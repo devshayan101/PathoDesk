@@ -1,22 +1,52 @@
 "use strict";
 const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("ipcRenderer", {
-  on(...args) {
-    const [channel, listener] = args;
-    return electron.ipcRenderer.on(channel, (event, ...args2) => listener(event, ...args2));
+const IPC_CHANNELS = {
+  // Auth
+  AUTH_LOGIN: "auth:login",
+  AUTH_LOGOUT: "auth:logout",
+  AUTH_GET_SESSION: "auth:getSession",
+  // Patients
+  PATIENT_CREATE: "patient:create",
+  PATIENT_GET: "patient:get",
+  PATIENT_SEARCH: "patient:search",
+  PATIENT_LIST: "patient:list",
+  // Tests
+  TEST_LIST: "test:list",
+  TEST_GET: "test:get",
+  // Parameters
+  PARAMETER_LIST: "parameter:list",
+  // Reference Ranges
+  REF_RANGE_LIST: "refRange:list",
+  REF_RANGE_CREATE: "refRange:create",
+  REF_RANGE_UPDATE: "refRange:update",
+  REF_RANGE_DELETE: "refRange:delete"
+};
+const api = {
+  // Auth
+  auth: {
+    login: (username, password) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGIN, username, password),
+    logout: () => electron.ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGOUT),
+    getSession: () => electron.ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_SESSION)
   },
-  off(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.off(channel, ...omit);
+  // Patients
+  patients: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.PATIENT_LIST),
+    get: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.PATIENT_GET, id),
+    search: (query) => electron.ipcRenderer.invoke(IPC_CHANNELS.PATIENT_SEARCH, query),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.PATIENT_CREATE, data)
   },
-  send(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.send(channel, ...omit);
+  // Tests
+  tests: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.TEST_LIST),
+    get: (testId) => electron.ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
+    getParameters: (testVersionId) => electron.ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId)
   },
-  invoke(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.invoke(channel, ...omit);
+  // Reference Ranges
+  refRanges: {
+    list: (parameterId) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_LIST, parameterId),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_CREATE, data),
+    update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_UPDATE, id, data),
+    delete: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_DELETE, id)
   }
-  // You can expose other APTs you need here.
-  // ...
-});
+};
+electron.contextBridge.exposeInMainWorld("electronAPI", api);

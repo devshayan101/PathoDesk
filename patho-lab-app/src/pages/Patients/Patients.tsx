@@ -1,24 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './Patients.css';
 
-// Mock patient data
-const mockPatients = [
-    { id: 'PID-10231', name: 'Rahul Sharma', gender: 'M', dob: '1985-03-15', phone: '9876543210' },
-    { id: 'PID-10232', name: 'Anita Patel', gender: 'F', dob: '1990-07-22', phone: '9876543211' },
-    { id: 'PID-10233', name: 'Vikram Singh', gender: 'M', dob: '1978-11-08', phone: '9876543212' },
-];
+interface Patient {
+    id: number;
+    patient_uid: string;
+    full_name: string;
+    dob: string;
+    gender: string;
+    phone: string | null;
+}
 
 export default function PatientsPage() {
+    const [patients, setPatients] = useState<Patient[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
-        name: '', gender: 'M', dob: '', phone: '', address: ''
+        fullName: '', gender: 'M', dob: '', phone: '', address: ''
     });
+    const [loading, setLoading] = useState(true);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Load patients on mount
+    useEffect(() => {
+        loadPatients();
+    }, []);
+
+    const loadPatients = async () => {
+        setLoading(true);
+        try {
+            if (window.electronAPI) {
+                const data = await window.electronAPI.patients.list();
+                setPatients(data);
+            }
+        } catch (e) {
+            console.error('Failed to load patients:', e);
+        }
+        setLoading(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Save patient:', formData);
-        setShowForm(false);
-        setFormData({ name: '', gender: 'M', dob: '', phone: '', address: '' });
+        try {
+            if (window.electronAPI) {
+                await window.electronAPI.patients.create(formData);
+                await loadPatients();
+            }
+            setShowForm(false);
+            setFormData({ fullName: '', gender: 'M', dob: '', phone: '', address: '' });
+        } catch (e) {
+            console.error('Failed to create patient:', e);
+        }
     };
 
     return (
@@ -42,8 +71,8 @@ export default function PatientsPage() {
                                     <label>Name</label>
                                     <input
                                         className="input"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        value={formData.fullName}
+                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                         required
                                         autoFocus
                                     />
@@ -105,32 +134,40 @@ export default function PatientsPage() {
 
             {/* Patient list */}
             <div className="patients-table-container">
-                <table className="table">
-                    <thead>
-                        <tr>
-                            <th>Patient ID</th>
-                            <th>Name</th>
-                            <th>Gender</th>
-                            <th>DOB</th>
-                            <th>Phone</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {mockPatients.map(patient => (
-                            <tr key={patient.id}>
-                                <td><code>{patient.id}</code></td>
-                                <td>{patient.name}</td>
-                                <td>{patient.gender}</td>
-                                <td>{patient.dob}</td>
-                                <td>{patient.phone}</td>
-                                <td>
-                                    <button className="btn btn-secondary btn-sm">Create Order</button>
-                                </td>
+                {loading ? (
+                    <div className="loading">Loading patients...</div>
+                ) : (
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Gender</th>
+                                <th>DOB</th>
+                                <th>Phone</th>
+                                <th>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {patients.length === 0 ? (
+                                <tr><td colSpan={6} className="empty">No patients found</td></tr>
+                            ) : (
+                                patients.map(patient => (
+                                    <tr key={patient.id}>
+                                        <td><code>{patient.patient_uid}</code></td>
+                                        <td>{patient.full_name}</td>
+                                        <td>{patient.gender}</td>
+                                        <td>{patient.dob}</td>
+                                        <td>{patient.phone || '—'}</td>
+                                        <td>
+                                            <button className="btn btn-secondary btn-sm">Create Order</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );
