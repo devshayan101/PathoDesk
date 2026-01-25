@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Patients.css';
 
 interface Patient {
@@ -11,6 +12,7 @@ interface Patient {
 }
 
 export default function PatientsPage() {
+    const navigate = useNavigate();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -160,7 +162,12 @@ export default function PatientsPage() {
                                         <td>{patient.dob}</td>
                                         <td>{patient.phone || '—'}</td>
                                         <td>
-                                            <button className="btn btn-secondary btn-sm">Create Order</button>
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => navigate('/orders')}
+                                            >
+                                                Create Order
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

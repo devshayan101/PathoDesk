@@ -168,4 +168,11 @@ export const IPC_CHANNELS = {
 
     // Dashboard
     DASHBOARD_STATS: 'dashboard:stats',
+
+    // Users (Admin)
+    USER_LIST: 'user:list',
+    USER_CREATE: 'user:create',
+    USER_UPDATE: 'user:update',
+    USER_TOGGLE_ACTIVE: 'user:toggleActive',
+    ROLE_LIST: 'role:list',
 } as const;

@@ -1,0 +1,11 @@
+.admin-page {
+    padding: var(--spacing-md);
+}
+
+.users-table-container {
+    margin-top: var(--spacing-lg);
+}
+
+.user-form-modal {
+    min-width: 500px;
+}

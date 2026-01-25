@@ -8,6 +8,7 @@ import * as patientService from './services/patientService'
 import * as testService from './services/testService'
 import * as orderService from './services/orderService'
 import * as sampleService from './services/sampleService'
+import * as userService from './services/userService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -154,6 +155,27 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.SAMPLE_PENDING, () => {
     return sampleService.getPendingSamples()
+  })
+
+  // Users (Admin)
+  ipcMain.handle(IPC_CHANNELS.USER_LIST, () => {
+    return userService.listUsers()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.USER_CREATE, (_, data) => {
+    return userService.createUser(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.USER_UPDATE, (_, id: number, data) => {
+    return userService.updateUser(id, data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.USER_TOGGLE_ACTIVE, (_, id: number) => {
+    return userService.toggleUserActive(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ROLE_LIST, () => {
+    return userService.listRoles()
   })
 }
 

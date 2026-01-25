@@ -72,6 +72,20 @@ const api = {
     delete: (id: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_DELETE, id),
   },
+
+  // Users (Admin)
+  users: {
+    list: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_LIST),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_UPDATE, id, data),
+    toggleActive: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
+    listRoles: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST),
+  },
 }
 
 // Expose to window

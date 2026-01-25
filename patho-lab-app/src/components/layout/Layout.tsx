@@ -8,7 +8,8 @@ const navItems = [
     { path: '/orders', label: 'Orders', roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
     { path: '/samples', label: 'Samples', roles: ['admin', 'technician', 'pathologist'] },
     { path: '/results', label: 'Results', roles: ['admin', 'technician', 'pathologist'] },
-    { path: '/test-master', label: 'Admin', roles: ['admin'] },
+    { path: '/test-master', label: 'Test Master', roles: ['admin'] },
+    { path: '/admin', label: 'Admin', roles: ['admin'] },
 ];
 
 export function Header() {

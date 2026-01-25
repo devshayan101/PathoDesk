@@ -30,7 +30,13 @@ const IPC_CHANNELS = {
   REF_RANGE_LIST: "refRange:list",
   REF_RANGE_CREATE: "refRange:create",
   REF_RANGE_UPDATE: "refRange:update",
-  REF_RANGE_DELETE: "refRange:delete"
+  REF_RANGE_DELETE: "refRange:delete",
+  // Users (Admin)
+  USER_LIST: "user:list",
+  USER_CREATE: "user:create",
+  USER_UPDATE: "user:update",
+  USER_TOGGLE_ACTIVE: "user:toggleActive",
+  ROLE_LIST: "role:list"
 };
 const api = {
   // Auth
@@ -73,6 +79,14 @@ const api = {
     create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_CREATE, data),
     update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_UPDATE, id, data),
     delete: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_DELETE, id)
+  },
+  // Users (Admin)
+  users: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_LIST),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_CREATE, data),
+    update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_UPDATE, id, data),
+    toggleActive: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
+    listRoles: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST)
   }
 };
 electron.contextBridge.exposeInMainWorld("electronAPI", api);

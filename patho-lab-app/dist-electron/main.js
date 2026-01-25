@@ -2214,6 +2214,67 @@ function getPendingSamples() {
     ORDER BY s.collected_at ASC
   `);
 }
+function listUsers() {
+  return queryAll(`
+    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active, u.created_at
+    FROM users u
+    JOIN roles r ON u.role_id = r.id
+    ORDER BY u.created_at DESC
+  `);
+}
+function createUser(data) {
+  try {
+    const existing = queryOne("SELECT id FROM users WHERE username = ?", [data.username]);
+    if (existing) {
+      return { success: false, error: "Username already exists" };
+    }
+    const passwordHash = bcrypt.hashSync(data.password, 10);
+    const userId = runWithId(`
+      INSERT INTO users (username, password_hash, full_name, role_id, is_active, created_at)
+      VALUES (?, ?, ?, ?, 1, datetime('now'))
+    `, [data.username, passwordHash, data.fullName, data.roleId]);
+    return { success: true, userId };
+  } catch (error) {
+    console.error("Create user error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function updateUser(id, data) {
+  try {
+    const sets = [];
+    const params = [];
+    if (data.fullName) {
+      sets.push("full_name = ?");
+      params.push(data.fullName);
+    }
+    if (data.roleId) {
+      sets.push("role_id = ?");
+      params.push(data.roleId);
+    }
+    if (data.password) {
+      sets.push("password_hash = ?");
+      params.push(bcrypt.hashSync(data.password, 10));
+    }
+    if (sets.length > 0) {
+      params.push(id);
+      run(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`, params);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function toggleUserActive(id) {
+  try {
+    run("UPDATE users SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = ?", [id]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function listRoles() {
+  return queryAll("SELECT id, name FROM roles ORDER BY id");
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -2244,7 +2305,13 @@ const IPC_CHANNELS = {
   REF_RANGE_LIST: "refRange:list",
   REF_RANGE_CREATE: "refRange:create",
   REF_RANGE_UPDATE: "refRange:update",
-  REF_RANGE_DELETE: "refRange:delete"
+  REF_RANGE_DELETE: "refRange:delete",
+  // Users (Admin)
+  USER_LIST: "user:list",
+  USER_CREATE: "user:create",
+  USER_UPDATE: "user:update",
+  USER_TOGGLE_ACTIVE: "user:toggleActive",
+  ROLE_LIST: "role:list"
 };
 createRequire(import.meta.url);
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
@@ -2352,6 +2419,21 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.SAMPLE_PENDING, () => {
     return getPendingSamples();
+  });
+  ipcMain.handle(IPC_CHANNELS.USER_LIST, () => {
+    return listUsers();
+  });
+  ipcMain.handle(IPC_CHANNELS.USER_CREATE, (_, data) => {
+    return createUser(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.USER_UPDATE, (_, id, data) => {
+    return updateUser(id, data);
+  });
+  ipcMain.handle(IPC_CHANNELS.USER_TOGGLE_ACTIVE, (_, id) => {
+    return toggleUserActive(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.ROLE_LIST, () => {
+    return listRoles();
   });
 }
 app.on("window-all-closed", () => {
