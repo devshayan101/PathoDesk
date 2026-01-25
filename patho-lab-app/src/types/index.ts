@@ -148,6 +148,14 @@ export const IPC_CHANNELS = {
     TEST_CREATE: 'test:create',
     TEST_UPDATE: 'test:update',
 
+    // Test Wizard
+    TEST_WIZARD_GET_DRAFTS: 'testWizard:getDrafts',
+    TEST_WIZARD_CREATE_DRAFT: 'testWizard:createDraft',
+    TEST_WIZARD_UPDATE_DRAFT: 'testWizard:updateDraft',
+    TEST_WIZARD_UPDATE_STEP: 'testWizard:updateStep',
+    TEST_WIZARD_SAVE_PARAMS: 'testWizard:saveParams',
+    TEST_WIZARD_PUBLISH: 'testWizard:publish',
+
     // Parameters
     PARAMETER_LIST: 'parameter:list',
     PARAMETER_CREATE: 'parameter:create',
@@ -160,10 +168,13 @@ export const IPC_CHANNELS = {
     REF_RANGE_DELETE: 'refRange:delete',
 
     // Results
+    RESULT_PENDING_SAMPLES: 'result:pendingSamples',
+    RESULT_GET: 'result:get',
     RESULT_SAVE: 'result:save',
     RESULT_SUBMIT: 'result:submit',
     RESULT_VERIFY: 'result:verify',
     RESULT_FINALIZE: 'result:finalize',
+    RESULT_GET_PREVIOUS: 'result:getPrevious',
     RESULT_GET_BY_ORDER: 'result:getByOrder',
 
     // Dashboard

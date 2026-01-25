@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './TestMaster.css';
+import TestWizard from './TestWizard';
 
 interface Test {
     id: number;
@@ -39,6 +40,7 @@ export default function TestMasterPage() {
     const [newRange, setNewRange] = useState({
         gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: ''
     });
+    const [showWizard, setShowWizard] = useState(false);
 
     // Load tests on mount
     useEffect(() => {
@@ -131,7 +133,10 @@ export default function TestMasterPage() {
             <div className="test-master-layout">
                 {/* Left - Test List */}
                 <div className="test-list-panel">
-                    <h2 className="panel-title">Tests</h2>
+                    <div className="panel-header">
+                        <h2 className="panel-title">Tests</h2>
+                        <button className="btn btn-primary btn-sm" onClick={() => setShowWizard(true)}>+ New</button>
+                    </div>
                     <ul className="test-list">
                         {tests.map(test => (
                             <li
@@ -293,6 +298,16 @@ export default function TestMasterPage() {
                     )}
                 </div>
             </div>
+
+            {showWizard && (
+                <TestWizard
+                    onClose={() => setShowWizard(false)}
+                    onSuccess={() => {
+                        setShowWizard(false);
+                        loadTests(); // Refresh list to show new test
+                    }}
+                />
+            )}
         </div>
     );
 }

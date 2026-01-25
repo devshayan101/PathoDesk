@@ -18,6 +18,14 @@ export interface ElectronAPI {
         get: (testId: number) => Promise<any>;
         getParameters: (testVersionId: number) => Promise<any[]>;
     };
+    testWizard: {
+        getDrafts: () => Promise<any[]>;
+        createDraft: (data: any) => Promise<number>;
+        updateDraft: (id: number, data: any) => Promise<void>;
+        updateStep: (id: number, step: number) => Promise<void>;
+        saveParams: (id: number, params: any[]) => Promise<void>;
+        publish: (id: number) => Promise<void>;
+    };
     refRanges: {
         list: (parameterId: number) => Promise<any[]>;
         create: (data: any) => Promise<{ success: boolean; id?: number; error?: string }>;
@@ -43,6 +51,15 @@ export interface ElectronAPI {
         update: (id: number, data: any) => Promise<{ success: boolean; error?: string }>;
         toggleActive: (id: number) => Promise<{ success: boolean; error?: string }>;
         listRoles: () => Promise<{ id: number; name: string }[]>;
+    };
+    results: {
+        getPendingSamples: () => Promise<any[]>;
+        get: (sampleId: number) => Promise<any>;
+        save: (data: any) => Promise<{ success: boolean; error?: string }>;
+        submit: (sampleId: number) => Promise<{ success: boolean; error?: string }>;
+        verify: (sampleId: number, verifiedBy: number) => Promise<{ success: boolean; error?: string }>;
+        finalize: (sampleId: number) => Promise<{ success: boolean; error?: string }>;
+        getPrevious: (patientId: number, testId: number, currentSampleId: number) => Promise<any[]>;
     };
 }
 
