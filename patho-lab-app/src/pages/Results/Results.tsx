@@ -131,8 +131,10 @@ export default function ResultsPage() {
 
     const handleValueChange = (paramCode: string, value: string) => {
         setValues(prev => ({ ...prev, [paramCode]: value }));
+    };
 
-        // Check for critical values
+    const handleInputBlur = (paramCode: string, value: string) => {
+        // Check for critical values only when user finishes typing (onBlur)
         const flag = calculateAbnormalFlag(paramCode, value);
         if (flag.startsWith('CRITICAL')) {
             const param = resultData?.parameters.find(p => p.parameter_code === paramCode);
@@ -318,8 +320,8 @@ export default function ResultsPage() {
                         <div className="panel-section">
                             <h3>Test Status</h3>
                             <span className={`badge ${resultData.status === 'FINALIZED' ? 'badge-success' :
-                                    resultData.status === 'VERIFIED' ? 'badge-info' :
-                                        resultData.status === 'SUBMITTED' ? 'badge-warning' : 'badge-warning'
+                                resultData.status === 'VERIFIED' ? 'badge-info' :
+                                    resultData.status === 'SUBMITTED' ? 'badge-warning' : 'badge-warning'
                                 }`}>
                                 {resultData.status}
                             </span>
@@ -355,6 +357,7 @@ export default function ResultsPage() {
                                                     type="text"
                                                     value={value}
                                                     onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
+                                                    onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
                                                     placeholder="—"
                                                     disabled={isReadOnly}
                                                 />
