@@ -132,11 +132,15 @@ export const IPC_CHANNELS = {
     ORDER_CREATE: 'order:create',
     ORDER_GET: 'order:get',
     ORDER_LIST: 'order:list',
+    ORDER_PENDING: 'order:pending',
 
     // Samples
     SAMPLE_CREATE: 'sample:create',
     SAMPLE_UPDATE_STATUS: 'sample:updateStatus',
     SAMPLE_LIST: 'sample:list',
+    SAMPLE_RECEIVE: 'sample:receive',
+    SAMPLE_REJECT: 'sample:reject',
+    SAMPLE_PENDING: 'sample:pending',
 
     // Tests
     TEST_LIST: 'test:list',

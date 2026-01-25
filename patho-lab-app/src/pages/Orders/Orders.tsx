@@ -1,26 +1,100 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './Orders.css';
 
-// Mock data matching wireframe
-const availableTests = [
-    { code: 'CBC', name: 'Complete Blood Count', price: 350 },
-    { code: 'LFT', name: 'Liver Function Test', price: 650 },
-    { code: 'RFT', name: 'Renal Function Test', price: 550 },
-    { code: 'TFT', name: 'Thyroid Function Test', price: 800 },
-];
+interface Test {
+    id: number;
+    test_code: string;
+    test_name: string;
+    price: number; // Will be added to DB later, using placeholder for now
+    version_id: number;
+}
+
+interface Patient {
+    id: number;
+    patient_uid: string;
+    full_name: string;
+}
+
+interface Order {
+    id: number;
+    order_uid: string;
+    patient_name: string;
+    patient_uid: string;
+    order_date: string;
+    payment_status: string;
+    total_amount: number;
+    test_names?: string; // Derived in frontend or query
+}
 
 export default function OrdersPage() {
     const [showForm, setShowForm] = useState(false);
-    const [selectedTests, setSelectedTests] = useState<string[]>([]);
-    const [discount, setDiscount] = useState('');
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [tests, setTests] = useState<Test[]>([]);
+    const [patients, setPatients] = useState<Patient[]>([]);
 
-    const toggleTest = (code: string) => {
-        setSelectedTests(prev =>
-            prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    // Form state
+    const [selectedPatientId, setSelectedPatientId] = useState<number | ''>('');
+    const [selectedTestIds, setSelectedTestIds] = useState<number[]>([]);
+    const [discount, setDiscount] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            if (window.electronAPI) {
+                const [ordersData, testsData, patientsData] = await Promise.all([
+                    window.electronAPI.orders.list(),
+                    window.electronAPI.tests.list(),
+                    window.electronAPI.patients.list()
+                ]);
+                setOrders(ordersData);
+                // Map DB tests to UI format (add placeholder price if missing)
+                setTests(testsData.map((t: any) => ({ ...t, price: 500 })));
+                setPatients(patientsData);
+            }
+        } catch (e) {
+            console.error('Failed to load data:', e);
+        }
+        setLoading(false);
+    };
+
+    const toggleTest = (testVersionId: number) => {
+        setSelectedTestIds(prev =>
+            prev.includes(testVersionId) ? prev.filter(id => id !== testVersionId) : [...prev, testVersionId]
         );
     };
 
-    const selectedTestsData = availableTests.filter(t => selectedTests.includes(t.code));
+    const handleSubmit = async () => {
+        if (!selectedPatientId || selectedTestIds.length === 0) return;
+
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.orders.create({
+                    patientId: Number(selectedPatientId),
+                    testVersionIds: selectedTestIds,
+                    discount: Number(discount) || 0
+                });
+
+                if (result.success) {
+                    setShowForm(false);
+                    setSelectedPatientId('');
+                    setSelectedTestIds([]);
+                    setDiscount('');
+                    loadData(); // Refresh list
+                } else {
+                    alert('Failed to create order: ' + result.error);
+                }
+            }
+        } catch (e) {
+            console.error('Create order error:', e);
+        }
+    };
+
+    const selectedTestsData = tests.filter(t => selectedTestIds.includes(t.version_id));
     const total = selectedTestsData.reduce((sum, t) => sum + t.price, 0);
     const discountAmount = parseInt(discount) || 0;
     const finalTotal = total - discountAmount;
@@ -38,114 +112,140 @@ export default function OrdersPage() {
                 <div className="modal-overlay">
                     <div className="modal order-form-modal">
                         <h2>Order Creation</h2>
-                        <p className="form-subtitle">Patient: Rahul Sharma (PID-10231)</p>
 
-                        {/* Test selection - matching wireframe */}
-                        <div className="test-selection">
-                            <label>Select Tests:</label>
-                            <div className="test-buttons">
-                                {availableTests.map(test => (
-                                    <button
-                                        key={test.code}
-                                        type="button"
-                                        className={`test-btn ${selectedTests.includes(test.code) ? 'selected' : ''}`}
-                                        onClick={() => toggleTest(test.code)}
-                                    >
-                                        {test.code}
-                                    </button>
+                        <div className="form-group">
+                            <label>Select Patient</label>
+                            <select
+                                className="input"
+                                value={selectedPatientId}
+                                onChange={(e) => setSelectedPatientId(Number(e.target.value))}
+                            >
+                                <option value="">-- Select Patient --</option>
+                                {patients.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.full_name} ({p.patient_uid})
+                                    </option>
                                 ))}
-                            </div>
+                            </select>
                         </div>
 
-                        {/* Order summary table - matching wireframe */}
-                        {selectedTestsData.length > 0 && (
-                            <div className="order-summary">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Test</th>
-                                            <th style={{ textAlign: 'right' }}>Price</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {selectedTestsData.map(test => (
-                                            <tr key={test.code}>
-                                                <td>{test.name}</td>
-                                                <td style={{ textAlign: 'right' }}>₹{test.price}</td>
-                                            </tr>
+                        {selectedPatientId && (
+                            <>
+                                {/* Test selection */}
+                                <div className="test-selection">
+                                    <label>Select Tests:</label>
+                                    <div className="test-buttons">
+                                        {tests.map(test => (
+                                            <button
+                                                key={test.id}
+                                                type="button"
+                                                className={`test-btn ${selectedTestIds.includes(test.version_id) ? 'selected' : ''}`}
+                                                onClick={() => toggleTest(test.version_id)}
+                                            >
+                                                {test.test_code}
+                                            </button>
                                         ))}
-                                    </tbody>
-                                </table>
-
-                                <div className="order-total">
-                                    <div className="total-row">
-                                        <span>Total:</span>
-                                        <span>₹{total}</span>
                                     </div>
-                                    <div className="discount-row">
-                                        <label>Discount:</label>
-                                        <input
-                                            className="input discount-input"
-                                            type="number"
-                                            value={discount}
-                                            onChange={(e) => setDiscount(e.target.value)}
-                                            placeholder="0"
-                                        />
-                                        <span>Approved By:</span>
-                                        <select className="input">
-                                            <option>Admin</option>
-                                        </select>
-                                    </div>
-                                    {discountAmount > 0 && (
-                                        <div className="total-row final">
-                                            <span>Final Total:</span>
-                                            <span>₹{finalTotal}</span>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        )}
 
-                        <div className="form-actions">
-                            <button className="btn btn-primary">Generate Invoice</button>
-                            <button className="btn btn-secondary">Print Receipt</button>
-                            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>
-                                Cancel
-                            </button>
-                        </div>
+                                {/* Order summary */}
+                                {selectedTestsData.length > 0 && (
+                                    <div className="order-summary">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Test</th>
+                                                    <th style={{ textAlign: 'right' }}>Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedTestsData.map(test => (
+                                                    <tr key={test.id}>
+                                                        <td>{test.test_name}</td>
+                                                        <td style={{ textAlign: 'right' }}>₹{test.price}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="order-total">
+                                            <div className="total-row">
+                                                <span>Total:</span>
+                                                <span>₹{total}</span>
+                                            </div>
+                                            <div className="discount-row">
+                                                <label>Discount:</label>
+                                                <input
+                                                    className="input discount-input"
+                                                    type="number"
+                                                    value={discount}
+                                                    onChange={(e) => setDiscount(e.target.value)}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div className="total-row final">
+                                                <span>Final Total:</span>
+                                                <span>₹{finalTotal}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="form-actions">
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={handleSubmit}
+                                        disabled={selectedTestIds.length === 0}
+                                    >
+                                        Generate Invoice
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
 
             {/* Orders list */}
             <div className="orders-table-container">
-                <table className="table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Patient</th>
-                            <th>Tests</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>ORD-2026-00123</code></td>
-                            <td>Rahul Sharma</td>
-                            <td>CBC, LFT</td>
-                            <td>2026-01-24</td>
-                            <td><span className="badge badge-warning">PENDING</span></td>
-                        </tr>
-                        <tr>
-                            <td><code>ORD-2026-00122</code></td>
-                            <td>Anita Patel</td>
-                            <td>RFT</td>
-                            <td>2026-01-24</td>
-                            <td><span className="badge badge-success">COMPLETED</span></td>
-                        </tr>
-                    </tbody>
-                </table>
+                {loading ? <div className="loading">Loading orders...</div> : (
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Patient</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orders.length === 0 ? (
+                                <tr><td colSpan={5} className="empty">No orders found</td></tr>
+                            ) : (
+                                orders.map(order => (
+                                    <tr key={order.id}>
+                                        <td><code>{order.order_uid}</code></td>
+                                        <td>
+                                            {order.patient_name} <br />
+                                            <small className="text-muted">{order.patient_uid}</small>
+                                        </td>
+                                        <td>{new Date(order.order_date).toLocaleDateString()}</td>
+                                        <td>₹{order.net_amount || order.total_amount}</td>
+                                        <td>
+                                            <span className={`badge ${order.payment_status === 'PAID' ? 'badge-success' : 'badge-warning'}`}>
+                                                {order.payment_status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

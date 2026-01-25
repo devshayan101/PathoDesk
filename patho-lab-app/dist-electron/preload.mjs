@@ -10,6 +10,17 @@ const IPC_CHANNELS = {
   PATIENT_GET: "patient:get",
   PATIENT_SEARCH: "patient:search",
   PATIENT_LIST: "patient:list",
+  // Orders
+  ORDER_CREATE: "order:create",
+  ORDER_GET: "order:get",
+  ORDER_LIST: "order:list",
+  ORDER_PENDING: "order:pending",
+  // Samples
+  SAMPLE_CREATE: "sample:create",
+  SAMPLE_LIST: "sample:list",
+  SAMPLE_RECEIVE: "sample:receive",
+  SAMPLE_REJECT: "sample:reject",
+  SAMPLE_PENDING: "sample:pending",
   // Tests
   TEST_LIST: "test:list",
   TEST_GET: "test:get",
@@ -40,6 +51,21 @@ const api = {
     list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.TEST_LIST),
     get: (testId) => electron.ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
     getParameters: (testVersionId) => electron.ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId)
+  },
+  // Orders
+  orders: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_LIST),
+    get: (orderId) => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_GET, orderId),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_CREATE, data),
+    getPending: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_PENDING)
+  },
+  // Samples
+  samples: {
+    list: (status) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST, status),
+    create: (orderTestId) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_CREATE, orderTestId),
+    receive: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE, sampleId),
+    reject: (sampleId, reason) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_REJECT, sampleId, reason),
+    getPending: () => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_PENDING)
   },
   // Reference Ranges
   refRanges: {

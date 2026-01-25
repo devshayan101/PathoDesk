@@ -6,6 +6,8 @@ import { initDatabase, closeDatabase } from './database/db'
 import * as authService from './services/authService'
 import * as patientService from './services/patientService'
 import * as testService from './services/testService'
+import * as orderService from './services/orderService'
+import * as sampleService from './services/sampleService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -114,6 +116,44 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.REF_RANGE_DELETE, (_, id: number) => {
     testService.deleteReferenceRange(id)
     return { success: true }
+  })
+
+  // Orders
+  ipcMain.handle(IPC_CHANNELS.ORDER_LIST, () => {
+    return orderService.listOrders()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORDER_GET, (_, orderId: number) => {
+    return orderService.getOrder(orderId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORDER_CREATE, (_, data) => {
+    return orderService.createOrder(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORDER_PENDING, () => {
+    return orderService.getPendingOrders()
+  })
+
+  // Samples
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_LIST, (_, status?: string) => {
+    return sampleService.listSamples(status)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_CREATE, (_, orderTestId: number) => {
+    return sampleService.createSample(orderTestId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_RECEIVE, (_, sampleId: number) => {
+    return sampleService.receiveSample(sampleId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_REJECT, (_, sampleId: number, reason: string) => {
+    return sampleService.rejectSample(sampleId, reason)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_PENDING, () => {
+    return sampleService.getPendingSamples()
   })
 }
 

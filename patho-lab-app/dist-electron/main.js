@@ -1940,6 +1940,17 @@ function getMigrations() {
         INSERT INTO patients (patient_uid, full_name, dob, gender, phone, created_at)
         VALUES ('PID-10231', 'Rahul Sharma', '1986-03-15', 'M', '9876543210', datetime('now'));
       `
+    },
+    {
+      name: "003_billing_columns",
+      sql: `
+        ALTER TABLE orders ADD COLUMN total_amount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN discount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN net_amount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'PENDING';
+        ALTER TABLE order_tests ADD COLUMN price REAL DEFAULT 0;
+        ALTER TABLE samples ADD COLUMN received_at TEXT;
+      `
     }
   ];
 }
@@ -2080,6 +2091,129 @@ function updateReferenceRange(id, data) {
 function deleteReferenceRange(id) {
   run("DELETE FROM reference_ranges WHERE id = ?", [id]);
 }
+function listOrders(limit = 50, offset = 0) {
+  return queryAll(`
+    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    FROM orders o
+    JOIN patients p ON o.patient_id = p.id
+    ORDER BY o.order_date DESC
+    LIMIT ? OFFSET ?
+  `, [limit, offset]);
+}
+function getOrder(orderId) {
+  const order = queryOne(`
+    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    FROM orders o
+    JOIN patients p ON o.patient_id = p.id
+    WHERE o.id = ?
+  `, [orderId]);
+  if (!order) return null;
+  const tests = queryAll(`
+    SELECT ot.*, tv.test_name, t.test_code
+    FROM order_tests ot
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+    JOIN tests t ON tv.test_id = t.id
+    WHERE ot.order_id = ?
+  `, [orderId]);
+  return { ...order, tests };
+}
+function createOrder(data) {
+  try {
+    const orderUid = `ORD-${Date.now().toString(36).toUpperCase()}`;
+    const totalAmount = data.testVersionIds.length * 500;
+    const discount = data.discount || 0;
+    const netAmount = totalAmount - discount;
+    const orderId = runWithId(`
+      INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status)
+      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING')
+    `, [orderUid, data.patientId, totalAmount, discount, netAmount]);
+    for (const testVersionId of data.testVersionIds) {
+      const orderTestId = runWithId(`
+        INSERT INTO order_tests (order_id, test_version_id, status, price)
+        VALUES (?, ?, 'ORDERED', 500)
+      `, [orderId, testVersionId]);
+      const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      run(`
+        INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
+        VALUES (?, ?, 'COLLECTED', datetime('now'))
+      `, [sampleUid, orderTestId]);
+    }
+    return { success: true, orderId, orderUid };
+  } catch (error) {
+    console.error("Create order error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function getPendingOrders() {
+  return queryAll(`
+    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    FROM orders o
+    JOIN patients p ON o.patient_id = p.id
+    WHERE EXISTS (
+      SELECT 1 FROM order_tests ot WHERE ot.order_id = o.id AND ot.status != 'FINALIZED'
+    )
+    ORDER BY o.order_date DESC
+    LIMIT 20
+  `);
+}
+function listSamples(status) {
+  let sql = `
+    SELECT s.*, o.order_uid, p.full_name as patient_name, tv.test_name
+    FROM samples s
+    JOIN order_tests ot ON s.order_test_id = ot.id
+    JOIN orders o ON ot.order_id = o.id
+    JOIN patients p ON o.patient_id = p.id
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+  `;
+  if (status) {
+    sql += ` WHERE s.status = ?`;
+    sql += ` ORDER BY s.id DESC`;
+    return queryAll(sql, [status]);
+  }
+  sql += ` ORDER BY s.id DESC LIMIT 50`;
+  return queryAll(sql);
+}
+function createSample(orderTestId) {
+  try {
+    const sampleUid = `S${Date.now().toString(36).toUpperCase()}`;
+    const sampleId = runWithId(`
+      INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
+      VALUES (?, ?, 'COLLECTED', datetime('now'))
+    `, [sampleUid, orderTestId]);
+    return { success: true, sampleId, sampleUid };
+  } catch (error) {
+    console.error("Create sample error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function receiveSample(sampleId) {
+  try {
+    run(`UPDATE samples SET status = 'RECEIVED', received_at = datetime('now') WHERE id = ?`, [sampleId]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function rejectSample(sampleId, reason) {
+  try {
+    run(`UPDATE samples SET status = 'REJECTED', rejection_reason = ? WHERE id = ?`, [reason, sampleId]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function getPendingSamples() {
+  return queryAll(`
+    SELECT s.*, o.order_uid, p.full_name as patient_name, tv.test_name
+    FROM samples s
+    JOIN order_tests ot ON s.order_test_id = ot.id
+    JOIN orders o ON ot.order_id = o.id
+    JOIN patients p ON o.patient_id = p.id
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+    WHERE s.status = 'COLLECTED'
+    ORDER BY s.collected_at ASC
+  `);
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -2090,6 +2224,17 @@ const IPC_CHANNELS = {
   PATIENT_GET: "patient:get",
   PATIENT_SEARCH: "patient:search",
   PATIENT_LIST: "patient:list",
+  // Orders
+  ORDER_CREATE: "order:create",
+  ORDER_GET: "order:get",
+  ORDER_LIST: "order:list",
+  ORDER_PENDING: "order:pending",
+  // Samples
+  SAMPLE_CREATE: "sample:create",
+  SAMPLE_LIST: "sample:list",
+  SAMPLE_RECEIVE: "sample:receive",
+  SAMPLE_REJECT: "sample:reject",
+  SAMPLE_PENDING: "sample:pending",
   // Tests
   TEST_LIST: "test:list",
   TEST_GET: "test:get",
@@ -2180,6 +2325,33 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.REF_RANGE_DELETE, (_, id) => {
     deleteReferenceRange(id);
     return { success: true };
+  });
+  ipcMain.handle(IPC_CHANNELS.ORDER_LIST, () => {
+    return listOrders();
+  });
+  ipcMain.handle(IPC_CHANNELS.ORDER_GET, (_, orderId) => {
+    return getOrder(orderId);
+  });
+  ipcMain.handle(IPC_CHANNELS.ORDER_CREATE, (_, data) => {
+    return createOrder(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.ORDER_PENDING, () => {
+    return getPendingOrders();
+  });
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_LIST, (_, status) => {
+    return listSamples(status);
+  });
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_CREATE, (_, orderTestId) => {
+    return createSample(orderTestId);
+  });
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_RECEIVE, (_, sampleId) => {
+    return receiveSample(sampleId);
+  });
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_REJECT, (_, sampleId, reason) => {
+    return rejectSample(sampleId, reason);
+  });
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_PENDING, () => {
+    return getPendingSamples();
   });
 }
 app.on("window-all-closed", () => {

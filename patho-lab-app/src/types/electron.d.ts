@@ -24,6 +24,19 @@ export interface ElectronAPI {
         update: (id: number, data: any) => Promise<{ success: boolean }>;
         delete: (id: number) => Promise<{ success: boolean }>;
     };
+    orders: {
+        list: () => Promise<any[]>;
+        get: (orderId: number) => Promise<any>;
+        create: (data: any) => Promise<{ success: boolean; orderId?: number; orderUid?: string; error?: string }>;
+        getPending: () => Promise<any[]>;
+    };
+    samples: {
+        list: (status?: string) => Promise<any[]>;
+        create: (orderTestId: number) => Promise<{ success: boolean; sampleId?: number; sampleUid?: string; error?: string }>;
+        receive: (sampleId: number) => Promise<{ success: boolean }>;
+        reject: (sampleId: number, reason: string) => Promise<{ success: boolean }>;
+        getPending: () => Promise<any[]>;
+    };
 }
 
 declare global {
