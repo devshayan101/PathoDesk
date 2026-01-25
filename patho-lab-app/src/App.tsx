@@ -8,6 +8,7 @@ import OrdersPage from './pages/Orders/Orders';
 import SamplesPage from './pages/Samples/Samples';
 import ResultsPage from './pages/Results/Results';
 import TestMasterPage from './pages/TestMaster/TestMaster';
+import AdminPage from './pages/Admin/Admin';
 import './index.css';
 
 // Protected route wrapper
@@ -71,6 +72,14 @@ function App() {
           element={
             <ProtectedRoute>
               <TestMasterPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
             </ProtectedRoute>
           }
         />

@@ -13,41 +13,14 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 | Layer | Technology |
 |-------|------------|
-| Desktop Framework | Electron |
+| Desktop Framework | Electron + Vite |
 | Language | TypeScript (strict mode) |
 | Frontend | React 18 + React Router |
 | State Management | Zustand |
 | Styling | CSS Modules + Custom Design System |
-| Database | better-sqlite3 (encrypted) |
+| Database | better-sqlite3 |
 | PDF Generation | @react-pdf/renderer |
-| Build/Package | Electron Forge |
-
----
-
-## Project Structure
-
-```
-patho-lab/
-├── src/
-│   ├── main/                    # Electron main process
-│   │   ├── index.ts
-│   │   ├── ipc/                 # IPC handlers
-│   │   ├── database/
-│   │   └── services/
-│   ├── renderer/                # React UI
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── stores/
-│   │   └── styles/
-│   ├── shared/                  # Shared types & constants
-│   └── preload/
-├── assets/
-├── forge.config.ts
-├── package.json
-└── tsconfig.json
-```
+| Build/Package | Electron Builder |
 
 ---
 
@@ -73,94 +46,93 @@ patho-lab/
 
 ---
 
-### Phase 2: Authentication & Licensing
+### Phase 2: Database & Authentication ✅ COMPLETED
+**Duration: ~4 hours**
+
+- [x] Set up SQLite database with better-sqlite3
+- [x] Create migration system for schema versioning
+- [x] Implement complete database schema (users, patients, tests, orders, results, audit)
+- [x] User login with bcrypt password verification
+- [x] Session management (in-memory)
+- [x] IPC handlers for auth, patients, tests, reference ranges
+- [x] Type-safe preload API for renderer process
+- [x] Reference Range Editor with overlap validation
+- [x] Seed data for initial testing (admin user, sample tests)
+
+---
+
+### Phase 3: Patient & Order Management ✅ COMPLETED
 **Duration: ~4-5 hours**
 
-- [ ] User login with bcrypt password verification
-- [ ] Session management (in-memory)
-- [ ] Role-based permission checking
-- [ ] License file loading & parsing
-- [ ] RSA/ECDSA signature verification
-- [ ] Login page UI
+- [x] Connect Patient list to database (CRUD operations)
+- [x] Patient search functionality
+- [x] Order creation with patient selection
+- [x] Test selection and pricing calculation
+- [x] Order status workflow (Ordered → Sample Collected → Completed)
+- [x] Sample accession with barcode generation
 
 ---
 
-### Phase 3: Core Layout & Navigation
-**Duration: ~3-4 hours**
-
-- [ ] Sidebar navigation with role-based visibility
-- [ ] Header with user info, license status
-- [ ] Main layout shell
-- [ ] Design system (colors, typography, spacing)
-
----
-
-### Phase 4: Patient & Order Management
+### Phase 4: Result Entry (Clinical Core) ⏳ NEXT
 **Duration: ~6-8 hours**
 
-- [ ] Patient list with search
-- [ ] Patient registration form
-- [ ] Order creation with test selection
-- [ ] Sample accession & barcode printing
-
----
-
-### Phase 5: Test Master Configuration
-**Duration: ~5-6 hours**
-
-- [ ] Test definition CRUD
-- [ ] Parameter configuration
-- [ ] Reference range editor (age/gender-based)
-- [ ] Critical value management
-
----
-
-### Phase 6: Result Entry (Clinical Core)
-**Duration: ~8-10 hours**
-
-- [ ] 3-panel result entry layout
-- [ ] Parameter grid with validation
-- [ ] Abnormal flagging (H/L/Critical)
+- [ ] Connect result entry to database
+- [ ] Parameter grid with real test data
+- [ ] Reference range lookup by patient age/gender
+- [ ] Abnormal flagging (H/L/Critical) with database storage
 - [ ] Delta check implementation
-- [ ] Verification workflow
+- [ ] Verification/finalization workflow
 
 ---
 
-### Phase 7: Report Generation
+### Phase 5: Report Generation
 **Duration: ~5-6 hours**
 
-- [ ] PDF report template
-- [ ] Report preview
-- [ ] Digital signature integration
+- [ ] PDF report template with @react-pdf/renderer
+- [ ] Report preview modal
+- [ ] Lab letterhead configuration
+- [ ] Digital signature placeholder
 - [ ] Print functionality
 
 ---
 
-### Phase 8: Billing & Inventory
+### Phase 6: Billing & Inventory
 **Duration: ~6-7 hours**
 
-- [ ] Invoice creation
-- [ ] Payment tracking
-- [ ] Stock management
-- [ ] Reagent expiry alerts
+- [ ] Invoice creation linked to orders
+- [ ] Payment tracking (cash, card, UPI)
+- [ ] Discount management
+- [ ] Stock management for reagents
+- [ ] Expiry alerts
 
 ---
 
-### Phase 9: QC & Audit
+### Phase 7: QC & Audit
 **Duration: ~4-5 hours**
 
-- [ ] Daily QC entry
-- [ ] Audit trail logging
+- [ ] Daily QC entry screens
+- [ ] Audit trail logging (all edits)
 - [ ] Audit report generation
 
 ---
 
-### Phase 10: Polish & Deployment
+### Phase 8: Licensing System
+**Duration: ~4-5 hours**
+
+- [ ] License file format (JSON + signature)
+- [ ] RSA/ECDSA signature verification
+- [ ] Machine binding (hardware ID)
+- [ ] License status display
+- [ ] Grace period handling
+
+---
+
+### Phase 9: Polish & Deployment
 **Duration: ~4-5 hours**
 
 - [ ] Error boundaries
 - [ ] Crash recovery
-- [ ] Windows installer (NSIS)
+- [ ] Windows installer (NSIS/Electron Builder)
 - [ ] Documentation
 
 ---
@@ -168,18 +140,12 @@ patho-lab/
 ## Verification Plan
 
 ### Manual Testing
-1. License validation (Trial/Valid/Expired modes)
-2. Authentication flow with role-based access
-3. Patient & Order workflow
-4. Result Entry with validation
-5. Report generation & printing
-
-### Automated Testing
-```bash
-npm test                  # Unit tests
-npm run test:integration  # Integration tests
-```
+1. Authentication flow with role-based access
+2. Patient & Order workflow
+3. Result Entry with validation
+4. Report generation & printing
+5. License validation (Trial/Valid/Expired modes)
 
 ---
 
-**Estimated Total Development Time: 50-60 hours**
+**Estimated Total Development Time: 45-55 hours**

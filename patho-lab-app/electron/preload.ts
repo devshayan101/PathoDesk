@@ -35,6 +35,32 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId),
   },
 
+  // Orders
+  orders: {
+    list: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_LIST),
+    get: (orderId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_GET, orderId),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_CREATE, data),
+    getPending: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_PENDING),
+  },
+
+  // Samples
+  samples: {
+    list: (status?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST, status),
+    create: (orderTestId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_CREATE, orderTestId),
+    receive: (sampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE, sampleId),
+    reject: (sampleId: number, reason: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_REJECT, sampleId, reason),
+    getPending: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_PENDING),
+  },
+
   // Reference Ranges
   refRanges: {
     list: (parameterId: number) =>
@@ -45,6 +71,20 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_UPDATE, id, data),
     delete: (id: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_DELETE, id),
+  },
+
+  // Users (Admin)
+  users: {
+    list: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_LIST),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_UPDATE, id, data),
+    toggleActive: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
+    listRoles: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST),
   },
 }
 

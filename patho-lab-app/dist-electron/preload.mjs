@@ -10,6 +10,17 @@ const IPC_CHANNELS = {
   PATIENT_GET: "patient:get",
   PATIENT_SEARCH: "patient:search",
   PATIENT_LIST: "patient:list",
+  // Orders
+  ORDER_CREATE: "order:create",
+  ORDER_GET: "order:get",
+  ORDER_LIST: "order:list",
+  ORDER_PENDING: "order:pending",
+  // Samples
+  SAMPLE_CREATE: "sample:create",
+  SAMPLE_LIST: "sample:list",
+  SAMPLE_RECEIVE: "sample:receive",
+  SAMPLE_REJECT: "sample:reject",
+  SAMPLE_PENDING: "sample:pending",
   // Tests
   TEST_LIST: "test:list",
   TEST_GET: "test:get",
@@ -19,7 +30,13 @@ const IPC_CHANNELS = {
   REF_RANGE_LIST: "refRange:list",
   REF_RANGE_CREATE: "refRange:create",
   REF_RANGE_UPDATE: "refRange:update",
-  REF_RANGE_DELETE: "refRange:delete"
+  REF_RANGE_DELETE: "refRange:delete",
+  // Users (Admin)
+  USER_LIST: "user:list",
+  USER_CREATE: "user:create",
+  USER_UPDATE: "user:update",
+  USER_TOGGLE_ACTIVE: "user:toggleActive",
+  ROLE_LIST: "role:list"
 };
 const api = {
   // Auth
@@ -41,12 +58,35 @@ const api = {
     get: (testId) => electron.ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
     getParameters: (testVersionId) => electron.ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId)
   },
+  // Orders
+  orders: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_LIST),
+    get: (orderId) => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_GET, orderId),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_CREATE, data),
+    getPending: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ORDER_PENDING)
+  },
+  // Samples
+  samples: {
+    list: (status) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST, status),
+    create: (orderTestId) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_CREATE, orderTestId),
+    receive: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE, sampleId),
+    reject: (sampleId, reason) => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_REJECT, sampleId, reason),
+    getPending: () => electron.ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_PENDING)
+  },
   // Reference Ranges
   refRanges: {
     list: (parameterId) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_LIST, parameterId),
     create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_CREATE, data),
     update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_UPDATE, id, data),
     delete: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.REF_RANGE_DELETE, id)
+  },
+  // Users (Admin)
+  users: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_LIST),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_CREATE, data),
+    update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_UPDATE, id, data),
+    toggleActive: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
+    listRoles: () => electron.ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST)
   }
 };
 electron.contextBridge.exposeInMainWorld("electronAPI", api);

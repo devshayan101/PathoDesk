@@ -240,6 +240,17 @@ function getMigrations() {
         INSERT INTO patients (patient_uid, full_name, dob, gender, phone, created_at)
         VALUES ('PID-10231', 'Rahul Sharma', '1986-03-15', 'M', '9876543210', datetime('now'));
       `
+    },
+    {
+      name: '003_billing_columns',
+      sql: `
+        ALTER TABLE orders ADD COLUMN total_amount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN discount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN net_amount REAL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'PENDING';
+        ALTER TABLE order_tests ADD COLUMN price REAL DEFAULT 0;
+        ALTER TABLE samples ADD COLUMN received_at TEXT;
+      `
     }
   ];
 }
