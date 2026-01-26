@@ -12,6 +12,9 @@ import * as userService from './services/userService'
 import * as resultService from './services/resultService'
 import * as reportService from './services/reportService'
 import * as doctorService from './services/doctorService'
+import * as billingService from './services/billingService'
+import * as invoiceService from './services/invoiceService'
+import * as paymentService from './services/paymentService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -299,6 +302,132 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.DOCTOR_SEARCH, (_, query: string) => {
     return doctorService.searchDoctors(query)
+  })
+
+  // Price Lists
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_LIST, () => {
+    return billingService.listPriceLists()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_LIST_ALL, () => {
+    return billingService.listAllPriceLists()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_GET, (_, id: number) => {
+    return billingService.getPriceList(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_GET_DEFAULT, () => {
+    return billingService.getDefaultPriceList()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_CREATE, (_, data) => {
+    return billingService.createPriceList(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_UPDATE, (_, id: number, data) => {
+    return billingService.updatePriceList(id, data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_DELETE, (_, id: number) => {
+    return billingService.deletePriceList(id)
+  })
+
+  // Test Prices
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_LIST, (_, priceListId: number) => {
+    return billingService.listTestPrices(priceListId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_GET, (_, testId: number, priceListId: number) => {
+    return billingService.getTestPrice(testId, priceListId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_SET, (_, priceListId: number, testId: number, data) => {
+    return billingService.setTestPrice(priceListId, testId, data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_BULK_SET, (_, priceListId: number, prices: any[]) => {
+    return billingService.bulkSetTestPrices(priceListId, prices)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_GET_FOR_TESTS, (_, testIds: number[], priceListId: number) => {
+    const priceMap = billingService.getTestPricesForTests(testIds, priceListId)
+    return Object.fromEntries(priceMap)
+  })
+
+  // Packages
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_LIST, (_, priceListId?: number) => {
+    return billingService.listPackages(priceListId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_GET, (_, id: number) => {
+    return billingService.getPackage(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_CREATE, (_, data) => {
+    return billingService.createPackage(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_UPDATE, (_, id: number, data) => {
+    return billingService.updatePackage(id, data)
+  })
+
+  // Invoices
+  ipcMain.handle(IPC_CHANNELS.INVOICE_LIST, (_, options) => {
+    return invoiceService.listInvoices(options)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_GET, (_, id: number) => {
+    return invoiceService.getInvoice(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_GET_BY_ORDER, (_, orderId: number) => {
+    return invoiceService.getInvoiceByOrder(orderId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_CREATE, (_, data) => {
+    return invoiceService.createInvoice(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_FINALIZE, (_, id: number, userId?: number) => {
+    return invoiceService.finalizeInvoice(id, userId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_CANCEL, (_, id: number, reason: string, userId: number) => {
+    return invoiceService.cancelInvoice(id, reason, userId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_PATIENT_DUES, (_, patientId: number) => {
+    return invoiceService.getPatientDues(patientId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INVOICE_SUMMARY, (_, fromDate?: string, toDate?: string) => {
+    return invoiceService.getInvoiceSummary(fromDate, toDate)
+  })
+
+  // Payments
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_RECORD, (_, data) => {
+    return paymentService.recordPayment(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_LIST, (_, invoiceId: number) => {
+    return paymentService.listPayments(invoiceId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_GET, (_, id: number) => {
+    return paymentService.getPayment(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_PATIENT_HISTORY, (_, patientId: number) => {
+    return paymentService.getPatientPaymentHistory(patientId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_DAILY_COLLECTION, (_, date?: string) => {
+    return paymentService.getDailyCollection(date)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES, () => {
+    return paymentService.getOutstandingDues()
   })
 }
 

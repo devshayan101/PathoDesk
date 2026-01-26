@@ -205,4 +205,133 @@ export const IPC_CHANNELS = {
     DOCTOR_UPDATE: 'doctor:update',
     DOCTOR_TOGGLE_ACTIVE: 'doctor:toggleActive',
     DOCTOR_SEARCH: 'doctor:search',
+
+    // Price Lists
+    PRICE_LIST_LIST: 'priceList:list',
+    PRICE_LIST_LIST_ALL: 'priceList:listAll',
+    PRICE_LIST_GET: 'priceList:get',
+    PRICE_LIST_GET_DEFAULT: 'priceList:getDefault',
+    PRICE_LIST_CREATE: 'priceList:create',
+    PRICE_LIST_UPDATE: 'priceList:update',
+    PRICE_LIST_DELETE: 'priceList:delete',
+
+    // Test Prices
+    TEST_PRICE_LIST: 'testPrice:list',
+    TEST_PRICE_GET: 'testPrice:get',
+    TEST_PRICE_SET: 'testPrice:set',
+    TEST_PRICE_BULK_SET: 'testPrice:bulkSet',
+    TEST_PRICE_GET_FOR_TESTS: 'testPrice:getForTests',
+
+    // Packages
+    PACKAGE_LIST: 'package:list',
+    PACKAGE_GET: 'package:get',
+    PACKAGE_CREATE: 'package:create',
+    PACKAGE_UPDATE: 'package:update',
+
+    // Invoices
+    INVOICE_LIST: 'invoice:list',
+    INVOICE_GET: 'invoice:get',
+    INVOICE_GET_BY_ORDER: 'invoice:getByOrder',
+    INVOICE_CREATE: 'invoice:create',
+    INVOICE_FINALIZE: 'invoice:finalize',
+    INVOICE_CANCEL: 'invoice:cancel',
+    INVOICE_PATIENT_DUES: 'invoice:patientDues',
+    INVOICE_SUMMARY: 'invoice:summary',
+
+    // Payments
+    PAYMENT_RECORD: 'payment:record',
+    PAYMENT_LIST: 'payment:list',
+    PAYMENT_GET: 'payment:get',
+    PAYMENT_PATIENT_HISTORY: 'payment:patientHistory',
+    PAYMENT_DAILY_COLLECTION: 'payment:dailyCollection',
+    PAYMENT_OUTSTANDING_DUES: 'payment:outstandingDues',
 } as const;
+
+// Billing Types
+export interface PriceList {
+    id: number;
+    code: string;
+    name: string;
+    description?: string;
+    isDefault: boolean;
+    isActive: boolean;
+    createdAt: string;
+}
+
+export interface TestPrice {
+    id: number;
+    priceListId: number;
+    testId: number;
+    testCode: string;
+    testName: string;
+    basePrice: number;
+    autoDiscountPercent: number;
+    discountCapPercent: number;
+    gstApplicable: boolean;
+    gstRate: number;
+    effectiveFrom: string;
+    effectiveTo?: string;
+    isActive: boolean;
+}
+
+export interface Package {
+    id: number;
+    code: string;
+    name: string;
+    description?: string;
+    packagePrice: number;
+    priceListId?: number;
+    validFrom?: string;
+    validTo?: string;
+    isActive: boolean;
+    items?: Array<{ testId: number; testCode: string; testName: string }>;
+}
+
+export interface Invoice {
+    id: number;
+    invoiceNumber: string;
+    orderId: number;
+    patientId: number;
+    patientName?: string;
+    patientUid?: string;
+    priceListId?: number;
+    priceListName?: string;
+    subtotal: number;
+    discountAmount: number;
+    discountPercent: number;
+    discountReason?: string;
+    gstAmount: number;
+    totalAmount: number;
+    status: 'DRAFT' | 'FINALIZED' | 'CANCELLED';
+    createdAt: string;
+    finalizedAt?: string;
+    amountPaid?: number;
+    balanceDue?: number;
+}
+
+export interface InvoiceItem {
+    id: number;
+    invoiceId: number;
+    testId?: number;
+    packageId?: number;
+    description: string;
+    unitPrice: number;
+    quantity: number;
+    discountAmount: number;
+    gstRate: number;
+    gstAmount: number;
+    lineTotal: number;
+}
+
+export interface Payment {
+    id: number;
+    invoiceId: number;
+    amount: number;
+    paymentMode: 'CASH' | 'CARD' | 'UPI' | 'CREDIT';
+    referenceNumber?: string;
+    paymentDate: string;
+    receivedBy?: number;
+    receivedByName?: string;
+    remarks?: string;
+}
+

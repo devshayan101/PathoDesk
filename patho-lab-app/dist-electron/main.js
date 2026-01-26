@@ -2591,6 +2591,175 @@ function getMigrations() {
           ('DR002', 'Dr. Priya Sharma', 'Cardiologist', '+91 98765 22222'),
           ('DR003', 'Dr. Suresh Patel', 'Orthopedic', '+91 98765 33333');
       `
+    },
+    {
+      name: "013_billing_pricing",
+      sql: `
+        -- Price Lists (Standard, Corporate, Camp, Custom)
+        CREATE TABLE IF NOT EXISTS price_lists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          is_default INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Test Prices per Price List
+        CREATE TABLE IF NOT EXISTS test_prices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          price_list_id INTEGER NOT NULL REFERENCES price_lists(id),
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          base_price REAL NOT NULL,
+          auto_discount_percent REAL DEFAULT 0,
+          discount_cap_percent REAL DEFAULT 100,
+          gst_applicable INTEGER DEFAULT 0,
+          gst_rate REAL DEFAULT 0,
+          effective_from TEXT NOT NULL,
+          effective_to TEXT,
+          is_active INTEGER DEFAULT 1,
+          UNIQUE(price_list_id, test_id, effective_from)
+        );
+        
+        -- Packages (commercial bundles)
+        CREATE TABLE IF NOT EXISTS packages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          package_price REAL NOT NULL,
+          price_list_id INTEGER REFERENCES price_lists(id),
+          valid_from TEXT,
+          valid_to TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Package Items (tests in package)
+        CREATE TABLE IF NOT EXISTS package_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          package_id INTEGER NOT NULL REFERENCES packages(id),
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          UNIQUE(package_id, test_id)
+        );
+        
+        -- Invoices
+        CREATE TABLE IF NOT EXISTS invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_number TEXT UNIQUE NOT NULL,
+          order_id INTEGER NOT NULL REFERENCES orders(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          price_list_id INTEGER REFERENCES price_lists(id),
+          subtotal REAL NOT NULL,
+          discount_amount REAL DEFAULT 0,
+          discount_percent REAL DEFAULT 0,
+          discount_reason TEXT,
+          discount_approved_by INTEGER REFERENCES users(id),
+          gst_amount REAL DEFAULT 0,
+          total_amount REAL NOT NULL,
+          status TEXT CHECK (status IN ('DRAFT','FINALIZED','CANCELLED')) DEFAULT 'DRAFT',
+          created_by INTEGER REFERENCES users(id),
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          finalized_at TEXT,
+          cancelled_at TEXT,
+          cancelled_by INTEGER REFERENCES users(id),
+          cancellation_reason TEXT
+        );
+        
+        -- Invoice Items (price snapshot)
+        CREATE TABLE IF NOT EXISTS invoice_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          test_id INTEGER REFERENCES tests(id),
+          package_id INTEGER REFERENCES packages(id),
+          description TEXT NOT NULL,
+          unit_price REAL NOT NULL,
+          quantity INTEGER DEFAULT 1,
+          discount_amount REAL DEFAULT 0,
+          gst_rate REAL DEFAULT 0,
+          gst_amount REAL DEFAULT 0,
+          line_total REAL NOT NULL
+        );
+        
+        -- Payments
+        CREATE TABLE IF NOT EXISTS payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          amount REAL NOT NULL,
+          payment_mode TEXT CHECK (payment_mode IN ('CASH','CARD','UPI','CREDIT')) NOT NULL,
+          reference_number TEXT,
+          payment_date TEXT NOT NULL DEFAULT (datetime('now')),
+          received_by INTEGER REFERENCES users(id),
+          remarks TEXT
+        );
+        
+        -- Insert default Standard price list
+        INSERT INTO price_lists (code, name, description, is_default, is_active) VALUES
+          ('STANDARD', 'Standard Price List', 'Default walk-in patient pricing', 1, 1),
+          ('CORPORATE', 'Corporate Price List', 'Corporate/company tie-up rates', 0, 1);
+        
+        -- Add GST and billing settings to lab_settings
+        INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES
+          ('gst_enabled', 'false'),
+          ('gst_mode', 'exclusive'),
+          ('gstin', ''),
+          ('discount_approval_threshold', '20');
+        
+        -- Seed sample test prices for Standard price list
+        INSERT INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+        SELECT 1, id, 
+          CASE test_code
+            WHEN 'CBC' THEN 350
+            WHEN 'ESR' THEN 100
+            WHEN 'GLUCOSE' THEN 80
+            WHEN 'RFT' THEN 450
+            WHEN 'LFT' THEN 550
+            WHEN 'LIPID' THEN 600
+            WHEN 'TFT' THEN 800
+            WHEN 'HBSAG' THEN 200
+            WHEN 'HIV' THEN 250
+            WHEN 'CRP' THEN 350
+            WHEN 'ASO' THEN 300
+            WHEN 'WIDAL' THEN 200
+            WHEN 'PROLACTIN' THEN 500
+            WHEN 'VITD' THEN 1200
+            WHEN 'VITB12' THEN 800
+            WHEN 'URINE' THEN 100
+            WHEN 'STOOL' THEN 100
+            WHEN 'COAG' THEN 450
+            ELSE 500
+          END,
+          0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+        
+        -- Seed Corporate prices (10% discount from standard)
+        INSERT INTO test_prices (price_list_id, test_id, base_price, auto_discount_percent, gst_applicable, gst_rate, effective_from)
+        SELECT 2, id, 
+          CASE test_code
+            WHEN 'CBC' THEN 315
+            WHEN 'ESR' THEN 90
+            WHEN 'GLUCOSE' THEN 72
+            WHEN 'RFT' THEN 405
+            WHEN 'LFT' THEN 495
+            WHEN 'LIPID' THEN 540
+            WHEN 'TFT' THEN 720
+            WHEN 'HBSAG' THEN 180
+            WHEN 'HIV' THEN 225
+            WHEN 'CRP' THEN 315
+            WHEN 'ASO' THEN 270
+            WHEN 'WIDAL' THEN 180
+            WHEN 'PROLACTIN' THEN 450
+            WHEN 'VITD' THEN 1080
+            WHEN 'VITB12' THEN 720
+            WHEN 'URINE' THEN 90
+            WHEN 'STOOL' THEN 90
+            WHEN 'COAG' THEN 405
+            ELSE 450
+          END,
+          0, 0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+      `
     }
   ];
 }
@@ -3461,6 +3630,672 @@ function searchDoctors(query) {
     LIMIT 20
   `, [`%${query}%`, `%${query}%`]);
 }
+function listPriceLists() {
+  return queryAll(`
+    SELECT * FROM price_lists
+    WHERE is_active = 1
+    ORDER BY is_default DESC, name ASC
+  `);
+}
+function listAllPriceLists() {
+  return queryAll(`
+    SELECT * FROM price_lists
+    ORDER BY is_default DESC, name ASC
+  `);
+}
+function getPriceList(id) {
+  return queryOne(`SELECT * FROM price_lists WHERE id = ?`, [id]);
+}
+function getDefaultPriceList() {
+  return queryOne(`SELECT * FROM price_lists WHERE is_default = 1 AND is_active = 1`);
+}
+function createPriceList(data) {
+  try {
+    if (data.isDefault) {
+      run(`UPDATE price_lists SET is_default = 0`);
+    }
+    const id = runWithId(`
+      INSERT INTO price_lists (code, name, description, is_default)
+      VALUES (?, ?, ?, ?)
+    `, [data.code, data.name, data.description || null, data.isDefault ? 1 : 0]);
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function updatePriceList(id, data) {
+  try {
+    const updates = [];
+    const params = [];
+    if (data.code !== void 0) {
+      updates.push("code = ?");
+      params.push(data.code);
+    }
+    if (data.name !== void 0) {
+      updates.push("name = ?");
+      params.push(data.name);
+    }
+    if (data.description !== void 0) {
+      updates.push("description = ?");
+      params.push(data.description);
+    }
+    if (data.isDefault !== void 0) {
+      if (data.isDefault) {
+        run(`UPDATE price_lists SET is_default = 0`);
+      }
+      updates.push("is_default = ?");
+      params.push(data.isDefault ? 1 : 0);
+    }
+    if (data.isActive !== void 0) {
+      updates.push("is_active = ?");
+      params.push(data.isActive ? 1 : 0);
+    }
+    if (updates.length > 0) {
+      params.push(id);
+      run(`UPDATE price_lists SET ${updates.join(", ")} WHERE id = ?`, params);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function deletePriceList(id) {
+  try {
+    const invoiceCount = queryOne(`
+      SELECT COUNT(*) as count FROM invoices WHERE price_list_id = ?
+    `, [id]);
+    if (invoiceCount && invoiceCount.count > 0) {
+      return { success: false, error: "Cannot delete price list with existing invoices. Deactivate instead." };
+    }
+    run(`UPDATE price_lists SET is_active = 0 WHERE id = ?`, [id]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function listTestPrices(priceListId) {
+  return queryAll(`
+    SELECT tp.*, t.test_code, tv.test_name
+    FROM test_prices tp
+    JOIN tests t ON tp.test_id = t.id
+    JOIN test_versions tv ON t.id = tv.test_id
+    WHERE tp.price_list_id = ?
+      AND tp.is_active = 1
+      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+      AND tv.status = 'PUBLISHED'
+    GROUP BY tp.test_id
+    ORDER BY tv.test_name ASC
+  `, [priceListId]);
+}
+function getTestPrice(testId, priceListId) {
+  return queryOne(`
+    SELECT tp.*, t.test_code, tv.test_name
+    FROM test_prices tp
+    JOIN tests t ON tp.test_id = t.id
+    JOIN test_versions tv ON t.id = tv.test_id
+    WHERE tp.test_id = ?
+      AND tp.price_list_id = ?
+      AND tp.is_active = 1
+      AND tp.effective_from <= datetime('now')
+      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+    ORDER BY tp.effective_from DESC
+    LIMIT 1
+  `, [testId, priceListId]);
+}
+function setTestPrice(priceListId, testId, data) {
+  try {
+    run(`
+      UPDATE test_prices 
+      SET is_active = 0 
+      WHERE price_list_id = ? AND test_id = ? AND is_active = 1
+    `, [priceListId, testId]);
+    const id = runWithId(`
+      INSERT INTO test_prices (
+        price_list_id, test_id, base_price, auto_discount_percent, 
+        discount_cap_percent, gst_applicable, gst_rate, effective_from, effective_to
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      priceListId,
+      testId,
+      data.basePrice,
+      data.autoDiscountPercent || 0,
+      data.discountCapPercent || 100,
+      data.gstApplicable ? 1 : 0,
+      data.gstRate || 0,
+      data.effectiveFrom || (/* @__PURE__ */ new Date()).toISOString(),
+      data.effectiveTo || null
+    ]);
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function bulkSetTestPrices(priceListId, prices) {
+  try {
+    let count = 0;
+    for (const price of prices) {
+      const result = setTestPrice(priceListId, price.testId, {
+        basePrice: price.basePrice,
+        gstApplicable: price.gstApplicable,
+        gstRate: price.gstRate
+      });
+      if (result.success) count++;
+    }
+    return { success: true, count };
+  } catch (error) {
+    return { success: false, count: 0, error: error.message };
+  }
+}
+function getTestPricesForTests(testIds, priceListId) {
+  const prices = /* @__PURE__ */ new Map();
+  if (testIds.length === 0) return prices;
+  const placeholders = testIds.map(() => "?").join(",");
+  const rows = queryAll(`
+    SELECT tp.*, t.test_code, tv.test_name
+    FROM test_prices tp
+    JOIN tests t ON tp.test_id = t.id
+    JOIN test_versions tv ON t.id = tv.test_id
+    WHERE tp.test_id IN (${placeholders})
+      AND tp.price_list_id = ?
+      AND tp.is_active = 1
+      AND tp.effective_from <= datetime('now')
+      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+    ORDER BY tp.effective_from DESC
+  `, [...testIds, priceListId]);
+  for (const row of rows) {
+    if (!prices.has(row.test_id)) {
+      prices.set(row.test_id, row);
+    }
+  }
+  return prices;
+}
+function listPackages(priceListId) {
+  if (priceListId) {
+    return queryAll(`
+      SELECT * FROM packages
+      WHERE (price_list_id = ? OR price_list_id IS NULL)
+        AND is_active = 1
+        AND (valid_to IS NULL OR valid_to >= datetime('now'))
+      ORDER BY name ASC
+    `, [priceListId]);
+  }
+  return queryAll(`
+    SELECT * FROM packages
+    WHERE is_active = 1
+    ORDER BY name ASC
+  `);
+}
+function getPackage(id) {
+  const pkg = queryOne(`SELECT * FROM packages WHERE id = ?`, [id]);
+  if (!pkg) return null;
+  const items = queryAll(`
+    SELECT pi.test_id, t.test_code, tv.test_name
+    FROM package_items pi
+    JOIN tests t ON pi.test_id = t.id
+    JOIN test_versions tv ON t.id = tv.test_id
+    WHERE pi.package_id = ?
+      AND tv.status = 'PUBLISHED'
+    GROUP BY pi.test_id
+  `, [id]);
+  return { ...pkg, items };
+}
+function createPackage(data) {
+  try {
+    const id = runWithId(`
+      INSERT INTO packages (code, name, description, package_price, price_list_id, valid_from, valid_to)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      data.code,
+      data.name,
+      data.description || null,
+      data.packagePrice,
+      data.priceListId || null,
+      data.validFrom || null,
+      data.validTo || null
+    ]);
+    for (const testId of data.testIds) {
+      run(`INSERT INTO package_items (package_id, test_id) VALUES (?, ?)`, [id, testId]);
+    }
+    return { success: true, id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function updatePackage(id, data) {
+  try {
+    const updates = [];
+    const params = [];
+    if (data.name !== void 0) {
+      updates.push("name = ?");
+      params.push(data.name);
+    }
+    if (data.description !== void 0) {
+      updates.push("description = ?");
+      params.push(data.description);
+    }
+    if (data.packagePrice !== void 0) {
+      updates.push("package_price = ?");
+      params.push(data.packagePrice);
+    }
+    if (data.validTo !== void 0) {
+      updates.push("valid_to = ?");
+      params.push(data.validTo);
+    }
+    if (data.isActive !== void 0) {
+      updates.push("is_active = ?");
+      params.push(data.isActive ? 1 : 0);
+    }
+    if (updates.length > 0) {
+      params.push(id);
+      run(`UPDATE packages SET ${updates.join(", ")} WHERE id = ?`, params);
+    }
+    if (data.testIds !== void 0) {
+      run(`DELETE FROM package_items WHERE package_id = ?`, [id]);
+      for (const testId of data.testIds) {
+        run(`INSERT INTO package_items (package_id, test_id) VALUES (?, ?)`, [id, testId]);
+      }
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function generateInvoiceNumber() {
+  const date = /* @__PURE__ */ new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const todayStart = date.toISOString().split("T")[0];
+  const count = queryOne(`
+    SELECT COUNT(*) as count FROM invoices 
+    WHERE created_at >= ? || 'T00:00:00'
+  `, [todayStart]);
+  const seq = (((count == null ? void 0 : count.count) || 0) + 1).toString().padStart(4, "0");
+  return `INV${year}${month}${seq}`;
+}
+function listInvoices(options = {}) {
+  const { limit = 50, offset = 0, status, patientId, fromDate, toDate } = options;
+  let sql = `
+    SELECT i.*, 
+           p.full_name as patient_name, p.patient_uid,
+           pl.name as price_list_name,
+           COALESCE(SUM(pay.amount), 0) as amount_paid,
+           i.total_amount - COALESCE(SUM(pay.amount), 0) as balance_due
+    FROM invoices i
+    JOIN patients p ON i.patient_id = p.id
+    LEFT JOIN price_lists pl ON i.price_list_id = pl.id
+    LEFT JOIN payments pay ON i.id = pay.invoice_id
+    WHERE 1=1
+  `;
+  const params = [];
+  if (status) {
+    sql += ` AND i.status = ?`;
+    params.push(status);
+  }
+  if (patientId) {
+    sql += ` AND i.patient_id = ?`;
+    params.push(patientId);
+  }
+  if (fromDate) {
+    sql += ` AND i.created_at >= ?`;
+    params.push(fromDate);
+  }
+  if (toDate) {
+    sql += ` AND i.created_at <= ?`;
+    params.push(toDate);
+  }
+  sql += ` GROUP BY i.id ORDER BY i.created_at DESC LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+  return queryAll(sql, params);
+}
+function getInvoice(id) {
+  const invoice = queryOne(`
+    SELECT i.*, 
+           p.full_name as patient_name, p.patient_uid, p.phone as patient_phone,
+           p.gender as patient_gender, p.dob as patient_dob, p.address as patient_address,
+           pl.name as price_list_name,
+           d.name as doctor_name,
+           u.full_name as created_by_name
+    FROM invoices i
+    JOIN patients p ON i.patient_id = p.id
+    LEFT JOIN price_lists pl ON i.price_list_id = pl.id
+    LEFT JOIN orders o ON i.order_id = o.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
+    LEFT JOIN users u ON i.created_by = u.id
+    WHERE i.id = ?
+  `, [id]);
+  if (!invoice) return null;
+  const items = queryAll(`
+    SELECT * FROM invoice_items WHERE invoice_id = ?
+  `, [id]);
+  const payments = queryAll(`
+    SELECT pay.*, u.full_name as received_by_name
+    FROM payments pay
+    LEFT JOIN users u ON pay.received_by = u.id
+    WHERE pay.invoice_id = ?
+    ORDER BY pay.payment_date DESC
+  `, [id]);
+  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+  return {
+    ...invoice,
+    items,
+    payments,
+    amount_paid: totalPaid,
+    balance_due: invoice.total_amount - totalPaid
+  };
+}
+function getInvoiceByOrder(orderId) {
+  return queryOne(`
+    SELECT * FROM invoices WHERE order_id = ? AND status != 'CANCELLED'
+  `, [orderId]);
+}
+function createInvoice(data) {
+  try {
+    const db2 = getDb();
+    const existing = getInvoiceByOrder(data.orderId);
+    if (existing) {
+      return { success: false, error: "Invoice already exists for this order" };
+    }
+    const testPrices = getTestPricesForTests(data.testIds, data.priceListId);
+    let subtotal = 0;
+    const items = [];
+    for (const testId of data.testIds) {
+      const price = testPrices.get(testId);
+      if (price) {
+        const unitPrice = price.base_price;
+        const gstRate = price.gst_applicable ? price.gst_rate : 0;
+        const gstAmount = unitPrice * gstRate / 100;
+        const lineTotal = unitPrice + gstAmount;
+        subtotal += unitPrice;
+        items.push({
+          testId,
+          description: `${price.test_code} - ${price.test_name}`,
+          unitPrice,
+          gstRate,
+          gstAmount,
+          lineTotal
+        });
+      }
+    }
+    let discountAmount = data.discountAmount || 0;
+    if (data.discountPercent && data.discountPercent > 0) {
+      discountAmount = subtotal * data.discountPercent / 100;
+    }
+    const discountedSubtotal = subtotal - discountAmount;
+    let totalGst = 0;
+    for (const item of items) {
+      if (item.gstRate > 0) {
+        const proportion = item.unitPrice / subtotal;
+        const itemDiscountedPrice = discountedSubtotal * proportion;
+        item.gstAmount = itemDiscountedPrice * item.gstRate / 100;
+        totalGst += item.gstAmount;
+      }
+    }
+    const totalAmount = discountedSubtotal + totalGst;
+    const invoiceNumber = generateInvoiceNumber();
+    const invoiceId = runWithId(`
+      INSERT INTO invoices (
+        invoice_number, order_id, patient_id, price_list_id,
+        subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by,
+        gst_amount, total_amount, status, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
+    `, [
+      invoiceNumber,
+      data.orderId,
+      data.patientId,
+      data.priceListId,
+      subtotal,
+      discountAmount,
+      data.discountPercent || 0,
+      data.discountReason || null,
+      data.discountApprovedBy || null,
+      totalGst,
+      totalAmount,
+      data.createdBy || null
+    ]);
+    for (const item of items) {
+      run(`
+        INSERT INTO invoice_items (
+          invoice_id, test_id, description, unit_price, quantity,
+          discount_amount, gst_rate, gst_amount, line_total
+        ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+      `, [
+        invoiceId,
+        item.testId,
+        item.description,
+        item.unitPrice,
+        item.gstRate,
+        item.gstAmount,
+        item.lineTotal
+      ]);
+    }
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+      VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
+    `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
+    return { success: true, invoiceId, invoiceNumber };
+  } catch (error) {
+    console.error("Create invoice error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function finalizeInvoice(id, userId) {
+  try {
+    const invoice = queryOne(`SELECT * FROM invoices WHERE id = ?`, [id]);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+    if (invoice.status !== "DRAFT") {
+      return { success: false, error: "Only draft invoices can be finalized" };
+    }
+    run(`
+      UPDATE invoices SET status = 'FINALIZED', finalized_at = datetime('now')
+      WHERE id = ?
+    `, [id]);
+    run(`UPDATE orders SET payment_status = 'INVOICED' WHERE id = ?`, [invoice.order_id]);
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, performed_by, performed_at)
+      VALUES ('invoice', ?, 'FINALIZE', ?, datetime('now'))
+    `, [id, userId || null]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function cancelInvoice(id, reason, userId) {
+  try {
+    const invoice = queryOne(`SELECT * FROM invoices WHERE id = ?`, [id]);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+    if (invoice.status === "CANCELLED") {
+      return { success: false, error: "Invoice is already cancelled" };
+    }
+    const payments = queryOne(`
+      SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?
+    `, [id]);
+    if (payments && payments.total > 0) {
+      return { success: false, error: "Cannot cancel invoice with payments. Refund first." };
+    }
+    run(`
+      UPDATE invoices 
+      SET status = 'CANCELLED', 
+          cancelled_at = datetime('now'),
+          cancelled_by = ?,
+          cancellation_reason = ?
+      WHERE id = ?
+    `, [userId, reason, id]);
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, old_value, new_value, performed_by, performed_at)
+      VALUES ('invoice', ?, 'CANCEL', ?, ?, ?, datetime('now'))
+    `, [id, invoice.status, reason, userId]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function getPatientDues(patientId) {
+  const invoices = queryAll(`
+    SELECT i.*, 
+           COALESCE(SUM(pay.amount), 0) as amount_paid,
+           i.total_amount - COALESCE(SUM(pay.amount), 0) as balance_due
+    FROM invoices i
+    LEFT JOIN payments pay ON i.id = pay.invoice_id
+    WHERE i.patient_id = ? 
+      AND i.status = 'FINALIZED'
+    GROUP BY i.id
+    HAVING balance_due > 0
+    ORDER BY i.created_at ASC
+  `, [patientId]);
+  const totalDue = invoices.reduce((sum, inv) => sum + (inv.balance_due || 0), 0);
+  return { totalDue, invoices };
+}
+function getInvoiceSummary(fromDate, toDate) {
+  const dateFilter = fromDate ? `AND created_at >= '${fromDate}'` : "";
+  const toDateFilter = toDate ? `AND created_at <= '${toDate}'` : "";
+  const summary = queryOne(`
+    SELECT 
+      COUNT(*) as total_invoices,
+      COALESCE(SUM(total_amount), 0) as total_amount,
+      COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id IN (
+        SELECT id FROM invoices WHERE status = 'FINALIZED' ${dateFilter} ${toDateFilter}
+      )), 0) as total_collected
+    FROM invoices
+    WHERE status = 'FINALIZED' ${dateFilter} ${toDateFilter}
+  `);
+  return {
+    ...summary,
+    total_pending: ((summary == null ? void 0 : summary.total_amount) || 0) - ((summary == null ? void 0 : summary.total_collected) || 0)
+  };
+}
+function recordPayment(data) {
+  try {
+    const invoice = queryOne(`
+      SELECT id, status, total_amount FROM invoices WHERE id = ?
+    `, [data.invoiceId]);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+    const paid = queryOne(`
+      SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?
+    `, [data.invoiceId]);
+    const currentPaid = (paid == null ? void 0 : paid.total) || 0;
+    const remaining = invoice.total_amount - currentPaid;
+    if (data.amount > remaining + 0.01) {
+      return { success: false, error: `Payment amount exceeds balance. Remaining: ₹${remaining.toFixed(2)}` };
+    }
+    const paymentId = runWithId(`
+      INSERT INTO payments (invoice_id, amount, payment_mode, reference_number, received_by, remarks)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      data.invoiceId,
+      data.amount,
+      data.paymentMode,
+      data.referenceNumber || null,
+      data.receivedBy || null,
+      data.remarks || null
+    ]);
+    const newTotal = currentPaid + data.amount;
+    if (newTotal >= invoice.total_amount - 0.01) {
+      const inv = queryOne(`SELECT order_id FROM invoices WHERE id = ?`, [data.invoiceId]);
+      if (inv) {
+        run(`UPDATE orders SET payment_status = 'PAID' WHERE id = ?`, [inv.order_id]);
+      }
+    }
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+      VALUES ('payment', ?, 'CREATE', ?, ?, datetime('now'))
+    `, [paymentId, JSON.stringify({ amount: data.amount, mode: data.paymentMode }), data.receivedBy || null]);
+    return { success: true, paymentId };
+  } catch (error) {
+    console.error("Record payment error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function listPayments(invoiceId) {
+  return queryAll(`
+    SELECT p.*, u.full_name as received_by_name
+    FROM payments p
+    LEFT JOIN users u ON p.received_by = u.id
+    WHERE p.invoice_id = ?
+    ORDER BY p.payment_date DESC
+  `, [invoiceId]);
+}
+function getPayment(id) {
+  return queryOne(`
+    SELECT p.*, u.full_name as received_by_name
+    FROM payments p
+    LEFT JOIN users u ON p.received_by = u.id
+    WHERE p.id = ?
+  `, [id]);
+}
+function getPatientPaymentHistory(patientId) {
+  return queryAll(`
+    SELECT p.*, u.full_name as received_by_name, i.invoice_number
+    FROM payments p
+    JOIN invoices i ON p.invoice_id = i.id
+    LEFT JOIN users u ON p.received_by = u.id
+    WHERE i.patient_id = ?
+    ORDER BY p.payment_date DESC
+  `, [patientId]);
+}
+function getDailyCollection(date) {
+  const targetDate = date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const payments = queryAll(`
+    SELECT p.*, u.full_name as received_by_name
+    FROM payments p
+    LEFT JOIN users u ON p.received_by = u.id
+    WHERE DATE(p.payment_date) = DATE(?)
+    ORDER BY p.payment_date DESC
+  `, [targetDate]);
+  const totals = {
+    totalCash: 0,
+    totalCard: 0,
+    totalUpi: 0,
+    totalCredit: 0,
+    grandTotal: 0
+  };
+  for (const p of payments) {
+    totals.grandTotal += p.amount;
+    switch (p.payment_mode) {
+      case "CASH":
+        totals.totalCash += p.amount;
+        break;
+      case "CARD":
+        totals.totalCard += p.amount;
+        break;
+      case "UPI":
+        totals.totalUpi += p.amount;
+        break;
+      case "CREDIT":
+        totals.totalCredit += p.amount;
+        break;
+    }
+  }
+  return { ...totals, payments };
+}
+function getOutstandingDues() {
+  return queryAll(`
+    SELECT 
+      p.id as patient_id,
+      p.full_name as patient_name,
+      p.patient_uid,
+      COALESCE(SUM(i.total_amount), 0) as total_invoiced,
+      COALESCE(SUM(paid.total_paid), 0) as total_paid,
+      COALESCE(SUM(i.total_amount), 0) - COALESCE(SUM(paid.total_paid), 0) as balance_due,
+      MIN(i.created_at) as oldest_invoice_date
+    FROM patients p
+    JOIN invoices i ON p.id = i.patient_id
+    LEFT JOIN (
+      SELECT invoice_id, SUM(amount) as total_paid
+      FROM payments
+      GROUP BY invoice_id
+    ) paid ON i.id = paid.invoice_id
+    WHERE i.status = 'FINALIZED'
+    GROUP BY p.id
+    HAVING balance_due > 0
+    ORDER BY balance_due DESC
+  `);
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -3529,7 +4364,42 @@ const IPC_CHANNELS = {
   DOCTOR_CREATE: "doctor:create",
   DOCTOR_UPDATE: "doctor:update",
   DOCTOR_TOGGLE_ACTIVE: "doctor:toggleActive",
-  DOCTOR_SEARCH: "doctor:search"
+  DOCTOR_SEARCH: "doctor:search",
+  // Price Lists
+  PRICE_LIST_LIST: "priceList:list",
+  PRICE_LIST_LIST_ALL: "priceList:listAll",
+  PRICE_LIST_GET: "priceList:get",
+  PRICE_LIST_GET_DEFAULT: "priceList:getDefault",
+  PRICE_LIST_CREATE: "priceList:create",
+  PRICE_LIST_UPDATE: "priceList:update",
+  PRICE_LIST_DELETE: "priceList:delete",
+  // Test Prices
+  TEST_PRICE_LIST: "testPrice:list",
+  TEST_PRICE_GET: "testPrice:get",
+  TEST_PRICE_SET: "testPrice:set",
+  TEST_PRICE_BULK_SET: "testPrice:bulkSet",
+  TEST_PRICE_GET_FOR_TESTS: "testPrice:getForTests",
+  // Packages
+  PACKAGE_LIST: "package:list",
+  PACKAGE_GET: "package:get",
+  PACKAGE_CREATE: "package:create",
+  PACKAGE_UPDATE: "package:update",
+  // Invoices
+  INVOICE_LIST: "invoice:list",
+  INVOICE_GET: "invoice:get",
+  INVOICE_GET_BY_ORDER: "invoice:getByOrder",
+  INVOICE_CREATE: "invoice:create",
+  INVOICE_FINALIZE: "invoice:finalize",
+  INVOICE_CANCEL: "invoice:cancel",
+  INVOICE_PATIENT_DUES: "invoice:patientDues",
+  INVOICE_SUMMARY: "invoice:summary",
+  // Payments
+  PAYMENT_RECORD: "payment:record",
+  PAYMENT_LIST: "payment:list",
+  PAYMENT_GET: "payment:get",
+  PAYMENT_PATIENT_HISTORY: "payment:patientHistory",
+  PAYMENT_DAILY_COLLECTION: "payment:dailyCollection",
+  PAYMENT_OUTSTANDING_DUES: "payment:outstandingDues"
 };
 createRequire(import.meta.url);
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
@@ -3732,6 +4602,97 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.DOCTOR_SEARCH, (_, query) => {
     return searchDoctors(query);
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_LIST, () => {
+    return listPriceLists();
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_LIST_ALL, () => {
+    return listAllPriceLists();
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_GET, (_, id) => {
+    return getPriceList(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_GET_DEFAULT, () => {
+    return getDefaultPriceList();
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_CREATE, (_, data) => {
+    return createPriceList(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_UPDATE, (_, id, data) => {
+    return updatePriceList(id, data);
+  });
+  ipcMain.handle(IPC_CHANNELS.PRICE_LIST_DELETE, (_, id) => {
+    return deletePriceList(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_LIST, (_, priceListId) => {
+    return listTestPrices(priceListId);
+  });
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_GET, (_, testId, priceListId) => {
+    return getTestPrice(testId, priceListId);
+  });
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_SET, (_, priceListId, testId, data) => {
+    return setTestPrice(priceListId, testId, data);
+  });
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_BULK_SET, (_, priceListId, prices) => {
+    return bulkSetTestPrices(priceListId, prices);
+  });
+  ipcMain.handle(IPC_CHANNELS.TEST_PRICE_GET_FOR_TESTS, (_, testIds, priceListId) => {
+    const priceMap = getTestPricesForTests(testIds, priceListId);
+    return Object.fromEntries(priceMap);
+  });
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_LIST, (_, priceListId) => {
+    return listPackages(priceListId);
+  });
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_GET, (_, id) => {
+    return getPackage(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_CREATE, (_, data) => {
+    return createPackage(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.PACKAGE_UPDATE, (_, id, data) => {
+    return updatePackage(id, data);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_LIST, (_, options) => {
+    return listInvoices(options);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_GET, (_, id) => {
+    return getInvoice(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_GET_BY_ORDER, (_, orderId) => {
+    return getInvoiceByOrder(orderId);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_CREATE, (_, data) => {
+    return createInvoice(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_FINALIZE, (_, id, userId) => {
+    return finalizeInvoice(id, userId);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_CANCEL, (_, id, reason, userId) => {
+    return cancelInvoice(id, reason, userId);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_PATIENT_DUES, (_, patientId) => {
+    return getPatientDues(patientId);
+  });
+  ipcMain.handle(IPC_CHANNELS.INVOICE_SUMMARY, (_, fromDate, toDate) => {
+    return getInvoiceSummary(fromDate, toDate);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_RECORD, (_, data) => {
+    return recordPayment(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_LIST, (_, invoiceId) => {
+    return listPayments(invoiceId);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_GET, (_, id) => {
+    return getPayment(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_PATIENT_HISTORY, (_, patientId) => {
+    return getPatientPaymentHistory(patientId);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_DAILY_COLLECTION, (_, date) => {
+    return getDailyCollection(date);
+  });
+  ipcMain.handle(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES, () => {
+    return getOutstandingDues();
   });
 }
 app.on("window-all-closed", () => {

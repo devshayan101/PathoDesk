@@ -158,6 +158,86 @@ const api = {
     search: (query: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_SEARCH, query),
   },
+
+  // Price Lists
+  priceLists: {
+    list: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_LIST),
+    listAll: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_LIST_ALL),
+    get: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_GET, id),
+    getDefault: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_GET_DEFAULT),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_UPDATE, id, data),
+    delete: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PRICE_LIST_DELETE, id),
+  },
+
+  // Test Prices
+  testPrices: {
+    list: (priceListId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_PRICE_LIST, priceListId),
+    get: (testId: number, priceListId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_PRICE_GET, testId, priceListId),
+    set: (priceListId: number, testId: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_PRICE_SET, priceListId, testId, data),
+    bulkSet: (priceListId: number, prices: any[]) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_PRICE_BULK_SET, priceListId, prices),
+    getForTests: (testIds: number[], priceListId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_PRICE_GET_FOR_TESTS, testIds, priceListId),
+  },
+
+  // Packages
+  packages: {
+    list: (priceListId?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_LIST, priceListId),
+    get: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_GET, id),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PACKAGE_UPDATE, id, data),
+  },
+
+  // Invoices
+  invoices: {
+    list: (options?: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_LIST, options),
+    get: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_GET, id),
+    getByOrder: (orderId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_GET_BY_ORDER, orderId),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_CREATE, data),
+    finalize: (id: number, userId?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_FINALIZE, id, userId),
+    cancel: (id: number, reason: string, userId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_CANCEL, id, reason, userId),
+    getPatientDues: (patientId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_PATIENT_DUES, patientId),
+    getSummary: (fromDate?: string, toDate?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_SUMMARY, fromDate, toDate),
+  },
+
+  // Payments
+  payments: {
+    record: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_RECORD, data),
+    list: (invoiceId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_LIST, invoiceId),
+    get: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_GET, id),
+    getPatientHistory: (patientId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_PATIENT_HISTORY, patientId),
+    getDailyCollection: (date?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_DAILY_COLLECTION, date),
+    getOutstandingDues: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES),
+  },
 }
 
 // Expose to window
@@ -169,3 +249,4 @@ declare global {
     electronAPI: typeof api
   }
 }
+

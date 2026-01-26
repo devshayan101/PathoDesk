@@ -10,6 +10,8 @@ import ResultsPage from './pages/Results/Results';
 import TestMasterPage from './pages/TestMaster/TestMaster';
 import AdminPage from './pages/Admin/Admin';
 import DoctorsPage from './pages/Doctors/Doctors';
+import PriceListsPage from './pages/Admin/PriceLists';
+import InvoicesPage from './pages/Billing/Invoices';
 import './index.css';
 
 // Protected route wrapper
@@ -92,9 +94,26 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/price-lists"
+          element={
+            <ProtectedRoute>
+              <PriceListsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/invoices"
+          element={
+            <ProtectedRoute>
+              <InvoicesPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </HashRouter>
   );
 }
 
 export default App;
+

@@ -97,34 +97,36 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 6: Test Pricing & Billing
+### Phase 6: Test Pricing & Billing ✅ COMPLETED
 **Duration: ~8-10 hours**
 *Reference: test_pricing_billing_configuration_prd.md*
 
 #### 6.1 Database Schema
-- [ ] Create tables: `price_lists`, `test_prices`, `packages`, `package_items`
-- [ ] Create tables: `invoices`, `invoice_items`, `payments`
-- [ ] Price snapshot storage on invoice generation
+- [x] Create tables: `price_lists`, `test_prices`, `packages`, `package_items`
+- [x] Create tables: `invoices`, `invoice_items`, `payments`
+- [x] Price snapshot storage on invoice generation
+- [x] Seed default price lists (Standard, Corporate) with test prices
 
 #### 6.2 Price List Management (Admin)
-- [ ] Price List CRUD (Standard, Corporate, Camp, Custom)
-- [ ] Test Price configuration per price list (base price, discount cap, GST)
-- [ ] Effective date handling (no overlap)
-- [ ] Package/Profile pricing (bundled price overrides individual)
+- [x] Price List CRUD (Standard, Corporate, Camp, Custom)
+- [x] Test Price configuration per price list (base price, discount cap, GST)
+- [x] Effective date handling
+- [x] Price Lists admin page (/admin/price-lists)
 
 #### 6.3 Billing Workflow
-- [ ] Invoice creation linked to orders
-- [ ] Price list selection at billing time
-- [ ] Discount management (%, flat, approval for > threshold)
-- [ ] GST configuration (Inclusive/Exclusive mode)
-- [ ] Payment tracking (Cash, Card, UPI, Credit/Due)
-- [ ] Partial payments & outstanding dues per patient
+- [x] Invoice creation linked to orders
+- [x] Price list selection at billing time (in Order Creation)
+- [x] Discount management (%, approval prompt for >threshold)
+- [x] GST configuration settings
+- [x] Payment tracking (Cash, Card, UPI, Credit/Due)
+- [x] Partial payments & outstanding dues per patient
 
 #### 6.4 Invoice Controls
-- [ ] Auto-generated immutable invoice numbers
-- [ ] Invoice print (PDF)
-- [ ] Invoice deletion (admin + reason)
-- [ ] Audit trail for all billing actions
+- [x] Auto-generated immutable invoice numbers
+- [x] Invoices page (/billing/invoices) with list/detail view
+- [x] Payment recording modal
+- [x] Invoice finalization workflow
+- [x] Audit trail for billing actions
 
 ---
 

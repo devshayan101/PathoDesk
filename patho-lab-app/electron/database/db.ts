@@ -891,6 +891,175 @@ function getMigrations() {
           ('DR002', 'Dr. Priya Sharma', 'Cardiologist', '+91 98765 22222'),
           ('DR003', 'Dr. Suresh Patel', 'Orthopedic', '+91 98765 33333');
       `
+    },
+    {
+      name: '013_billing_pricing',
+      sql: `
+        -- Price Lists (Standard, Corporate, Camp, Custom)
+        CREATE TABLE IF NOT EXISTS price_lists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          is_default INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Test Prices per Price List
+        CREATE TABLE IF NOT EXISTS test_prices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          price_list_id INTEGER NOT NULL REFERENCES price_lists(id),
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          base_price REAL NOT NULL,
+          auto_discount_percent REAL DEFAULT 0,
+          discount_cap_percent REAL DEFAULT 100,
+          gst_applicable INTEGER DEFAULT 0,
+          gst_rate REAL DEFAULT 0,
+          effective_from TEXT NOT NULL,
+          effective_to TEXT,
+          is_active INTEGER DEFAULT 1,
+          UNIQUE(price_list_id, test_id, effective_from)
+        );
+        
+        -- Packages (commercial bundles)
+        CREATE TABLE IF NOT EXISTS packages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          package_price REAL NOT NULL,
+          price_list_id INTEGER REFERENCES price_lists(id),
+          valid_from TEXT,
+          valid_to TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Package Items (tests in package)
+        CREATE TABLE IF NOT EXISTS package_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          package_id INTEGER NOT NULL REFERENCES packages(id),
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          UNIQUE(package_id, test_id)
+        );
+        
+        -- Invoices
+        CREATE TABLE IF NOT EXISTS invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_number TEXT UNIQUE NOT NULL,
+          order_id INTEGER NOT NULL REFERENCES orders(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          price_list_id INTEGER REFERENCES price_lists(id),
+          subtotal REAL NOT NULL,
+          discount_amount REAL DEFAULT 0,
+          discount_percent REAL DEFAULT 0,
+          discount_reason TEXT,
+          discount_approved_by INTEGER REFERENCES users(id),
+          gst_amount REAL DEFAULT 0,
+          total_amount REAL NOT NULL,
+          status TEXT CHECK (status IN ('DRAFT','FINALIZED','CANCELLED')) DEFAULT 'DRAFT',
+          created_by INTEGER REFERENCES users(id),
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          finalized_at TEXT,
+          cancelled_at TEXT,
+          cancelled_by INTEGER REFERENCES users(id),
+          cancellation_reason TEXT
+        );
+        
+        -- Invoice Items (price snapshot)
+        CREATE TABLE IF NOT EXISTS invoice_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          test_id INTEGER REFERENCES tests(id),
+          package_id INTEGER REFERENCES packages(id),
+          description TEXT NOT NULL,
+          unit_price REAL NOT NULL,
+          quantity INTEGER DEFAULT 1,
+          discount_amount REAL DEFAULT 0,
+          gst_rate REAL DEFAULT 0,
+          gst_amount REAL DEFAULT 0,
+          line_total REAL NOT NULL
+        );
+        
+        -- Payments
+        CREATE TABLE IF NOT EXISTS payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          amount REAL NOT NULL,
+          payment_mode TEXT CHECK (payment_mode IN ('CASH','CARD','UPI','CREDIT')) NOT NULL,
+          reference_number TEXT,
+          payment_date TEXT NOT NULL DEFAULT (datetime('now')),
+          received_by INTEGER REFERENCES users(id),
+          remarks TEXT
+        );
+        
+        -- Insert default Standard price list
+        INSERT INTO price_lists (code, name, description, is_default, is_active) VALUES
+          ('STANDARD', 'Standard Price List', 'Default walk-in patient pricing', 1, 1),
+          ('CORPORATE', 'Corporate Price List', 'Corporate/company tie-up rates', 0, 1);
+        
+        -- Add GST and billing settings to lab_settings
+        INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES
+          ('gst_enabled', 'false'),
+          ('gst_mode', 'exclusive'),
+          ('gstin', ''),
+          ('discount_approval_threshold', '20');
+        
+        -- Seed sample test prices for Standard price list
+        INSERT INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+        SELECT 1, id, 
+          CASE test_code
+            WHEN 'CBC' THEN 350
+            WHEN 'ESR' THEN 100
+            WHEN 'GLUCOSE' THEN 80
+            WHEN 'RFT' THEN 450
+            WHEN 'LFT' THEN 550
+            WHEN 'LIPID' THEN 600
+            WHEN 'TFT' THEN 800
+            WHEN 'HBSAG' THEN 200
+            WHEN 'HIV' THEN 250
+            WHEN 'CRP' THEN 350
+            WHEN 'ASO' THEN 300
+            WHEN 'WIDAL' THEN 200
+            WHEN 'PROLACTIN' THEN 500
+            WHEN 'VITD' THEN 1200
+            WHEN 'VITB12' THEN 800
+            WHEN 'URINE' THEN 100
+            WHEN 'STOOL' THEN 100
+            WHEN 'COAG' THEN 450
+            ELSE 500
+          END,
+          0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+        
+        -- Seed Corporate prices (10% discount from standard)
+        INSERT INTO test_prices (price_list_id, test_id, base_price, auto_discount_percent, gst_applicable, gst_rate, effective_from)
+        SELECT 2, id, 
+          CASE test_code
+            WHEN 'CBC' THEN 315
+            WHEN 'ESR' THEN 90
+            WHEN 'GLUCOSE' THEN 72
+            WHEN 'RFT' THEN 405
+            WHEN 'LFT' THEN 495
+            WHEN 'LIPID' THEN 540
+            WHEN 'TFT' THEN 720
+            WHEN 'HBSAG' THEN 180
+            WHEN 'HIV' THEN 225
+            WHEN 'CRP' THEN 315
+            WHEN 'ASO' THEN 270
+            WHEN 'WIDAL' THEN 180
+            WHEN 'PROLACTIN' THEN 450
+            WHEN 'VITD' THEN 1080
+            WHEN 'VITB12' THEN 720
+            WHEN 'URINE' THEN 90
+            WHEN 'STOOL' THEN 90
+            WHEN 'COAG' THEN 405
+            ELSE 450
+          END,
+          0, 0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+      `
     }
   ];
 }

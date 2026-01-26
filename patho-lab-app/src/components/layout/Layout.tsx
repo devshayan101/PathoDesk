@@ -8,8 +8,10 @@ const navItems = [
     { path: '/orders', label: 'Orders', roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
     { path: '/samples', label: 'Samples', roles: ['admin', 'technician', 'pathologist'] },
     { path: '/results', label: 'Results', roles: ['admin', 'technician', 'pathologist'] },
+    { path: '/billing/invoices', label: 'Billing', roles: ['admin', 'receptionist'] },
     { path: '/test-master', label: 'Test Master', roles: ['admin'] },
     { path: '/doctors', label: 'Doctors', roles: ['admin', 'receptionist'] },
+    { path: '/admin/price-lists', label: 'Price Lists', roles: ['admin'] },
     { path: '/admin', label: 'Admin', roles: ['admin'] },
 ];
 
