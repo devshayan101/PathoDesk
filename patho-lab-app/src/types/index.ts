@@ -245,6 +245,16 @@ export const IPC_CHANNELS = {
     PAYMENT_PATIENT_HISTORY: 'payment:patientHistory',
     PAYMENT_DAILY_COLLECTION: 'payment:dailyCollection',
     PAYMENT_OUTSTANDING_DUES: 'payment:outstandingDues',
+
+    // Commissions
+    COMMISSION_GET_DOCTOR_COMMISSIONS: 'commission:getDoctorCommissions',
+    COMMISSION_GET_MONTHLY_SUMMARY: 'commission:getMonthlySummary',
+    COMMISSION_GET_STATEMENT: 'commission:getStatement',
+    COMMISSION_GET_DOCTORS_WITH_PENDING: 'commission:getDoctorsWithPending',
+    COMMISSION_CREATE_SETTLEMENT: 'commission:createSettlement',
+    COMMISSION_RECORD_PAYMENT: 'commission:recordPayment',
+    COMMISSION_GET_SETTLEMENT: 'commission:getSettlement',
+    COMMISSION_LIST_SETTLEMENTS: 'commission:listSettlements',
 } as const;
 
 // Billing Types

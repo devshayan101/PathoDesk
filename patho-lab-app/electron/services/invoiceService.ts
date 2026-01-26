@@ -1,5 +1,6 @@
 import { queryAll, queryOne, run, runWithId, getDb } from '../database/db';
 import { getTestPricesForTests } from './billingService';
+import { calculateAndRecordCommission, reverseCommission } from './commissionService';
 
 // Types
 interface InvoiceRow {
@@ -299,6 +300,22 @@ export function createInvoice(data: {
           VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
         `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
 
+            // Calculate and record commission if there's a referring doctor
+            const order = queryOne<{ referring_doctor_id: number | null }>(`
+          SELECT referring_doctor_id FROM orders WHERE id = ?
+        `, [data.orderId]);
+
+            if (order?.referring_doctor_id) {
+                const commissionResult = calculateAndRecordCommission(
+                    invoiceId,
+                    order.referring_doctor_id,
+                    data.patientId
+                );
+                if (!commissionResult.success) {
+                    console.warn('Commission calculation failed:', commissionResult.error);
+                }
+            }
+
             return { success: true, invoiceId, invoiceNumber };
         } catch (error: any) {
             // If it's a UNIQUE constraint error and we have retries left, try again
@@ -376,6 +393,9 @@ export function cancelInvoice(id: number, reason: string, userId: number): { suc
           cancellation_reason = ?
       WHERE id = ?
     `, [userId, reason, id]);
+
+        // Reverse commission if exists
+        reverseCommission(id);
 
         // Audit log
         run(`

@@ -7,6 +7,9 @@ interface Doctor {
     specialty?: string;
     phone?: string;
     clinic_address?: string;
+    commission_model?: string;
+    commission_rate?: number;
+    price_list_id?: number;
     is_active: number;
     created_at: string;
 }
@@ -17,12 +20,16 @@ interface DoctorInput {
     specialty?: string;
     phone?: string;
     clinicAddress?: string;
+    commissionModel?: string;
+    commissionRate?: number;
+    priceListId?: number;
 }
 
 // List all active doctors
 export function listDoctors(): Doctor[] {
     return queryAll<Doctor>(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
+           commission_model, commission_rate, price_list_id, is_active, created_at
     FROM doctors
     WHERE is_active = 1
     ORDER BY name ASC
@@ -32,7 +39,8 @@ export function listDoctors(): Doctor[] {
 // List all doctors (including inactive, for admin)
 export function listAllDoctors(): Doctor[] {
     return queryAll<Doctor>(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
+           commission_model, commission_rate, price_list_id, is_active, created_at
     FROM doctors
     ORDER BY name ASC
   `);
@@ -47,9 +55,21 @@ export function getDoctor(id: number): Doctor | null {
 export function createDoctor(data: DoctorInput): { success: boolean; id?: number; error?: string } {
     try {
         const id = runWithId(`
-      INSERT INTO doctors (doctor_code, name, specialty, phone, clinic_address, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-    `, [data.doctorCode, data.name, data.specialty || null, data.phone || null, data.clinicAddress || null]);
+      INSERT INTO doctors (
+        doctor_code, name, specialty, phone, clinic_address, 
+        commission_model, commission_rate, price_list_id, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+            data.doctorCode,
+            data.name,
+            data.specialty || null,
+            data.phone || null,
+            data.clinicAddress || null,
+            data.commissionModel || 'NONE',
+            data.commissionRate || 0,
+            data.priceListId || null
+        ]);
 
         return { success: true, id };
     } catch (error: any) {
@@ -83,6 +103,18 @@ export function updateDoctor(id: number, data: Partial<DoctorInput>): { success:
         if (data.clinicAddress !== undefined) {
             updates.push('clinic_address = ?');
             values.push(data.clinicAddress || null);
+        }
+        if (data.commissionModel !== undefined) {
+            updates.push('commission_model = ?');
+            values.push(data.commissionModel || 'NONE');
+        }
+        if (data.commissionRate !== undefined) {
+            updates.push('commission_rate = ?');
+            values.push(data.commissionRate || 0);
+        }
+        if (data.priceListId !== undefined) {
+            updates.push('price_list_id = ?');
+            values.push(data.priceListId || null);
         }
 
         if (updates.length === 0) {

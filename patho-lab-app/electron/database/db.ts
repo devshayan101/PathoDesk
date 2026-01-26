@@ -1060,6 +1060,121 @@ function getMigrations() {
           0, 0, 0, datetime('now')
         FROM tests WHERE is_active = 1;
       `
+    },
+    {
+      name: '014_doctor_pricing_commission',
+      sql: `
+        -- ========================================
+        -- Doctor Referral Pricing & Commission Management
+        -- ========================================
+        
+        -- 1. Extend doctors table with commission configuration
+        ALTER TABLE doctors ADD COLUMN commission_model TEXT CHECK (commission_model IN ('PERCENTAGE','FLAT','NONE')) DEFAULT 'NONE';
+        ALTER TABLE doctors ADD COLUMN commission_rate REAL DEFAULT 0;
+        ALTER TABLE doctors ADD COLUMN price_list_id INTEGER REFERENCES price_lists(id);
+        
+        -- 2. Doctor Price Lists (for tracking doctor-specific price list assignments)
+        CREATE TABLE IF NOT EXISTS doctor_price_lists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          price_list_id INTEGER NOT NULL REFERENCES price_lists(id),
+          is_default INTEGER DEFAULT 1,
+          effective_from TEXT NOT NULL DEFAULT (datetime('now')),
+          effective_to TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          UNIQUE(doctor_id, price_list_id, effective_from)
+        );
+        
+        -- 3. Doctor Commissions (commission snapshot per invoice)
+        CREATE TABLE IF NOT EXISTS doctor_commissions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          invoice_item_id INTEGER REFERENCES invoice_items(id),
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          test_id INTEGER REFERENCES tests(id),
+          test_description TEXT,
+          commission_model TEXT NOT NULL CHECK (commission_model IN ('PERCENTAGE','FLAT')),
+          commission_rate REAL NOT NULL,
+          test_price REAL NOT NULL,
+          commission_amount REAL NOT NULL,
+          calculated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          settlement_id INTEGER REFERENCES commission_settlements(id),
+          is_cancelled INTEGER DEFAULT 0
+        );
+        
+        -- 4. Commission Settlements (monthly payment tracking)
+        CREATE TABLE IF NOT EXISTS commission_settlements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          total_commission REAL NOT NULL,
+          paid_amount REAL DEFAULT 0,
+          payment_status TEXT CHECK (payment_status IN ('PENDING','PARTIALLY_PAID','PAID')) DEFAULT 'PENDING',
+          payment_date TEXT,
+          payment_mode TEXT CHECK (payment_mode IN ('CASH','CARD','UPI','CHEQUE','NEFT','RTGS')),
+          payment_reference TEXT,
+          remarks TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          created_by INTEGER REFERENCES users(id),
+          UNIQUE(doctor_id, period_month, period_year)
+        );
+        
+        -- 5. Commission Payments (track individual payments for a settlement)
+        CREATE TABLE IF NOT EXISTS commission_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          settlement_id INTEGER NOT NULL REFERENCES commission_settlements(id),
+          amount REAL NOT NULL,
+          payment_date TEXT NOT NULL DEFAULT (datetime('now')),
+          payment_mode TEXT NOT NULL CHECK (payment_mode IN ('CASH','CARD','UPI','CHEQUE','NEFT','RTGS')),
+          payment_reference TEXT,
+          remarks TEXT,
+          created_by INTEGER REFERENCES users(id),
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- 6. Indexes for performance
+        CREATE INDEX idx_doctor_commissions_doctor ON doctor_commissions(doctor_id);
+        CREATE INDEX idx_doctor_commissions_invoice ON doctor_commissions(invoice_id);
+        CREATE INDEX idx_doctor_commissions_settlement ON doctor_commissions(settlement_id);
+        CREATE INDEX idx_commission_settlements_doctor ON commission_settlements(doctor_id);
+        CREATE INDEX idx_commission_settlements_period ON commission_settlements(period_year, period_month);
+        CREATE INDEX idx_doctor_price_lists_doctor ON doctor_price_lists(doctor_id);
+        
+        -- 7. Create a default "Doctor Referral" price list
+        INSERT OR IGNORE INTO price_lists (code, name, description, is_default, is_active) VALUES
+          ('DOCTOR_REFERRAL', 'Doctor Referral Price List', 'Default pricing for doctor-referred patients', 0, 1);
+        
+        -- 8. Seed doctor referral prices (15% discount from standard for referred patients)
+        INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, auto_discount_percent, gst_applicable, gst_rate, effective_from)
+        SELECT 
+          (SELECT id FROM price_lists WHERE code = 'DOCTOR_REFERRAL'), 
+          id, 
+          CASE test_code
+            WHEN 'CBC' THEN 298
+            WHEN 'ESR' THEN 85
+            WHEN 'GLUCOSE' THEN 68
+            WHEN 'RFT' THEN 383
+            WHEN 'LFT' THEN 468
+            WHEN 'LIPID' THEN 510
+            WHEN 'TFT' THEN 680
+            WHEN 'HBSAG' THEN 170
+            WHEN 'HIV' THEN 213
+            WHEN 'CRP' THEN 298
+            WHEN 'ASO' THEN 255
+            WHEN 'WIDAL' THEN 170
+            WHEN 'PROLACTIN' THEN 425
+            WHEN 'VITD' THEN 1020
+            WHEN 'VITB12' THEN 680
+            WHEN 'URINE' THEN 85
+            WHEN 'STOOL' THEN 85
+            WHEN 'COAG' THEN 383
+            ELSE 425
+          END,
+          0, 0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+      `
     }
   ];
 }

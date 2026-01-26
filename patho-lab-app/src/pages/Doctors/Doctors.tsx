@@ -8,11 +8,15 @@ interface Doctor {
     specialty?: string;
     phone?: string;
     clinic_address?: string;
+    commission_model?: string;
+    commission_rate?: number;
+    price_list_id?: number;
     is_active: number;
 }
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [priceLists, setPriceLists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
@@ -21,11 +25,15 @@ export default function DoctorsPage() {
         name: '',
         specialty: '',
         phone: '',
-        clinicAddress: ''
+        clinicAddress: '',
+        commissionModel: 'NONE',
+        commissionRate: 0,
+        priceListId: ''
     });
 
     useEffect(() => {
         loadDoctors();
+        loadPriceLists();
     }, []);
 
     const loadDoctors = async () => {
@@ -41,6 +49,17 @@ export default function DoctorsPage() {
         setLoading(false);
     };
 
+    const loadPriceLists = async () => {
+        try {
+            if (window.electronAPI) {
+                const data = await window.electronAPI.billing.listPriceLists();
+                setPriceLists(data);
+            }
+        } catch (e) {
+            console.error('Failed to load price lists:', e);
+        }
+    };
+
     const handleOpenModal = (doctor?: Doctor) => {
         if (doctor) {
             setEditingDoctor(doctor);
@@ -49,7 +68,10 @@ export default function DoctorsPage() {
                 name: doctor.name,
                 specialty: doctor.specialty || '',
                 phone: doctor.phone || '',
-                clinicAddress: doctor.clinic_address || ''
+                clinicAddress: doctor.clinic_address || '',
+                commissionModel: doctor.commission_model || 'NONE',
+                commissionRate: doctor.commission_rate || 0,
+                priceListId: doctor.price_list_id?.toString() || ''
             });
         } else {
             setEditingDoctor(null);
@@ -58,7 +80,10 @@ export default function DoctorsPage() {
                 name: '',
                 specialty: '',
                 phone: '',
-                clinicAddress: ''
+                clinicAddress: '',
+                commissionModel: 'NONE',
+                commissionRate: 0,
+                priceListId: ''
             });
         }
         setShowModal(true);
@@ -74,10 +99,15 @@ export default function DoctorsPage() {
         if (!window.electronAPI) return;
 
         try {
+            const submitData = {
+                ...formData,
+                priceListId: formData.priceListId ? parseInt(formData.priceListId) : undefined
+            };
+
             if (editingDoctor) {
-                await window.electronAPI.doctors.update(editingDoctor.id, formData);
+                await window.electronAPI.doctors.update(editingDoctor.id, submitData);
             } else {
-                await window.electronAPI.doctors.create(formData);
+                await window.electronAPI.doctors.create(submitData);
             }
             handleCloseModal();
             loadDoctors();
@@ -216,6 +246,58 @@ export default function DoctorsPage() {
                                         placeholder="Clinic address..."
                                         rows={2}
                                     />
+                                </div>
+
+                                {/* Commission Configuration */}
+                                <div className="form-group full-width" style={{ marginTop: '1rem', borderTop: '1px solid #ddd', paddingTop: '1rem' }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#555' }}>Commission Configuration</h4>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Commission Model</label>
+                                    <select
+                                        className="input"
+                                        value={formData.commissionModel}
+                                        onChange={e => setFormData({ ...formData, commissionModel: e.target.value })}
+                                    >
+                                        <option value="NONE">No Commission</option>
+                                        <option value="PERCENTAGE">Percentage (%)</option>
+                                        <option value="FLAT">Flat Amount (₹)</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>
+                                        Commission Rate
+                                        {formData.commissionModel === 'PERCENTAGE' && ' (%)'}
+                                        {formData.commissionModel === 'FLAT' && ' (₹)'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="input"
+                                        value={formData.commissionRate}
+                                        onChange={e => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
+                                        placeholder={formData.commissionModel === 'PERCENTAGE' ? '25' : '100'}
+                                        min="0"
+                                        step={formData.commissionModel === 'PERCENTAGE' ? '0.1' : '1'}
+                                        disabled={formData.commissionModel === 'NONE'}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Default Price List (Optional)</label>
+                                    <select
+                                        className="input"
+                                        value={formData.priceListId}
+                                        onChange={e => setFormData({ ...formData, priceListId: e.target.value })}
+                                    >
+                                        <option value="">-- Use Standard Pricing --</option>
+                                        {priceLists.map(pl => (
+                                            <option key={pl.id} value={pl.id}>
+                                                {pl.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                             <div className="modal-actions">

@@ -15,6 +15,7 @@ import * as doctorService from './services/doctorService'
 import * as billingService from './services/billingService'
 import * as invoiceService from './services/invoiceService'
 import * as paymentService from './services/paymentService'
+import * as commissionService from './services/commissionService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -428,6 +429,39 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES, () => {
     return paymentService.getOutstandingDues()
+  })
+
+  // Commissions
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_DOCTOR_COMMISSIONS, (_, doctorId: number, month?: number, year?: number) => {
+    return commissionService.getDoctorCommissions(doctorId, month, year)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_MONTHLY_SUMMARY, (_, doctorId: number, month: number, year: number) => {
+    return commissionService.getMonthlyCommissionSummary(doctorId, month, year)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_STATEMENT, (_, doctorId: number, month: number, year: number) => {
+    return commissionService.getCommissionStatement(doctorId, month, year)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_DOCTORS_WITH_PENDING, (_, month: number, year: number) => {
+    return commissionService.getDoctorsWithPendingCommissions(month, year)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_CREATE_SETTLEMENT, (_, doctorId: number, month: number, year: number, userId?: number) => {
+    return commissionService.getOrCreateSettlement(doctorId, month, year, userId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_RECORD_PAYMENT, (_, settlementId: number, amount: number, paymentMode: string, paymentReference?: string, remarks?: string, userId?: number) => {
+    return commissionService.recordSettlementPayment(settlementId, amount, paymentMode, paymentReference, remarks, userId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_SETTLEMENT, (_, settlementId: number) => {
+    return commissionService.getSettlement(settlementId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, (_, options) => {
+    return commissionService.listSettlements(options)
   })
 }
 

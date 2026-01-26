@@ -103,7 +103,16 @@ const IPC_CHANNELS = {
   PAYMENT_GET: "payment:get",
   PAYMENT_PATIENT_HISTORY: "payment:patientHistory",
   PAYMENT_DAILY_COLLECTION: "payment:dailyCollection",
-  PAYMENT_OUTSTANDING_DUES: "payment:outstandingDues"
+  PAYMENT_OUTSTANDING_DUES: "payment:outstandingDues",
+  // Commissions
+  COMMISSION_GET_DOCTOR_COMMISSIONS: "commission:getDoctorCommissions",
+  COMMISSION_GET_MONTHLY_SUMMARY: "commission:getMonthlySummary",
+  COMMISSION_GET_STATEMENT: "commission:getStatement",
+  COMMISSION_GET_DOCTORS_WITH_PENDING: "commission:getDoctorsWithPending",
+  COMMISSION_CREATE_SETTLEMENT: "commission:createSettlement",
+  COMMISSION_RECORD_PAYMENT: "commission:recordPayment",
+  COMMISSION_GET_SETTLEMENT: "commission:getSettlement",
+  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements"
 };
 const api = {
   // Auth
@@ -240,6 +249,21 @@ const api = {
     getPatientHistory: (patientId) => electron.ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_PATIENT_HISTORY, patientId),
     getDailyCollection: (date) => electron.ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_DAILY_COLLECTION, date),
     getOutstandingDues: () => electron.ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES)
+  },
+  // Commissions
+  commissions: {
+    getDoctorCommissions: (doctorId, month, year) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_DOCTOR_COMMISSIONS, doctorId, month, year),
+    getMonthlySummary: (doctorId, month, year) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_MONTHLY_SUMMARY, doctorId, month, year),
+    getStatement: (doctorId, month, year) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_STATEMENT, doctorId, month, year),
+    getDoctorsWithPending: (month, year) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_DOCTORS_WITH_PENDING, month, year),
+    createSettlement: (doctorId, month, year, userId) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_CREATE_SETTLEMENT, doctorId, month, year, userId),
+    recordPayment: (settlementId, amount, paymentMode, paymentReference, remarks, userId) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_RECORD_PAYMENT, settlementId, amount, paymentMode, paymentReference, remarks, userId),
+    getSettlement: (settlementId) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_SETTLEMENT, settlementId),
+    listSettlements: (options) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, options)
+  },
+  // Alias for billing (for backward compatibility and clearer naming)
+  get billing() {
+    return this.priceLists;
   }
 };
 electron.contextBridge.exposeInMainWorld("electronAPI", api);

@@ -2760,6 +2760,121 @@ function getMigrations() {
           0, 0, 0, datetime('now')
         FROM tests WHERE is_active = 1;
       `
+    },
+    {
+      name: "014_doctor_pricing_commission",
+      sql: `
+        -- ========================================
+        -- Doctor Referral Pricing & Commission Management
+        -- ========================================
+        
+        -- 1. Extend doctors table with commission configuration
+        ALTER TABLE doctors ADD COLUMN commission_model TEXT CHECK (commission_model IN ('PERCENTAGE','FLAT','NONE')) DEFAULT 'NONE';
+        ALTER TABLE doctors ADD COLUMN commission_rate REAL DEFAULT 0;
+        ALTER TABLE doctors ADD COLUMN price_list_id INTEGER REFERENCES price_lists(id);
+        
+        -- 2. Doctor Price Lists (for tracking doctor-specific price list assignments)
+        CREATE TABLE IF NOT EXISTS doctor_price_lists (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          price_list_id INTEGER NOT NULL REFERENCES price_lists(id),
+          is_default INTEGER DEFAULT 1,
+          effective_from TEXT NOT NULL DEFAULT (datetime('now')),
+          effective_to TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          UNIQUE(doctor_id, price_list_id, effective_from)
+        );
+        
+        -- 3. Doctor Commissions (commission snapshot per invoice)
+        CREATE TABLE IF NOT EXISTS doctor_commissions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+          invoice_item_id INTEGER REFERENCES invoice_items(id),
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          test_id INTEGER REFERENCES tests(id),
+          test_description TEXT,
+          commission_model TEXT NOT NULL CHECK (commission_model IN ('PERCENTAGE','FLAT')),
+          commission_rate REAL NOT NULL,
+          test_price REAL NOT NULL,
+          commission_amount REAL NOT NULL,
+          calculated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          settlement_id INTEGER REFERENCES commission_settlements(id),
+          is_cancelled INTEGER DEFAULT 0
+        );
+        
+        -- 4. Commission Settlements (monthly payment tracking)
+        CREATE TABLE IF NOT EXISTS commission_settlements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          period_month INTEGER NOT NULL,
+          period_year INTEGER NOT NULL,
+          total_commission REAL NOT NULL,
+          paid_amount REAL DEFAULT 0,
+          payment_status TEXT CHECK (payment_status IN ('PENDING','PARTIALLY_PAID','PAID')) DEFAULT 'PENDING',
+          payment_date TEXT,
+          payment_mode TEXT CHECK (payment_mode IN ('CASH','CARD','UPI','CHEQUE','NEFT','RTGS')),
+          payment_reference TEXT,
+          remarks TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          created_by INTEGER REFERENCES users(id),
+          UNIQUE(doctor_id, period_month, period_year)
+        );
+        
+        -- 5. Commission Payments (track individual payments for a settlement)
+        CREATE TABLE IF NOT EXISTS commission_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          settlement_id INTEGER NOT NULL REFERENCES commission_settlements(id),
+          amount REAL NOT NULL,
+          payment_date TEXT NOT NULL DEFAULT (datetime('now')),
+          payment_mode TEXT NOT NULL CHECK (payment_mode IN ('CASH','CARD','UPI','CHEQUE','NEFT','RTGS')),
+          payment_reference TEXT,
+          remarks TEXT,
+          created_by INTEGER REFERENCES users(id),
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- 6. Indexes for performance
+        CREATE INDEX idx_doctor_commissions_doctor ON doctor_commissions(doctor_id);
+        CREATE INDEX idx_doctor_commissions_invoice ON doctor_commissions(invoice_id);
+        CREATE INDEX idx_doctor_commissions_settlement ON doctor_commissions(settlement_id);
+        CREATE INDEX idx_commission_settlements_doctor ON commission_settlements(doctor_id);
+        CREATE INDEX idx_commission_settlements_period ON commission_settlements(period_year, period_month);
+        CREATE INDEX idx_doctor_price_lists_doctor ON doctor_price_lists(doctor_id);
+        
+        -- 7. Create a default "Doctor Referral" price list
+        INSERT OR IGNORE INTO price_lists (code, name, description, is_default, is_active) VALUES
+          ('DOCTOR_REFERRAL', 'Doctor Referral Price List', 'Default pricing for doctor-referred patients', 0, 1);
+        
+        -- 8. Seed doctor referral prices (15% discount from standard for referred patients)
+        INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, auto_discount_percent, gst_applicable, gst_rate, effective_from)
+        SELECT 
+          (SELECT id FROM price_lists WHERE code = 'DOCTOR_REFERRAL'), 
+          id, 
+          CASE test_code
+            WHEN 'CBC' THEN 298
+            WHEN 'ESR' THEN 85
+            WHEN 'GLUCOSE' THEN 68
+            WHEN 'RFT' THEN 383
+            WHEN 'LFT' THEN 468
+            WHEN 'LIPID' THEN 510
+            WHEN 'TFT' THEN 680
+            WHEN 'HBSAG' THEN 170
+            WHEN 'HIV' THEN 213
+            WHEN 'CRP' THEN 298
+            WHEN 'ASO' THEN 255
+            WHEN 'WIDAL' THEN 170
+            WHEN 'PROLACTIN' THEN 425
+            WHEN 'VITD' THEN 1020
+            WHEN 'VITB12' THEN 680
+            WHEN 'URINE' THEN 85
+            WHEN 'STOOL' THEN 85
+            WHEN 'COAG' THEN 383
+            ELSE 425
+          END,
+          0, 0, 0, datetime('now')
+        FROM tests WHERE is_active = 1;
+      `
     }
   ];
 }
@@ -3550,7 +3665,8 @@ function getReportData(sampleId) {
 }
 function listDoctors() {
   return queryAll(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
+           commission_model, commission_rate, price_list_id, is_active, created_at
     FROM doctors
     WHERE is_active = 1
     ORDER BY name ASC
@@ -3558,7 +3674,8 @@ function listDoctors() {
 }
 function listAllDoctors() {
   return queryAll(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
+           commission_model, commission_rate, price_list_id, is_active, created_at
     FROM doctors
     ORDER BY name ASC
   `);
@@ -3569,9 +3686,21 @@ function getDoctor(id) {
 function createDoctor(data) {
   try {
     const id = runWithId(`
-      INSERT INTO doctors (doctor_code, name, specialty, phone, clinic_address, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-    `, [data.doctorCode, data.name, data.specialty || null, data.phone || null, data.clinicAddress || null]);
+      INSERT INTO doctors (
+        doctor_code, name, specialty, phone, clinic_address, 
+        commission_model, commission_rate, price_list_id, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      data.doctorCode,
+      data.name,
+      data.specialty || null,
+      data.phone || null,
+      data.clinicAddress || null,
+      data.commissionModel || "NONE",
+      data.commissionRate || 0,
+      data.priceListId || null
+    ]);
     return { success: true, id };
   } catch (error) {
     console.error("Create doctor error:", error);
@@ -3601,6 +3730,18 @@ function updateDoctor(id, data) {
     if (data.clinicAddress !== void 0) {
       updates.push("clinic_address = ?");
       values.push(data.clinicAddress || null);
+    }
+    if (data.commissionModel !== void 0) {
+      updates.push("commission_model = ?");
+      values.push(data.commissionModel || "NONE");
+    }
+    if (data.commissionRate !== void 0) {
+      updates.push("commission_rate = ?");
+      values.push(data.commissionRate || 0);
+    }
+    if (data.priceListId !== void 0) {
+      updates.push("price_list_id = ?");
+      values.push(data.priceListId || null);
     }
     if (updates.length === 0) {
       return { success: true };
@@ -3900,6 +4041,287 @@ function updatePackage(id, data) {
     return { success: false, error: error.message };
   }
 }
+function calculateAndRecordCommission(invoiceId, doctorId, patientId) {
+  try {
+    const doctor = queryOne("SELECT id, commission_model, commission_rate FROM doctors WHERE id = ?", [doctorId]);
+    if (!doctor) {
+      return { success: false, error: "Doctor not found" };
+    }
+    if (doctor.commission_model === "NONE" || doctor.commission_rate === 0) {
+      return { success: true, totalCommission: 0 };
+    }
+    const invoiceItems = queryAll(`
+      SELECT id, test_id, description, unit_price
+      FROM invoice_items
+      WHERE invoice_id = ?
+    `, [invoiceId]);
+    if (invoiceItems.length === 0) {
+      return { success: false, error: "No invoice items found" };
+    }
+    let totalCommission = 0;
+    for (const item of invoiceItems) {
+      let commissionAmount = 0;
+      if (doctor.commission_model === "PERCENTAGE") {
+        commissionAmount = item.unit_price * doctor.commission_rate / 100;
+      } else if (doctor.commission_model === "FLAT") {
+        commissionAmount = doctor.commission_rate;
+      }
+      run(`
+        INSERT INTO doctor_commissions (
+          invoice_id, invoice_item_id, doctor_id, patient_id, test_id,
+          test_description, commission_model, commission_rate,
+          test_price, commission_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        invoiceId,
+        item.id,
+        doctorId,
+        patientId,
+        item.test_id,
+        item.description,
+        doctor.commission_model,
+        doctor.commission_rate,
+        item.unit_price,
+        commissionAmount
+      ]);
+      totalCommission += commissionAmount;
+    }
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_at)
+      VALUES ('commission', ?, 'CALCULATE', ?, datetime('now'))
+    `, [invoiceId, JSON.stringify({ doctorId, totalCommission })]);
+    return { success: true, totalCommission };
+  } catch (error) {
+    console.error("Calculate commission error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function reverseCommission(invoiceId) {
+  try {
+    run(`
+      UPDATE doctor_commissions
+      SET is_cancelled = 1
+      WHERE invoice_id = ?
+    `, [invoiceId]);
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, performed_at)
+      VALUES ('commission', ?, 'REVERSE', datetime('now'))
+    `, [invoiceId]);
+    return { success: true };
+  } catch (error) {
+    console.error("Reverse commission error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function getDoctorCommissions(doctorId, month, year) {
+  let sql = `
+    SELECT dc.*
+    FROM doctor_commissions dc
+    JOIN invoices i ON dc.invoice_id = i.id
+    WHERE dc.doctor_id = ? AND dc.is_cancelled = 0
+  `;
+  const params = [doctorId];
+  if (month !== void 0 && year !== void 0) {
+    sql += ` AND CAST(strftime('%m', i.created_at) AS INTEGER) = ?`;
+    sql += ` AND CAST(strftime('%Y', i.created_at) AS INTEGER) = ?`;
+    params.push(month, year);
+  }
+  sql += ` ORDER BY i.created_at DESC`;
+  return queryAll(sql, params);
+}
+function getMonthlyCommissionSummary(doctorId, month, year) {
+  const summary = queryOne(`
+    SELECT 
+      COALESCE(SUM(dc.commission_amount), 0) as total_commission,
+      COUNT(dc.id) as test_count,
+      COUNT(DISTINCT dc.patient_id) as patient_count,
+      COUNT(DISTINCT dc.invoice_id) as invoice_count
+    FROM doctor_commissions dc
+    JOIN invoices i ON dc.invoice_id = i.id
+    WHERE dc.doctor_id = ?
+      AND dc.is_cancelled = 0
+      AND CAST(strftime('%m', i.created_at) AS INTEGER) = ?
+      AND CAST(strftime('%Y', i.created_at) AS INTEGER) = ?
+  `, [doctorId, month, year]);
+  return {
+    totalCommission: (summary == null ? void 0 : summary.total_commission) || 0,
+    testCount: (summary == null ? void 0 : summary.test_count) || 0,
+    patientCount: (summary == null ? void 0 : summary.patient_count) || 0,
+    invoiceCount: (summary == null ? void 0 : summary.invoice_count) || 0
+  };
+}
+function getCommissionStatement(doctorId, month, year) {
+  const doctor = queryOne(`
+    SELECT id, name, doctor_code, commission_model, commission_rate
+    FROM doctors
+    WHERE id = ?
+  `, [doctorId]);
+  const summary = getMonthlyCommissionSummary(doctorId, month, year);
+  const items = queryAll(`
+    SELECT 
+      p.full_name as patient_name,
+      p.patient_uid,
+      i.invoice_number,
+      i.created_at as invoice_date,
+      dc.test_description,
+      dc.test_price,
+      dc.commission_amount
+    FROM doctor_commissions dc
+    JOIN invoices i ON dc.invoice_id = i.id
+    JOIN patients p ON dc.patient_id = p.id
+    WHERE dc.doctor_id = ?
+      AND dc.is_cancelled = 0
+      AND CAST(strftime('%m', i.created_at) AS INTEGER) = ?
+      AND CAST(strftime('%Y', i.created_at) AS INTEGER) = ?
+    ORDER BY i.created_at ASC, p.full_name ASC, dc.test_description ASC
+  `, [doctorId, month, year]);
+  return {
+    doctor: doctor || null,
+    period: { month, year },
+    summary,
+    items
+  };
+}
+function getDoctorsWithPendingCommissions(month, year) {
+  return queryAll(`
+    SELECT 
+      d.id as doctor_id,
+      d.name as doctor_name,
+      d.doctor_code,
+      COALESCE(SUM(dc.commission_amount), 0) as total_commission,
+      COUNT(dc.id) as test_count,
+      COUNT(DISTINCT dc.patient_id) as patient_count
+    FROM doctors d
+    JOIN doctor_commissions dc ON d.id = dc.doctor_id
+    JOIN invoices i ON dc.invoice_id = i.id
+    WHERE dc.is_cancelled = 0
+      AND dc.settlement_id IS NULL
+      AND CAST(strftime('%m', i.created_at) AS INTEGER) = ?
+      AND CAST(strftime('%Y', i.created_at) AS INTEGER) = ?
+    GROUP BY d.id, d.name, d.doctor_code
+    HAVING total_commission > 0
+    ORDER BY d.name ASC
+  `, [month, year]);
+}
+function getOrCreateSettlement(doctorId, month, year, userId) {
+  try {
+    const existing = queryOne(`
+      SELECT id FROM commission_settlements
+      WHERE doctor_id = ? AND period_month = ? AND period_year = ?
+    `, [doctorId, month, year]);
+    if (existing) {
+      return { success: true, settlementId: existing.id };
+    }
+    const summary = getMonthlyCommissionSummary(doctorId, month, year);
+    if (summary.totalCommission === 0) {
+      return { success: false, error: "No commission to settle for this period" };
+    }
+    const settlementId = runWithId(`
+      INSERT INTO commission_settlements (
+        doctor_id, period_month, period_year, total_commission, created_by
+      ) VALUES (?, ?, ?, ?, ?)
+    `, [doctorId, month, year, summary.totalCommission, userId || null]);
+    run(`
+      UPDATE doctor_commissions
+      SET settlement_id = ?
+      WHERE doctor_id = ?
+        AND is_cancelled = 0
+        AND settlement_id IS NULL
+        AND invoice_id IN (
+          SELECT id FROM invoices
+          WHERE CAST(strftime('%m', created_at) AS INTEGER) = ?
+            AND CAST(strftime('%Y', created_at) AS INTEGER) = ?
+        )
+    `, [settlementId, doctorId, month, year]);
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+      VALUES ('settlement', ?, 'CREATE', ?, ?, datetime('now'))
+    `, [settlementId, JSON.stringify({ doctorId, month, year, totalCommission: summary.totalCommission }), userId || null]);
+    return { success: true, settlementId };
+  } catch (error) {
+    console.error("Create settlement error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function recordSettlementPayment(settlementId, amount, paymentMode, paymentReference, remarks, userId) {
+  try {
+    const settlement = queryOne(`
+      SELECT * FROM commission_settlements WHERE id = ?
+    `, [settlementId]);
+    if (!settlement) {
+      return { success: false, error: "Settlement not found" };
+    }
+    runWithId(`
+      INSERT INTO commission_payments (
+        settlement_id, amount, payment_mode, payment_reference, remarks, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [settlementId, amount, paymentMode, paymentReference || null, remarks || null, userId || null]);
+    const newPaidAmount = settlement.paid_amount + amount;
+    const newStatus = newPaidAmount >= settlement.total_commission ? "PAID" : newPaidAmount > 0 ? "PARTIALLY_PAID" : "PENDING";
+    run(`
+      UPDATE commission_settlements
+      SET paid_amount = ?,
+          payment_status = ?,
+          payment_date = CASE WHEN ? = 'PAID' THEN datetime('now') ELSE payment_date END,
+          payment_mode = ?,
+          payment_reference = ?
+      WHERE id = ?
+    `, [newPaidAmount, newStatus, newStatus, paymentMode, paymentReference || null, settlementId]);
+    run(`
+      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+      VALUES ('settlement', ?, 'PAYMENT', ?, ?, datetime('now'))
+    `, [settlementId, JSON.stringify({ amount, paymentMode, newPaidAmount, newStatus }), userId || null]);
+    return { success: true };
+  } catch (error) {
+    console.error("Record settlement payment error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function getSettlement(settlementId) {
+  const settlement = queryOne(`
+    SELECT cs.*, d.name as doctor_name, d.doctor_code
+    FROM commission_settlements cs
+    JOIN doctors d ON cs.doctor_id = d.id
+    WHERE cs.id = ?
+  `, [settlementId]);
+  if (!settlement) return null;
+  const payments = queryAll(`
+    SELECT cp.*, u.full_name as created_by_name
+    FROM commission_payments cp
+    LEFT JOIN users u ON cp.created_by = u.id
+    WHERE cp.settlement_id = ?
+    ORDER BY cp.payment_date DESC
+  `, [settlementId]);
+  return {
+    ...settlement,
+    payments
+  };
+}
+function listSettlements(options = {}) {
+  const { doctorId, status, year, limit = 50, offset = 0 } = options;
+  let sql = `
+    SELECT cs.*, d.name as doctor_name, d.doctor_code
+    FROM commission_settlements cs
+    JOIN doctors d ON cs.doctor_id = d.id
+    WHERE 1=1
+  `;
+  const params = [];
+  if (doctorId) {
+    sql += ` AND cs.doctor_id = ?`;
+    params.push(doctorId);
+  }
+  if (status) {
+    sql += ` AND cs.payment_status = ?`;
+    params.push(status);
+  }
+  if (year) {
+    sql += ` AND cs.period_year = ?`;
+    params.push(year);
+  }
+  sql += ` ORDER BY cs.period_year DESC, cs.period_month DESC LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+  return queryAll(sql, params);
+}
 function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -4082,6 +4504,19 @@ function createInvoice(data) {
           INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
           VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
         `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
+      const order = queryOne(`
+          SELECT referring_doctor_id FROM orders WHERE id = ?
+        `, [data.orderId]);
+      if (order == null ? void 0 : order.referring_doctor_id) {
+        const commissionResult = calculateAndRecordCommission(
+          invoiceId,
+          order.referring_doctor_id,
+          data.patientId
+        );
+        if (!commissionResult.success) {
+          console.warn("Commission calculation failed:", commissionResult.error);
+        }
+      }
       return { success: true, invoiceId, invoiceNumber };
     } catch (error) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE" && attempt < maxRetries - 1) {
@@ -4140,6 +4575,7 @@ function cancelInvoice(id, reason, userId) {
           cancellation_reason = ?
       WHERE id = ?
     `, [userId, reason, id]);
+    reverseCommission(id);
     run(`
       INSERT INTO audit_log (entity, entity_id, action, old_value, new_value, performed_by, performed_at)
       VALUES ('invoice', ?, 'CANCEL', ?, ?, ?, datetime('now'))
@@ -4415,7 +4851,16 @@ const IPC_CHANNELS = {
   PAYMENT_GET: "payment:get",
   PAYMENT_PATIENT_HISTORY: "payment:patientHistory",
   PAYMENT_DAILY_COLLECTION: "payment:dailyCollection",
-  PAYMENT_OUTSTANDING_DUES: "payment:outstandingDues"
+  PAYMENT_OUTSTANDING_DUES: "payment:outstandingDues",
+  // Commissions
+  COMMISSION_GET_DOCTOR_COMMISSIONS: "commission:getDoctorCommissions",
+  COMMISSION_GET_MONTHLY_SUMMARY: "commission:getMonthlySummary",
+  COMMISSION_GET_STATEMENT: "commission:getStatement",
+  COMMISSION_GET_DOCTORS_WITH_PENDING: "commission:getDoctorsWithPending",
+  COMMISSION_CREATE_SETTLEMENT: "commission:createSettlement",
+  COMMISSION_RECORD_PAYMENT: "commission:recordPayment",
+  COMMISSION_GET_SETTLEMENT: "commission:getSettlement",
+  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements"
 };
 createRequire(import.meta.url);
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
@@ -4709,6 +5154,30 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES, () => {
     return getOutstandingDues();
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_DOCTOR_COMMISSIONS, (_, doctorId, month, year) => {
+    return getDoctorCommissions(doctorId, month, year);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_MONTHLY_SUMMARY, (_, doctorId, month, year) => {
+    return getMonthlyCommissionSummary(doctorId, month, year);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_STATEMENT, (_, doctorId, month, year) => {
+    return getCommissionStatement(doctorId, month, year);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_DOCTORS_WITH_PENDING, (_, month, year) => {
+    return getDoctorsWithPendingCommissions(month, year);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_CREATE_SETTLEMENT, (_, doctorId, month, year, userId) => {
+    return getOrCreateSettlement(doctorId, month, year, userId);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_RECORD_PAYMENT, (_, settlementId, amount, paymentMode, paymentReference, remarks, userId) => {
+    return recordSettlementPayment(settlementId, amount, paymentMode, paymentReference, remarks, userId);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_GET_SETTLEMENT, (_, settlementId) => {
+    return getSettlement(settlementId);
+  });
+  ipcMain.handle(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, (_, options) => {
+    return listSettlements(options);
   });
 }
 app.on("window-all-closed", () => {

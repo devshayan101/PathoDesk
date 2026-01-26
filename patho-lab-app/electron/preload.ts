@@ -238,6 +238,31 @@ const api = {
     getOutstandingDues: () =>
       ipcRenderer.invoke(IPC_CHANNELS.PAYMENT_OUTSTANDING_DUES),
   },
+
+  // Commissions
+  commissions: {
+    getDoctorCommissions: (doctorId: number, month?: number, year?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_DOCTOR_COMMISSIONS, doctorId, month, year),
+    getMonthlySummary: (doctorId: number, month: number, year: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_MONTHLY_SUMMARY, doctorId, month, year),
+    getStatement: (doctorId: number, month: number, year: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_STATEMENT, doctorId, month, year),
+    getDoctorsWithPending: (month: number, year: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_DOCTORS_WITH_PENDING, month, year),
+    createSettlement: (doctorId: number, month: number, year: number, userId?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_CREATE_SETTLEMENT, doctorId, month, year, userId),
+    recordPayment: (settlementId: number, amount: number, paymentMode: string, paymentReference?: string, remarks?: string, userId?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_RECORD_PAYMENT, settlementId, amount, paymentMode, paymentReference, remarks, userId),
+    getSettlement: (settlementId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_SETTLEMENT, settlementId),
+    listSettlements: (options?: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, options),
+  },
+
+  // Alias for billing (for backward compatibility and clearer naming)
+  get billing() {
+    return this.priceLists
+  },
 }
 
 // Expose to window
