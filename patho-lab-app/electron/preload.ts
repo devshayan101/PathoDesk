@@ -33,6 +33,28 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
     getParameters: (testVersionId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId),
+    delete: (testId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_DELETE, testId),
+  },
+
+  // Test Wizard
+  testWizard: {
+    getDrafts: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_GET_DRAFTS),
+    createDraft: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT, data),
+    updateDraft: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_UPDATE_DRAFT, id, data),
+    updateStep: (id: number, step: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_UPDATE_STEP, id, step),
+    saveParams: (id: number, params: any[]) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_SAVE_PARAMS, id, params),
+    publish: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_PUBLISH, id),
+    createDraftFromExisting: (testId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT_FROM_EXISTING, testId),
+    getDraft: (versionId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_GET_DRAFT, versionId),
   },
 
   // Orders
@@ -85,6 +107,24 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
     listRoles: () =>
       ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST),
+  },
+
+  // Results
+  results: {
+    getPendingSamples: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_PENDING_SAMPLES),
+    get: (sampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_GET, sampleId),
+    save: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_SAVE, data),
+    submit: (sampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_SUBMIT, sampleId),
+    verify: (sampleId: number, verifiedBy: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_VERIFY, sampleId, verifiedBy),
+    finalize: (sampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_FINALIZE, sampleId),
+    getPrevious: (patientId: number, testId: number, currentSampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESULT_GET_PREVIOUS, patientId, testId, currentSampleId),
   },
 }
 

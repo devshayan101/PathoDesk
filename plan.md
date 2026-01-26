@@ -96,18 +96,65 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 6: Billing & Inventory
-**Duration: ~6-7 hours**
+### Phase 6: Test Pricing & Billing
+**Duration: ~8-10 hours**
+*Reference: test_pricing_billing_configuration_prd.md*
 
+#### 6.1 Database Schema
+- [ ] Create tables: `price_lists`, `test_prices`, `packages`, `package_items`
+- [ ] Create tables: `invoices`, `invoice_items`, `payments`
+- [ ] Price snapshot storage on invoice generation
+
+#### 6.2 Price List Management (Admin)
+- [ ] Price List CRUD (Standard, Corporate, Camp, Custom)
+- [ ] Test Price configuration per price list (base price, discount cap, GST)
+- [ ] Effective date handling (no overlap)
+- [ ] Package/Profile pricing (bundled price overrides individual)
+
+#### 6.3 Billing Workflow
 - [ ] Invoice creation linked to orders
-- [ ] Payment tracking (cash, card, UPI)
-- [ ] Discount management
-- [ ] Stock management for reagents
-- [ ] Expiry alerts
+- [ ] Price list selection at billing time
+- [ ] Discount management (%, flat, approval for > threshold)
+- [ ] GST configuration (Inclusive/Exclusive mode)
+- [ ] Payment tracking (Cash, Card, UPI, Credit/Due)
+- [ ] Partial payments & outstanding dues per patient
+
+#### 6.4 Invoice Controls
+- [ ] Auto-generated immutable invoice numbers
+- [ ] Invoice print (PDF)
+- [ ] Invoice deletion (admin + reason)
+- [ ] Audit trail for all billing actions
 
 ---
 
-### Phase 7: QC & Audit
+### Phase 7: Doctor Referral & Commission Management
+**Duration: ~6-8 hours**
+*Reference: doctor_referral_pricing_commission_management_prd.md*
+
+#### 7.1 Database Schema
+- [ ] Create tables: `doctors`, `doctor_price_lists`, `doctor_test_prices`
+- [ ] Create tables: `doctor_commissions`, `commission_settlements`
+
+#### 7.2 Doctor Master
+- [ ] Doctor CRUD (name, specialty, contact, commission model)
+- [ ] Link doctor to price list (doctor-specific or shared)
+- [ ] Default commission rate (% or flat)
+
+#### 7.3 Doctor Pricing at Billing
+- [ ] Select referring doctor on patient/order
+- [ ] Auto-select doctor's price list
+- [ ] Calculate commission per invoice item (stored immutably)
+- [ ] Lab margin calculation (hidden from doctor)
+
+#### 7.4 Commission Reporting
+- [ ] Monthly commission aggregation per doctor
+- [ ] Generate Doctor Commission Statement (PDF/Excel)
+- [ ] Settlement tracking (Paid/Partially Paid/Outstanding)
+- [ ] Manual override with reason (admin-only)
+
+---
+
+### Phase 8: QC & Audit
 **Duration: ~4-5 hours**
 
 - [ ] Daily QC entry screens
@@ -116,7 +163,7 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 8: Licensing System
+### Phase 9: Licensing System
 **Duration: ~4-5 hours**
 
 - [ ] License file format (JSON + signature)
@@ -124,10 +171,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [ ] Machine binding (hardware ID)
 - [ ] License status display
 - [ ] Grace period handling
+- [ ] Billing module gating by license state
 
 ---
 
-### Phase 9: Polish & Deployment
+### Phase 10: Polish & Deployment
 **Duration: ~4-5 hours**
 
 - [ ] Error boundaries
@@ -144,8 +192,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 2. Patient & Order workflow
 3. Result Entry with validation
 4. Report generation & printing
-5. License validation (Trial/Valid/Expired modes)
+5. Billing with price lists and discounts
+6. Doctor commission calculation and statements
+7. License validation (Trial/Valid/Expired modes)
 
 ---
 
-**Estimated Total Development Time: 45-55 hours**
+**Estimated Total Development Time: 60-75 hours**
+

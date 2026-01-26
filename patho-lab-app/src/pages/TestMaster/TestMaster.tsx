@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './TestMaster.css';
+import TestWizard from './TestWizard';
 
 interface Test {
     id: number;
@@ -39,6 +40,8 @@ export default function TestMasterPage() {
     const [newRange, setNewRange] = useState({
         gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: ''
     });
+    const [showWizard, setShowWizard] = useState(false);
+    const [wizardDraftId, setWizardDraftId] = useState<number | undefined>(undefined);
 
     // Load tests on mount
     useEffect(() => {
@@ -118,6 +121,32 @@ export default function TestMasterPage() {
         }
     };
 
+    const handleDeleteTest = async (testId: number) => {
+        if (!confirm('Are you sure you want to delete this test? This action cannot be undone.')) return;
+
+        try {
+            if (window.electronAPI) {
+                await window.electronAPI.tests.delete(testId);
+                await loadTests(); // Refresh list
+                setSelectedTest(null);
+            }
+        } catch (e: any) {
+            alert('Failed to delete test: ' + e.message);
+        }
+    };
+
+    const handleEditTest = async (testId: number) => {
+        try {
+            if (window.electronAPI) {
+                const draftId = await window.electronAPI.testWizard.createDraftFromExisting(testId);
+                setWizardDraftId(draftId);
+                setShowWizard(true);
+            }
+        } catch (e: any) {
+            alert('Failed to start edit: ' + e.message);
+        }
+    };
+
     const formatAge = (days: number): string => {
         if (days >= 365) return `${Math.floor(days / 365)}y`;
         if (days >= 30) return `${Math.floor(days / 30)}m`;
@@ -131,7 +160,13 @@ export default function TestMasterPage() {
             <div className="test-master-layout">
                 {/* Left - Test List */}
                 <div className="test-list-panel">
-                    <h2 className="panel-title">Tests</h2>
+                    <div className="panel-header">
+                        <h2 className="panel-title">Tests</h2>
+                        <button className="btn btn-primary btn-sm" onClick={() => {
+                            setWizardDraftId(undefined);
+                            setShowWizard(true);
+                        }}>+ New</button>
+                    </div>
                     <ul className="test-list">
                         {tests.map(test => (
                             <li
@@ -139,8 +174,32 @@ export default function TestMasterPage() {
                                 className={`test-item ${selectedTest?.id === test.id ? 'selected' : ''}`}
                                 onClick={() => setSelectedTest(test)}
                             >
-                                <strong>{test.test_code}</strong>
-                                <span>{test.test_name}</span>
+                                <div className="test-info">
+                                    <strong>{test.test_code}</strong>
+                                    <span>{test.test_name}</span>
+                                </div>
+                                <div className="test-actions">
+                                    <button
+                                        className="btn-icon"
+                                        title="Edit"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditTest(test.id);
+                                        }}
+                                    >
+                                        ✎
+                                    </button>
+                                    <button
+                                        className="btn-delete"
+                                        title="Delete"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteTest(test.id);
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>
@@ -293,6 +352,18 @@ export default function TestMasterPage() {
                     )}
                 </div>
             </div>
+
+            {showWizard && (
+                <TestWizard
+                    initialDraftId={wizardDraftId}
+                    onClose={() => setShowWizard(false)}
+                    onSuccess={() => {
+                        setShowWizard(false);
+                        loadTests(); // Refresh list to show new test
+                        setWizardDraftId(undefined);
+                    }}
+                />
+            )}
         </div>
     );
 }

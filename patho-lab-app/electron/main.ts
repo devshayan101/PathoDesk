@@ -9,6 +9,7 @@ import * as testService from './services/testService'
 import * as orderService from './services/orderService'
 import * as sampleService from './services/sampleService'
 import * as userService from './services/userService'
+import * as resultService from './services/resultService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -96,6 +97,53 @@ function registerIpcHandlers() {
     return testService.getTestParameters(testVersionId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.TEST_DELETE, (_, testId: number) => {
+    return testService.deleteTest(testId)
+  })
+
+  // Test Wizard
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFTS, () => {
+    return testService.getDrafts()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT, (_, data) => {
+    return testService.createTestDraft(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_UPDATE_DRAFT, (_, id: number, data) => {
+    return testService.updateTestDraft(id, data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_UPDATE_STEP, (_, id: number, step: number) => {
+    return testService.updateWizardStep(id, step)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_SAVE_PARAMS, (_, id: number, params: any[]) => {
+    return testService.saveTestParameters(id, params)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_PUBLISH, (_, id: number) => {
+    return testService.publishTest(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT_FROM_EXISTING, (_, testId: number) => {
+    return testService.createDraftFromExisting(testId)
+  })
+
+  // We need a way to get draft details (which is essentially getTest + getParameters)
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFT, (_, versionId: number) => {
+    const version = testService.getTest(versionId) // This actually gets by test_id? No, getTest gets by test_id.
+    // Wait, getTest(testId) returns the latest version.
+    // We need getTestVersion(versionId).
+    // Let's check testService again.
+    // testService.getTest takes testId.
+    // We need a new service method getTestVersion(versionId).
+    // I missed adding that to testService.ts. 
+    // Actually, I can use a direct query here or better, add it to service.
+    // For now, let's implement the handler by calling a new service method I will add.
+    return testService.getTestVersion(versionId)
+  })
+
   // Reference Ranges
   ipcMain.handle(IPC_CHANNELS.REF_RANGE_LIST, (_, parameterId: number) => {
     return testService.listReferenceRanges(parameterId)
@@ -176,6 +224,35 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.ROLE_LIST, () => {
     return userService.listRoles()
+  })
+
+  // Results
+  ipcMain.handle(IPC_CHANNELS.RESULT_PENDING_SAMPLES, () => {
+    return resultService.listPendingSamples()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_GET, (_, sampleId: number) => {
+    return resultService.getSampleResults(sampleId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_SAVE, (_, data) => {
+    return resultService.saveResultValues(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_SUBMIT, (_, sampleId: number) => {
+    return resultService.submitResults(sampleId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_VERIFY, (_, sampleId: number, verifiedBy: number) => {
+    return resultService.verifyResults(sampleId, verifiedBy)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_FINALIZE, (_, sampleId: number) => {
+    return resultService.finalizeResults(sampleId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESULT_GET_PREVIOUS, (_, patientId: number, testId: number, currentSampleId: number) => {
+    return resultService.getPreviousResults(patientId, testId, currentSampleId)
   })
 }
 
