@@ -125,7 +125,7 @@ System auto-selects Doctor Price List
 Add Tests
    ↓
 System calculates:
-   - Selling price (doctor rate)
+   - Selling price
    - Doctor commission
    - Lab margin (hidden)
    ↓

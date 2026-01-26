@@ -47,6 +47,19 @@
   /* Sidebar */
   --sidebar-width: 200px;
   --header-height: 48px;
+
+  /* Aliases for compatibility */
+  --bg-primary: var(--color-bg-primary);
+  --bg-secondary: var(--color-bg-secondary);
+  --bg-tertiary: var(--color-bg-tertiary);
+  --text-primary: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --border-color: var(--color-border);
+  --primary: var(--color-accent);
+  --primary-hover: var(--color-accent-hover);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-error);
 }
 
 * {

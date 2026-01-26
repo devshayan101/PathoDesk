@@ -3904,13 +3904,21 @@ function generateInvoiceNumber() {
   const date = /* @__PURE__ */ new Date();
   const year = date.getFullYear().toString().slice(-2);
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const todayStart = date.toISOString().split("T")[0];
-  const count = queryOne(`
-    SELECT COUNT(*) as count FROM invoices 
-    WHERE created_at >= ? || 'T00:00:00'
-  `, [todayStart]);
-  const seq = (((count == null ? void 0 : count.count) || 0) + 1).toString().padStart(4, "0");
-  return `INV${year}${month}${seq}`;
+  const prefix = `INV${year}${month}`;
+  const lastInvoice = queryOne(`
+    SELECT invoice_number FROM invoices 
+    WHERE invoice_number LIKE ? || '%'
+    ORDER BY invoice_number DESC
+    LIMIT 1
+  `, [prefix]);
+  let seq = "0001";
+  if (lastInvoice && lastInvoice.invoice_number) {
+    const lastSeq = parseInt(lastInvoice.invoice_number.slice(-4));
+    if (!isNaN(lastSeq)) {
+      seq = (lastSeq + 1).toString().padStart(4, "0");
+    }
+  }
+  return `${prefix}${seq}`;
 }
 function listInvoices(options = {}) {
   const { limit = 50, offset = 0, status, patientId, fromDate, toDate } = options;
@@ -3989,94 +3997,102 @@ function getInvoiceByOrder(orderId) {
   `, [orderId]);
 }
 function createInvoice(data) {
-  try {
-    const db2 = getDb();
-    const existing = getInvoiceByOrder(data.orderId);
-    if (existing) {
-      return { success: false, error: "Invoice already exists for this order" };
-    }
-    const testPrices = getTestPricesForTests(data.testIds, data.priceListId);
-    let subtotal = 0;
-    const items = [];
-    for (const testId of data.testIds) {
-      const price = testPrices.get(testId);
-      if (price) {
-        const unitPrice = price.base_price;
-        const gstRate = price.gst_applicable ? price.gst_rate : 0;
-        const gstAmount = unitPrice * gstRate / 100;
-        const lineTotal = unitPrice + gstAmount;
-        subtotal += unitPrice;
-        items.push({
-          testId,
-          description: `${price.test_code} - ${price.test_name}`,
-          unitPrice,
-          gstRate,
-          gstAmount,
-          lineTotal
-        });
+  const maxRetries = 5;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const db2 = getDb();
+      const existing = getInvoiceByOrder(data.orderId);
+      if (existing) {
+        return { success: false, error: "Invoice already exists for this order" };
       }
-    }
-    let discountAmount = data.discountAmount || 0;
-    if (data.discountPercent && data.discountPercent > 0) {
-      discountAmount = subtotal * data.discountPercent / 100;
-    }
-    const discountedSubtotal = subtotal - discountAmount;
-    let totalGst = 0;
-    for (const item of items) {
-      if (item.gstRate > 0) {
-        const proportion = item.unitPrice / subtotal;
-        const itemDiscountedPrice = discountedSubtotal * proportion;
-        item.gstAmount = itemDiscountedPrice * item.gstRate / 100;
-        totalGst += item.gstAmount;
+      const testPrices = getTestPricesForTests(data.testIds, data.priceListId);
+      let subtotal = 0;
+      const items = [];
+      for (const testId of data.testIds) {
+        const price = testPrices.get(testId);
+        if (price) {
+          const unitPrice = price.base_price;
+          const gstRate = price.gst_applicable ? price.gst_rate : 0;
+          const gstAmount = unitPrice * gstRate / 100;
+          const lineTotal = unitPrice + gstAmount;
+          subtotal += unitPrice;
+          items.push({
+            testId,
+            description: `${price.test_code} - ${price.test_name}`,
+            unitPrice,
+            gstRate,
+            gstAmount,
+            lineTotal
+          });
+        }
       }
-    }
-    const totalAmount = discountedSubtotal + totalGst;
-    const invoiceNumber = generateInvoiceNumber();
-    const invoiceId = runWithId(`
-      INSERT INTO invoices (
-        invoice_number, order_id, patient_id, price_list_id,
-        subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by,
-        gst_amount, total_amount, status, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
-    `, [
-      invoiceNumber,
-      data.orderId,
-      data.patientId,
-      data.priceListId,
-      subtotal,
-      discountAmount,
-      data.discountPercent || 0,
-      data.discountReason || null,
-      data.discountApprovedBy || null,
-      totalGst,
-      totalAmount,
-      data.createdBy || null
-    ]);
-    for (const item of items) {
-      run(`
-        INSERT INTO invoice_items (
-          invoice_id, test_id, description, unit_price, quantity,
-          discount_amount, gst_rate, gst_amount, line_total
-        ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
-      `, [
-        invoiceId,
-        item.testId,
-        item.description,
-        item.unitPrice,
-        item.gstRate,
-        item.gstAmount,
-        item.lineTotal
+      let discountAmount = data.discountAmount || 0;
+      if (data.discountPercent && data.discountPercent > 0) {
+        discountAmount = subtotal * data.discountPercent / 100;
+      }
+      const discountedSubtotal = subtotal - discountAmount;
+      let totalGst = 0;
+      for (const item of items) {
+        if (item.gstRate > 0) {
+          const proportion = item.unitPrice / subtotal;
+          const itemDiscountedPrice = discountedSubtotal * proportion;
+          item.gstAmount = itemDiscountedPrice * item.gstRate / 100;
+          totalGst += item.gstAmount;
+        }
+      }
+      const totalAmount = discountedSubtotal + totalGst;
+      const invoiceNumber = generateInvoiceNumber();
+      const invoiceId = runWithId(`
+          INSERT INTO invoices (
+            invoice_number, order_id, patient_id, price_list_id,
+            subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by,
+            gst_amount, total_amount, status, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
+        `, [
+        invoiceNumber,
+        data.orderId,
+        data.patientId,
+        data.priceListId,
+        subtotal,
+        discountAmount,
+        data.discountPercent || 0,
+        data.discountReason || null,
+        data.discountApprovedBy || null,
+        totalGst,
+        totalAmount,
+        data.createdBy || null
       ]);
+      for (const item of items) {
+        run(`
+            INSERT INTO invoice_items (
+              invoice_id, test_id, description, unit_price, quantity,
+              discount_amount, gst_rate, gst_amount, line_total
+            ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+          `, [
+          invoiceId,
+          item.testId,
+          item.description,
+          item.unitPrice,
+          item.gstRate,
+          item.gstAmount,
+          item.lineTotal
+        ]);
+      }
+      run(`
+          INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+          VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
+        `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
+      return { success: true, invoiceId, invoiceNumber };
+    } catch (error) {
+      if (error.code === "SQLITE_CONSTRAINT_UNIQUE" && attempt < maxRetries - 1) {
+        console.log(`Invoice number conflict, retrying... (attempt ${attempt + 1})`);
+        continue;
+      }
+      console.error("Create invoice error:", error);
+      return { success: false, error: error.message };
     }
-    run(`
-      INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
-      VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
-    `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
-    return { success: true, invoiceId, invoiceNumber };
-  } catch (error) {
-    console.error("Create invoice error:", error);
-    return { success: false, error: error.message };
   }
+  return { success: false, error: "Failed to create invoice after multiple attempts" };
 }
 function finalizeInvoice(id, userId) {
   try {
