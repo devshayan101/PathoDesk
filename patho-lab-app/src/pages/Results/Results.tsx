@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import ReportPreview from '../../components/Report/ReportPreview';
 import './Results.css';
 
 interface Sample {
@@ -54,6 +55,7 @@ export default function ResultsPage() {
     const [values, setValues] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [criticalAlert, setCriticalAlert] = useState<{ param: string; value: string } | null>(null);
+    const [showReport, setShowReport] = useState(false);
 
     useEffect(() => {
         loadPendingSamples();
@@ -397,15 +399,21 @@ export default function ResultsPage() {
                                 </>
                             ) : null}
 
-                            {resultData.status === 'SUBMITTED' && session?.role === 'pathologist' && (
+                            {resultData.status === 'SUBMITTED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
                                 <button className="btn btn-primary" onClick={handleVerify}>
                                     Verify Results
                                 </button>
                             )}
 
-                            {resultData.status === 'VERIFIED' && session?.role === 'pathologist' && (
+                            {resultData.status === 'VERIFIED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
                                 <button className="btn btn-success" onClick={handleFinalize}>
                                     Finalize
+                                </button>
+                            )}
+
+                            {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (
+                                <button className="btn btn-secondary" onClick={() => setShowReport(true)}>
+                                    📄 View Report
                                 </button>
                             )}
                         </div>
@@ -446,6 +454,14 @@ export default function ResultsPage() {
                 <div className="empty-state">
                     {loading ? 'Loading...' : 'Select a sample to begin result entry'}
                 </div>
+            )}
+
+            {/* Report Preview Modal */}
+            {showReport && resultData && (
+                <ReportPreview
+                    sampleId={resultData.sample_id}
+                    onClose={() => setShowReport(false)}
+                />
             )}
         </div>
     );

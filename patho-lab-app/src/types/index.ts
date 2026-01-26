@@ -189,4 +189,11 @@ export const IPC_CHANNELS = {
     USER_UPDATE: 'user:update',
     USER_TOGGLE_ACTIVE: 'user:toggleActive',
     ROLE_LIST: 'role:list',
+
+    // Reports
+    REPORT_GET_DATA: 'report:getData',
+
+    // Lab Settings
+    LAB_SETTINGS_GET: 'labSettings:get',
+    LAB_SETTINGS_UPDATE: 'labSettings:update',
 } as const;

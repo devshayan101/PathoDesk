@@ -55,7 +55,12 @@ const IPC_CHANNELS = {
   USER_CREATE: "user:create",
   USER_UPDATE: "user:update",
   USER_TOGGLE_ACTIVE: "user:toggleActive",
-  ROLE_LIST: "role:list"
+  ROLE_LIST: "role:list",
+  // Reports
+  REPORT_GET_DATA: "report:getData",
+  // Lab Settings
+  LAB_SETTINGS_GET: "labSettings:get",
+  LAB_SETTINGS_UPDATE: "labSettings:update"
 };
 const api = {
   // Auth
@@ -128,6 +133,15 @@ const api = {
     verify: (sampleId, verifiedBy) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_VERIFY, sampleId, verifiedBy),
     finalize: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_FINALIZE, sampleId),
     getPrevious: (patientId, testId, currentSampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_GET_PREVIOUS, patientId, testId, currentSampleId)
+  },
+  // Reports
+  reports: {
+    getData: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_DATA, sampleId)
+  },
+  // Lab Settings
+  labSettings: {
+    get: () => electron.ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_GET),
+    update: (key, value) => electron.ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_UPDATE, key, value)
   }
 };
 electron.contextBridge.exposeInMainWorld("electronAPI", api);

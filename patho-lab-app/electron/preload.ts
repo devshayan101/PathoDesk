@@ -126,6 +126,20 @@ const api = {
     getPrevious: (patientId: number, testId: number, currentSampleId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.RESULT_GET_PREVIOUS, patientId, testId, currentSampleId),
   },
+
+  // Reports
+  reports: {
+    getData: (sampleId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_DATA, sampleId),
+  },
+
+  // Lab Settings
+  labSettings: {
+    get: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_GET),
+    update: (key: string, value: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_UPDATE, key, value),
+  },
 }
 
 // Expose to window

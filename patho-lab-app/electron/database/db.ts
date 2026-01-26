@@ -844,6 +844,28 @@ function getMigrations() {
           ((SELECT id FROM test_parameters WHERE parameter_code='INR'), NULL, 5.0),
           ((SELECT id FROM test_parameters WHERE parameter_code='PT'), NULL, 30.0);
       `
+    },
+    {
+      name: '011_lab_settings',
+      sql: `
+        -- Lab settings for report letterhead and configuration
+        CREATE TABLE IF NOT EXISTS lab_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          setting_key TEXT UNIQUE NOT NULL,
+          setting_value TEXT
+        );
+        
+        -- Insert default lab settings
+        INSERT INTO lab_settings (setting_key, setting_value) VALUES
+          ('lab_name', 'PathoCare Diagnostics'),
+          ('address_line1', '123 Medical Complex, Main Road'),
+          ('address_line2', 'City - 400001'),
+          ('phone', '+91 98765 43210'),
+          ('email', 'reports@pathocare.com'),
+          ('nabl_accreditation', 'NABL-MC-XXXX'),
+          ('report_footer', 'This report is electronically generated and valid without signature.'),
+          ('disclaimer', 'Results should be correlated with clinical findings. Consult your physician for interpretation.');
+      `
     }
   ];
 }
