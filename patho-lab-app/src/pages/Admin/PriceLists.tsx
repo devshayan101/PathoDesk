@@ -161,30 +161,42 @@ export default function PriceLists() {
                 </button>
             </div>
 
-            <div className="price-lists-layout">
+            <div className="price-lists-layout" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem', height: 'calc(100vh - 140px)' }}>
                 {/* Left: Price Lists */}
-                <div className="lists-panel">
-                    <h3>Price Lists</h3>
-                    <div className="lists-container">
+                <div className="lists-panel" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div style={{ padding: '1rem', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-tertiary)' }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem' }}>Price Lists</h3>
+                    </div>
+                    <div className="lists-container" style={{ overflowY: 'auto', flex: 1, padding: '0.5rem' }}>
                         {priceLists.map(list => (
                             <div
                                 key={list.id}
                                 className={`list-card ${selectedList?.id === list.id ? 'selected' : ''} ${list.is_active === 0 ? 'inactive' : ''}`}
                                 onClick={() => setSelectedList(list)}
+                                style={{
+                                    padding: '1rem',
+                                    marginBottom: '0.5rem',
+                                    borderRadius: 'var(--radius-md)',
+                                    cursor: 'pointer',
+                                    border: selectedList?.id === list.id ? '1px solid var(--color-accent)' : '1px solid transparent',
+                                    background: selectedList?.id === list.id ? 'var(--color-bg-tertiary)' : 'transparent',
+                                    transition: 'background 0.2s'
+                                }}
                             >
-                                <div className="list-header">
-                                    <span className="list-code">{list.code}</span>
-                                    {list.is_default === 1 && <span className="badge default">Default</span>}
-                                    {list.is_active === 0 && <span className="badge inactive">Inactive</span>}
+                                <div className="list-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{list.code}</span>
+                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                        {list.is_default === 1 && <span className="badge badge-info" style={{ fontSize: '0.6rem' }}>Default</span>}
+                                        {list.is_active === 0 && <span className="badge badge-warning" style={{ fontSize: '0.6rem' }}>Inactive</span>}
+                                    </div>
                                 </div>
-                                <div className="list-name">{list.name}</div>
-                                {list.description && <div className="list-desc">{list.description}</div>}
-                                <div className="list-actions">
-                                    <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleEditList(list); }}>
+                                <div className="list-name" style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{list.name}</div>
+                                <div className="list-actions" style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                                    <button className="btn btn-sm btn-secondary" onClick={(e) => { e.stopPropagation(); handleEditList(list); }} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}>
                                         Edit
                                     </button>
                                     {list.is_default === 0 && list.is_active === 1 && (
-                                        <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleSetDefault(list); }}>
+                                        <button className="btn btn-sm btn-secondary" onClick={(e) => { e.stopPropagation(); handleSetDefault(list); }} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}>
                                             Set Default
                                         </button>
                                     )}
@@ -195,11 +207,14 @@ export default function PriceLists() {
                 </div>
 
                 {/* Right: Test Prices */}
-                <div className="prices-panel">
+                <div className="prices-panel" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {selectedList ? (
                         <>
-                            <div className="prices-header">
-                                <h3>Test Prices - {selectedList.name}</h3>
+                            <div className="prices-header" style={{ padding: '1rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-bg-tertiary)' }}>
+                                <div>
+                                    <h3 style={{ margin: 0 }}>{selectedList.name}</h3>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{selectedList.code}</span>
+                                </div>
                                 {editingPrices.size > 0 && (
                                     <button
                                         className="btn btn-primary"
@@ -214,33 +229,38 @@ export default function PriceLists() {
                             {pricesLoading ? (
                                 <div className="loading">Loading prices...</div>
                             ) : (
-                                <div className="prices-table-container">
-                                    <table className="prices-table">
-                                        <thead>
+                                <div className="prices-table-container" style={{ overflowY: 'auto', flex: 1 }}>
+                                    <table className="prices-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-card)', zIndex: 1 }}>
                                             <tr>
-                                                <th>Test Code</th>
-                                                <th>Test Name</th>
-                                                <th>Base Price (₹)</th>
-                                                <th>GST</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)' }}>Test Code</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)' }}>Test Name</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)', width: '150px' }}>Base Price (₹)</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)' }}>GST</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {testPrices.map(price => (
-                                                <tr key={price.test_id} className={editingPrices.has(price.test_id) ? 'modified' : ''}>
-                                                    <td className="code">{price.test_code}</td>
-                                                    <td>{price.test_name}</td>
-                                                    <td>
+                                                <tr key={price.test_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                                    <td style={{ padding: '0.75rem 1rem' }} className="code">{price.test_code}</td>
+                                                    <td style={{ padding: '0.75rem 1rem' }}>{price.test_name}</td>
+                                                    <td style={{ padding: '0.5rem 1rem' }}>
                                                         <input
                                                             type="number"
-                                                            className="price-input"
+                                                            className="price-input input"
                                                             value={editingPrices.get(price.test_id) ?? price.base_price}
                                                             onChange={(e) => handlePriceChange(price.test_id, e.target.value)}
                                                             min="0"
                                                             step="10"
+                                                            style={{
+                                                                width: '100%',
+                                                                borderColor: editingPrices.has(price.test_id) ? 'var(--color-accent)' : 'var(--color-border)',
+                                                                background: editingPrices.has(price.test_id) ? 'var(--color-bg-tertiary)' : 'transparent'
+                                                            }}
                                                         />
                                                     </td>
-                                                    <td>
-                                                        {price.gst_applicable === 1 ? `${price.gst_rate}%` : 'Exempt'}
+                                                    <td style={{ padding: '0.75rem 1rem' }}>
+                                                        {price.gst_applicable === 1 ? <span className="badge badge-info">{price.gst_rate}%</span> : <span className="text-muted">Exempt</span>}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -250,7 +270,7 @@ export default function PriceLists() {
                             )}
                         </>
                     ) : (
-                        <div className="no-selection">
+                        <div className="no-selection" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>
                             Select a price list to view/edit test prices
                         </div>
                     )}

@@ -252,6 +252,8 @@ export function getCommissionStatement(
         invoiceCount: number;
     };
     items: CommissionStatementItem[];
+    settlement: { id: number; paid_amount: number; payment_status: string } | null;
+    payments: any[];
 } {
     // Get doctor info
     const doctor = queryOne<{
@@ -289,11 +291,30 @@ export function getCommissionStatement(
     ORDER BY i.created_at ASC, p.full_name ASC, dc.test_description ASC
   `, [doctorId, month, year]);
 
+    // Get settlement and payments
+    let settlement = null;
+    let payments: any[] = [];
+
+    const settlementRow = queryOne<{ id: number; paid_amount: number; payment_status: string }>(`
+      SELECT id, paid_amount, payment_status
+      FROM commission_settlements
+      WHERE doctor_id = ? AND period_month = ? AND period_year = ?
+    `, [doctorId, month, year]);
+
+    if (settlementRow) {
+        settlement = settlementRow;
+        payments = queryAll(`
+        SELECT * FROM commission_payments WHERE settlement_id = ? ORDER BY payment_date DESC
+      `, [settlementRow.id]);
+    }
+
     return {
         doctor: doctor || null,
         period: { month, year },
         summary,
-        items
+        items,
+        settlement,
+        payments
     };
 }
 

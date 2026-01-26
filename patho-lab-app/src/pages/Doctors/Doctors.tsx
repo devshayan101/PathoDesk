@@ -105,9 +105,12 @@ export default function DoctorsPage() {
             if (window.electronAPI) {
                 const data = await window.electronAPI.commissions.getStatement(doctorId, month, year);
                 setStatementData(data);
-                // Pre-fill payment amount
+                // Pre-fill payment amount with net due
                 if (data?.summary?.totalCommission) {
-                    setPaymentForm(prev => ({ ...prev, amount: data.summary.totalCommission }));
+                    const totalCommission = data.summary.totalCommission || 0;
+                    const paidAmount = data.settlement?.paid_amount || 0;
+                    const netDue = Math.max(0, totalCommission - paidAmount);
+                    setPaymentForm(prev => ({ ...prev, amount: netDue }));
                 }
             }
         } catch (e) {
@@ -447,15 +450,15 @@ export default function DoctorsPage() {
             {/* Commission Statement Modal */}
             {showStatementModal && selectedDoctorForStatement && (
                 <div className="modal-overlay" onClick={() => setShowStatementModal(false)}>
-                    <div className="modal" style={{ maxWidth: '900px', width: '90%' }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>Commission Management - {selectedDoctorForStatement.name}</h2>
+                    <div className="modal" style={{ maxWidth: '900px', width: '90%', padding: 0 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Commission Management - {selectedDoctorForStatement.name}</h2>
                             <button className="close-btn" onClick={() => setShowStatementModal(false)}>×</button>
                         </div>
 
                         <div className="modal-body" style={{ padding: 0 }}>
                             {/* Tabs */}
-                            <div className="tabs" style={{ display: 'flex', borderBottom: '1px solid #ddd', padding: '0 1rem', background: '#f8f9fa' }}>
+                            <div className="tabs" style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', padding: '0 1rem', background: 'var(--color-bg-tertiary)' }}>
                                 <button
                                     className={`tab-btn ${activeTab === 'statement' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('statement')}
@@ -463,8 +466,8 @@ export default function DoctorsPage() {
                                         padding: '1rem',
                                         border: 'none',
                                         background: 'none',
-                                        borderBottom: activeTab === 'statement' ? '2px solid #3498db' : 'none',
-                                        color: activeTab === 'statement' ? '#3498db' : '#666',
+                                        borderBottom: activeTab === 'statement' ? '2px solid var(--color-accent)' : '2px solid transparent',
+                                        color: activeTab === 'statement' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                                         fontWeight: activeTab === 'statement' ? 'bold' : 'normal',
                                         cursor: 'pointer'
                                     }}
@@ -478,8 +481,8 @@ export default function DoctorsPage() {
                                         padding: '1rem',
                                         border: 'none',
                                         background: 'none',
-                                        borderBottom: activeTab === 'payment' ? '2px solid #3498db' : 'none',
-                                        color: activeTab === 'payment' ? '#3498db' : '#666',
+                                        borderBottom: activeTab === 'payment' ? '2px solid var(--color-accent)' : '2px solid transparent',
+                                        color: activeTab === 'payment' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                                         fontWeight: activeTab === 'payment' ? 'bold' : 'normal',
                                         cursor: 'pointer'
                                     }}
@@ -491,7 +494,7 @@ export default function DoctorsPage() {
                             <div className="tab-content" style={{ padding: '1.5rem' }}>
                                 {activeTab === 'statement' ? (
                                     <>
-                                        <div className="filters-row" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                                        <div className="filters-row" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', background: 'var(--color-bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
                                             <div className="form-group" style={{ marginBottom: 0 }}>
                                                 <label>Month</label>
                                                 <select
@@ -516,179 +519,277 @@ export default function DoctorsPage() {
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="summary-badges" style={{ marginLeft: 'auto', display: 'flex', gap: '1rem' }}>
-                                                <div className="badge badge-info" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
-                                                    Tests: <strong>{statementData?.summary?.testCount || 0}</strong>
-                                                </div>
-                                                <div className="badge badge-success" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
-                                                    Total: <strong>₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}</strong>
-                                                </div>
-                                            </div>
+
                                         </div>
 
                                         {statementLoading ? (
                                             <div className="loading">Loading statement...</div>
                                         ) : (
-                                            <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                                <table className="table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Date</th>
-                                                            <th>Patient</th>
-                                                            <th>Test</th>
-                                                            <th style={{ textAlign: 'right' }}>Price</th>
-                                                            <th style={{ textAlign: 'right' }}>Commission</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {!statementData?.items || statementData.items.length === 0 ? (
-                                                            <tr>
-                                                                <td colSpan={5} className="empty-row">No commissions found for this period</td>
-                                                            </tr>
-                                                        ) : (
-                                                            <>
-                                                                {statementData.items.map((item, index) => (
-                                                                    <tr key={index}>
-                                                                        <td>{new Date(item.invoice_date).toLocaleDateString()}</td>
-                                                                        <td>
-                                                                            <div>{item.patient_name}</div>
-                                                                            <small style={{ color: '#888' }}>{item.invoice_number}</small>
-                                                                        </td>
-                                                                        <td>{item.test_description}</td>
-                                                                        <td style={{ textAlign: 'right' }}>₹{item.test_price.toFixed(2)}</td>
-                                                                        <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#27ae60' }}>
-                                                                            ₹{item.commission_amount.toFixed(2)}
-                                                                        </td>
+                                            <>
+                                                {/* Summary Cards */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                                    <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>TESTS</div>
+                                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{statementData?.summary?.testCount || 0}</div>
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>TOTAL COMMISSION</div>
+                                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-success)' }}>
+                                                            ₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>TOTAL PAID</div>
+                                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-accent)' }}>
+                                                            ₹{statementData?.settlement?.paid_amount?.toFixed(2) || '0.00'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="card" style={{ padding: '1rem', textAlign: 'center', background: (statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0) > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)' }}>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>NET DUE</div>
+                                                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: (statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0) > 0 ? 'var(--color-error)' : 'var(--color-success)' }}>
+                                                            ₹{Math.max(0, (statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0)).toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                                                    {/* Commission List */}
+                                                    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderBottom: '1px solid var(--color-border)', fontWeight: '600' }}>Commission Details</div>
+                                                        <div className="table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                                            <table className="table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Date</th>
+                                                                        <th>Patient</th>
+                                                                        <th>Test</th>
+                                                                        <th style={{ textAlign: 'right' }}>Comm.</th>
                                                                     </tr>
-                                                                ))}
-                                                                <tr style={{ background: '#f8f9fa', fontWeight: 'bold' }}>
-                                                                    <td colSpan={4} style={{ textAlign: 'right' }}>Total Commission:</td>
-                                                                    <td style={{ textAlign: 'right', color: '#27ae60', fontSize: '1.2rem' }}>
-                                                                        ₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}
-                                                                    </td>
-                                                                </tr>
-                                                            </>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
+                                                                </thead>
+                                                                <tbody>
+                                                                    {!statementData?.items || statementData.items.length === 0 ? (
+                                                                        <tr>
+                                                                            <td colSpan={4} className="empty-row">No commissions</td>
+                                                                        </tr>
+                                                                    ) : (
+                                                                        statementData.items.map((item, index) => (
+                                                                            <tr key={index}>
+                                                                                <td>{new Date(item.invoice_date).toLocaleDateString()}</td>
+                                                                                <td>
+                                                                                    <div>{item.patient_name}</div>
+                                                                                    <small className="text-muted">{item.invoice_number}</small>
+                                                                                </td>
+                                                                                <td>{item.test_description}</td>
+                                                                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--color-success)' }}>
+                                                                                    ₹{item.commission_amount.toFixed(2)}
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
 
-                                        <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => setActiveTab('payment')}
-                                                disabled={!statementData?.summary?.totalCommission || statementData.summary.totalCommission <= 0}
-                                            >
-                                                Proceed to Payment
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="payment-form">
-                                        <h3>Record Commission Payment</h3>
+                                                    {/* Payment History */}
+                                                    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderBottom: '1px solid var(--color-border)', fontWeight: '600' }}>Payment History</div>
+                                                        <div className="table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                                            <table className="table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Date</th>
+                                                                        <th>Mode</th>
+                                                                        <th style={{ textAlign: 'right' }}>Amount</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {!statementData?.payments || statementData.payments.length === 0 ? (
+                                                                        <tr>
+                                                                            <td colSpan={3} className="empty-row">No payments</td>
+                                                                        </tr>
+                                                                    ) : (
+                                                                        statementData.payments.map((payment, index) => (
+                                                                            <tr key={index}>
+                                                                                <td>{new Date(payment.payment_date).toLocaleDateString()}</td>
+                                                                                <td>{payment.payment_mode}</td>
+                                                                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--color-accent)' }}>
+                                                                                    ₹{payment.amount.toFixed(2)}
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                        {lastPayment ? (
-                                            <div className="success-message" style={{ textAlign: 'center', padding: '2rem', background: '#e8f5e9', borderRadius: '8px' }}>
-                                                <div style={{ fontSize: '3rem', color: '#27ae60', marginBottom: '1rem' }}>✓</div>
-                                                <h3>Payment Recorded Successfully!</h3>
-                                                <p>₹{lastPayment.amount} has been recorded for Dr. {lastPayment.doctorName}</p>
-
-                                                <div style={{ marginTop: '2rem' }}>
-                                                    <PDFDownloadLink
-                                                        document={
-                                                            <PaymentReceipt
-                                                                doctorName={lastPayment.doctorName}
-                                                                doctorCode={lastPayment.doctorCode}
-                                                                paymentId={lastPayment.id}
-                                                                paymentDate={lastPayment.date}
-                                                                amount={lastPayment.amount}
-                                                                paymentMode={lastPayment.mode}
-                                                                reference={lastPayment.reference}
-                                                                period={lastPayment.period}
-                                                            />
-                                                        }
-                                                        fileName={`receipt_${lastPayment.period.replace(/\s/g, '_')}.pdf`}
-                                                        className="btn btn-primary"
-                                                    >
-                                                        {({ blob, url, loading, error }) =>
-                                                            loading ? 'Generating Receipt...' : 'Download Receipt PDF'
-                                                        }
-                                                    </PDFDownloadLink>
-
+                                                <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
                                                     <button
-                                                        className="btn btn-secondary"
-                                                        onClick={() => {
-                                                            setLastPayment(null);
-                                                            setActiveTab('statement');
-                                                            if (selectedDoctorForStatement) {
-                                                                loadStatement(selectedDoctorForStatement.id, statementPeriod.month, statementPeriod.year);
-                                                            }
-                                                            loadDoctors(); // Refresh doctors list to update pending dues
-                                                        }}
-                                                        style={{ marginLeft: '1rem' }}
+                                                        className="btn btn-primary"
+                                                        onClick={() => setActiveTab('payment')}
+                                                        disabled={(statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0) <= 0}
                                                     >
-                                                        Back to Statement
+                                                        Proceed to Payment
                                                     </button>
                                                 </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="payment-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                        {/* Left: Payment History & Net Due */}
+                                        <div className="payment-history-section">
+                                            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'var(--color-bg-tertiary)', border: 'none' }}>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>NET DUE AMOUNT</div>
+                                                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: (statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0) > 0 ? 'var(--color-error)' : 'var(--color-success)' }}>
+                                                    ₹{Math.max(0, (statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0)).toFixed(2)}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', fontSize: '0.9rem' }}>
+                                                    <div>
+                                                        <span style={{ color: 'var(--color-text-muted)' }}>Total Commission: </span>
+                                                        <strong>₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}</strong>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: 'var(--color-text-muted)' }}>Paid: </span>
+                                                        <strong>₹{statementData?.settlement?.paid_amount?.toFixed(2) || '0.00'}</strong>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div className="form-grid" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                                                <div className="form-group full-width">
-                                                    <label>Amount (₹)</label>
-                                                    <input
-                                                        type="number"
-                                                        className="input"
-                                                        style={{ fontSize: '1.2rem', fontWeight: 'bold' }}
-                                                        value={paymentForm.amount}
-                                                        onChange={e => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
-                                                    />
-                                                </div>
-                                                <div className="form-group full-width">
-                                                    <label>Payment Mode</label>
-                                                    <select
-                                                        className="input"
-                                                        value={paymentForm.mode}
-                                                        onChange={e => setPaymentForm({ ...paymentForm, mode: e.target.value })}
-                                                    >
-                                                        <option value="CASH">Cash</option>
-                                                        <option value="UPI">UPI</option>
-                                                        <option value="NEFT">NEFT/RTGS</option>
-                                                        <option value="CHEQUE">Cheque</option>
-                                                    </select>
-                                                </div>
-                                                <div className="form-group full-width">
-                                                    <label>Reference # (Optional)</label>
-                                                    <input
-                                                        type="text"
-                                                        className="input"
-                                                        placeholder="Transaction ID / Cheque No."
-                                                        value={paymentForm.reference}
-                                                        onChange={e => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="form-group full-width">
-                                                    <label>Remarks</label>
-                                                    <textarea
-                                                        className="input"
-                                                        rows={2}
-                                                        value={paymentForm.remarks}
-                                                        onChange={e => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
-                                                    />
-                                                </div>
 
-                                                <div className="actions" style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+                                            <h4 style={{ margin: '0 0 1rem 0' }}>Payment History</h4>
+                                            <div className="payment-list" style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {!statementData?.payments || statementData.payments.length === 0 ? (
+                                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                                                        No payments recorded for this period
+                                                    </div>
+                                                ) : (
+                                                    statementData.payments.map((payment, index) => (
+                                                        <div key={index} className="payment-card-item" style={{ padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div>
+                                                                <div style={{ fontWeight: 'bold' }}>₹{payment.amount.toFixed(2)}</div>
+                                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                                                    {new Date(payment.payment_date).toLocaleDateString()} • {payment.payment_mode}
+                                                                </div>
+                                                                {payment.reference && (
+                                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+                                                                        Ref: {payment.reference}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="status-dot success"></div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Record Payment Form */}
+                                        <div className="payment-form-section" style={{ background: 'var(--color-bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                                            <h3 style={{ marginTop: 0 }}>Record New Payment</h3>
+
+                                            {lastPayment ? (
+                                                <div className="success-message" style={{ textAlign: 'center', padding: '2rem', background: 'rgba(34, 197, 94, 0.1)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-success)' }}>
+                                                    <div style={{ fontSize: '3rem', color: 'var(--color-success)', marginBottom: '1rem' }}>✓</div>
+                                                    <h3>Payment Recorded Successfully!</h3>
+                                                    <p>₹{lastPayment.amount} has been recorded for Dr. {lastPayment.doctorName}</p>
+
+                                                    <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                        <PDFDownloadLink
+                                                            document={
+                                                                <PaymentReceipt
+                                                                    doctorName={lastPayment.doctorName}
+                                                                    doctorCode={lastPayment.doctorCode}
+                                                                    paymentId={lastPayment.id}
+                                                                    paymentDate={lastPayment.date}
+                                                                    amount={lastPayment.amount}
+                                                                    paymentMode={lastPayment.mode}
+                                                                    reference={lastPayment.reference}
+                                                                    period={lastPayment.period}
+                                                                />
+                                                            }
+                                                            fileName={`receipt_${lastPayment.period.replace(/\s/g, '_')}.pdf`}
+                                                            className="btn btn-primary"
+                                                            style={{ textDecoration: 'none' }}
+                                                        >
+                                                            {({ blob, url, loading, error }) =>
+                                                                loading ? 'Generating Receipt...' : 'Download Receipt PDF'
+                                                            }
+                                                        </PDFDownloadLink>
+
+                                                        <button
+                                                            className="btn btn-secondary"
+                                                            onClick={() => {
+                                                                setLastPayment(null);
+                                                                // Refresh statement to update net due
+                                                                if (selectedDoctorForStatement) {
+                                                                    loadStatement(selectedDoctorForStatement.id, statementPeriod.month, statementPeriod.year);
+                                                                }
+                                                                loadDoctors();
+                                                            }}
+                                                        >
+                                                            Record Another Payment
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="form-grid" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                    <div className="form-group">
+                                                        <label>Amount (₹)</label>
+                                                        <input
+                                                            type="number"
+                                                            className="input"
+                                                            style={{ fontSize: '1.2rem', fontWeight: 'bold' }}
+                                                            value={paymentForm.amount}
+                                                            onChange={e => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                                                            max={(statementData?.summary?.totalCommission || 0) - (statementData?.settlement?.paid_amount || 0)}
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label>Payment Mode</label>
+                                                        <select
+                                                            className="input"
+                                                            value={paymentForm.mode}
+                                                            onChange={e => setPaymentForm({ ...paymentForm, mode: e.target.value })}
+                                                        >
+                                                            <option value="CASH">Cash</option>
+                                                            <option value="UPI">UPI</option>
+                                                            <option value="NEFT">NEFT/RTGS</option>
+                                                            <option value="CHEQUE">Cheque</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label>Reference # (Optional)</label>
+                                                        <input
+                                                            type="text"
+                                                            className="input"
+                                                            placeholder="Transaction ID / Cheque No."
+                                                            value={paymentForm.reference}
+                                                            onChange={e => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label>Remarks</label>
+                                                        <textarea
+                                                            className="input"
+                                                            rows={3}
+                                                            value={paymentForm.remarks}
+                                                            onChange={e => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                                                        />
+                                                    </div>
+
                                                     <button
                                                         className="btn btn-primary"
-                                                        style={{ flex: 1 }}
+                                                        style={{ marginTop: '1rem' }}
                                                         onClick={() => handleRecordPayment()}
                                                         disabled={submittingPayment || paymentForm.amount <= 0}
                                                     >
-                                                        {submittingPayment ? 'Processing...' : 'Record Payment & Generate Receipt'}
+                                                        {submittingPayment ? 'Processing...' : 'Record Payment'}
                                                     </button>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

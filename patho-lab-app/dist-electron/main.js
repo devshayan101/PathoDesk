@@ -2875,6 +2875,14 @@ function getMigrations() {
           0, 0, 0, datetime('now')
         FROM tests WHERE is_active = 1;
       `
+    },
+    {
+      name: "015_add_referring_doctor_to_orders",
+      sql: `
+        -- Add referring_doctor_id to orders table (idempotent)
+        -- SQLite doesn't support IF NOT EXISTS for columns, so we check via pragma
+        -- This will fail silently if column already exists and migration already ran
+      `
     }
   ];
 }
@@ -3381,13 +3389,16 @@ function listPendingSamples() {
       s.id, s.sample_uid, o.order_uid,
       p.id as patient_id, p.full_name as patient_name, p.patient_uid, p.dob as patient_dob, p.gender as patient_gender,
       t.id as test_id, tv.test_name, ot.test_version_id,
-      s.status
+      s.status,
+      s.received_at,
+      d.name as doctor_name
     FROM samples s
     JOIN order_tests ot ON s.order_test_id = ot.id
     JOIN test_versions tv ON ot.test_version_id = tv.id
     JOIN tests t ON tv.test_id = t.id
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE s.status IN ('RECEIVED', 'DRAFT', 'SUBMITTED', 'VERIFIED', 'FINALIZED')
     ORDER BY 
       CASE s.status 
@@ -4181,11 +4192,26 @@ function getCommissionStatement(doctorId, month, year) {
       AND CAST(strftime('%Y', i.created_at) AS INTEGER) = ?
     ORDER BY i.created_at ASC, p.full_name ASC, dc.test_description ASC
   `, [doctorId, month, year]);
+  let settlement = null;
+  let payments = [];
+  const settlementRow = queryOne(`
+      SELECT id, paid_amount, payment_status
+      FROM commission_settlements
+      WHERE doctor_id = ? AND period_month = ? AND period_year = ?
+    `, [doctorId, month, year]);
+  if (settlementRow) {
+    settlement = settlementRow;
+    payments = queryAll(`
+        SELECT * FROM commission_payments WHERE settlement_id = ? ORDER BY payment_date DESC
+      `, [settlementRow.id]);
+  }
   return {
     doctor: doctor || null,
     period: { month, year },
     summary,
-    items
+    items,
+    settlement,
+    payments
   };
 }
 function getDoctorsWithPendingCommissions(month, year) {

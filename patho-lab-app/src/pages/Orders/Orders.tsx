@@ -217,205 +217,236 @@ export default function OrdersPage() {
     const finalTotal = subtotal - discountAmount;
 
     return (
-        <div className="orders-page">
-            <div className="page-header">
-                <h1 className="page-title">Orders</h1>
+        <div className="orders-page" style={{ padding: '1.5rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h1 className="page-title" style={{ margin: 0 }}>Orders</h1>
                 <button className="btn btn-primary" onClick={() => setShowForm(true)}>
                     + New Order
                 </button>
             </div>
 
             {showForm && (
-                <div className="modal-overlay">
-                    <div className="modal order-form-modal">
-                        <h2>Order Creation</h2>
-
-                        <div className="form-row">
-                            <div className="form-group flex-1">
-                                <label>Select Patient *</label>
-                                <select
-                                    className="input"
-                                    value={selectedPatientId}
-                                    onChange={(e) => setSelectedPatientId(Number(e.target.value))}
-                                >
-                                    <option value="">-- Select Patient --</option>
-                                    {patients.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.full_name} ({p.patient_uid})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group flex-1">
-                                <label>Price List *</label>
-                                <select
-                                    className="input"
-                                    value={selectedPriceListId}
-                                    onChange={(e) => setSelectedPriceListId(Number(e.target.value))}
-                                >
-                                    {priceLists.map(pl => (
-                                        <option key={pl.id} value={pl.id}>
-                                            {pl.name} {pl.is_default === 1 ? '(Default)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal order-form-modal" style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
+                        <div className="modal-header" style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 style={{ margin: 0 }}>Create New Order</h2>
+                            <button className="close-btn" onClick={() => { setShowForm(false); resetForm(); }} style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                         </div>
 
-                        <div className="form-group">
-                            <label>Referring Doctor (Optional)</label>
-                            <select
-                                className="input"
-                                value={selectedDoctorId}
-                                onChange={(e) => setSelectedDoctorId(e.target.value ? Number(e.target.value) : '')}
-                            >
-                                <option value="">-- Walk-in / No Referral --</option>
-                                {doctors.map(d => (
-                                    <option key={d.id} value={d.id}>
-                                        {d.name} ({d.doctor_code})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {selectedPatientId && (
-                            <>
-                                {/* Test selection */}
-                                <div className="test-selection">
-                                    <label>Select Tests:</label>
-                                    <div className="test-buttons">
-                                        {tests.map(test => (
-                                            <button
-                                                key={test.id}
-                                                type="button"
-                                                className={`test-btn ${selectedTestIds.includes(test.version_id) ? 'selected' : ''}`}
-                                                onClick={() => toggleTest(test.version_id)}
-                                            >
-                                                {test.test_code}
-                                            </button>
-                                        ))}
+                        <div className="modal-body" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
+                            {/* Left Column: Form Inputs */}
+                            <div className="form-column">
+                                <div className="section-title" style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Patient Details</div>
+                                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                    <div className="form-group">
+                                        <label>Select Patient *</label>
+                                        <select
+                                            className="input"
+                                            value={selectedPatientId}
+                                            onChange={(e) => setSelectedPatientId(Number(e.target.value))}
+                                            style={{ width: '100%' }}
+                                        >
+                                            <option value="">-- Select Patient --</option>
+                                            {patients.map(p => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.full_name} ({p.patient_uid})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Referring Doctor</label>
+                                        <select
+                                            className="input"
+                                            value={selectedDoctorId}
+                                            onChange={(e) => setSelectedDoctorId(e.target.value ? Number(e.target.value) : '')}
+                                            style={{ width: '100%' }}
+                                        >
+                                            <option value="">-- Walk-in / Self --</option>
+                                            {doctors.map(d => (
+                                                <option key={d.id} value={d.id}>
+                                                    {d.name} ({d.doctor_code})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
-                                {/* Order summary */}
-                                {selectedTestsData.length > 0 && (
-                                    <div className="order-summary">
-                                        <table className="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Test</th>
-                                                    <th style={{ textAlign: 'right' }}>Price</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {selectedTestsData.map(test => (
-                                                    <tr key={test.id}>
-                                                        <td>{test.test_name}</td>
-                                                        <td style={{ textAlign: 'right' }}>₹{getPrice(test).toLocaleString()}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                <div className="form-group" style={{ marginBottom: '2rem' }}>
+                                    <label>Price List * (Auto-selected)</label>
+                                    <select
+                                        className="input"
+                                        value={selectedPriceListId}
+                                        onChange={(e) => setSelectedPriceListId(Number(e.target.value))}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {priceLists.map(pl => (
+                                            <option key={pl.id} value={pl.id}>
+                                                {pl.name} {pl.is_default === 1 ? '(Default)' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                        <div className="order-total">
-                                            <div className="total-row">
-                                                <span>Subtotal:</span>
+                                {selectedPatientId && (
+                                    <>
+                                        <div className="section-title" style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Select Tests</div>
+                                        <div className="test-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                                            {tests.map(test => (
+                                                <button
+                                                    key={test.id}
+                                                    type="button"
+                                                    className={`test-card-btn ${selectedTestIds.includes(test.version_id) ? 'selected' : ''}`}
+                                                    onClick={() => toggleTest(test.version_id)}
+                                                    style={{
+                                                        background: selectedTestIds.includes(test.version_id) ? 'var(--color-accent)' : 'var(--color-bg-card)',
+                                                        color: selectedTestIds.includes(test.version_id) ? 'white' : 'var(--color-text-primary)',
+                                                        border: `1px solid ${selectedTestIds.includes(test.version_id) ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                                                        padding: '0.75rem',
+                                                        borderRadius: 'var(--radius-md)',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        justifyContent: 'space-between',
+                                                        minHeight: '80px'
+                                                    }}
+                                                >
+                                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem', display: 'block' }}>{test.test_code}</span>
+                                                    <span style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.2 }}>{test.test_name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Right Column: Order Summary */}
+                            <div className="summary-column" style={{ background: 'var(--color-bg-tertiary)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem' }}>Order Summary</h3>
+
+                                {selectedTestsData.length > 0 ? (
+                                    <>
+                                        <div className="selected-items" style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem' }}>
+                                            {selectedTestsData.map(test => (
+                                                <div key={test.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                                    <span style={{ fontSize: '0.9rem' }}>{test.test_name}</span>
+                                                    <span style={{ fontWeight: 600 }}>₹{getPrice(test).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="order-totals" style={{ borderTop: '2px solid var(--color-border)', paddingTop: '1rem' }}>
+                                            <div className="total-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <span style={{ color: 'var(--color-text-secondary)' }}>Subtotal</span>
                                                 <span>₹{subtotal.toLocaleString()}</span>
                                             </div>
-                                            <div className="discount-row">
-                                                <label>Discount %:</label>
+
+                                            <div className="discount-input-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.9rem' }}>Discount %</label>
                                                 <input
-                                                    className="input discount-input"
                                                     type="number"
                                                     value={discountPercent}
                                                     onChange={(e) => setDiscountPercent(e.target.value)}
                                                     placeholder="0"
                                                     min="0"
                                                     max="100"
+                                                    style={{ width: '60px', padding: '0.25rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
                                                 />
                                             </div>
+
                                             {discountPct > 0 && (
-                                                <>
-                                                    <div className="total-row discount">
-                                                        <span>Discount ({discountPct}%):</span>
-                                                        <span>- ₹{discountAmount.toLocaleString()}</span>
-                                                    </div>
-                                                    {discountPct > 20 && (
-                                                        <div className="form-group">
-                                                            <label>Discount Reason (Required for &gt;20%)</label>
-                                                            <input
-                                                                className="input"
-                                                                type="text"
-                                                                value={discountReason}
-                                                                onChange={(e) => setDiscountReason(e.target.value)}
-                                                                placeholder="Enter reason for discount"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </>
+                                                <div className="total-row discount" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--color-success)' }}>
+                                                    <span>Discount ({discountPct}%)</span>
+                                                    <span>- ₹{discountAmount.toLocaleString()}</span>
+                                                </div>
                                             )}
-                                            <div className="total-row final">
-                                                <span>Total:</span>
+
+                                            {discountPct > 20 && (
+                                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                                    <input
+                                                        className="input"
+                                                        type="text"
+                                                        value={discountReason}
+                                                        onChange={(e) => setDiscountReason(e.target.value)}
+                                                        placeholder="Reason for high discount..."
+                                                        style={{ width: '100%', fontSize: '0.85rem' }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className="total-row final" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                                <span>Total</span>
                                                 <span>₹{finalTotal.toLocaleString()}</span>
                                             </div>
                                         </div>
+                                    </>
+                                ) : (
+                                    <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '2rem' }}>
+                                        No tests selected
                                     </div>
                                 )}
+                            </div>
+                        </div>
 
-                                <div className="form-actions">
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={handleSubmit}
-                                        disabled={selectedTestIds.length === 0 || submitting || (discountPct > 20 && !discountReason)}
-                                    >
-                                        {submitting ? 'Creating...' : 'Create Order & Invoice'}
-                                    </button>
-                                    <button className="btn btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>
-                                        Cancel
-                                    </button>
-                                </div>
-                            </>
-                        )}
+                        <div className="modal-footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: 'var(--color-bg-card)' }}>
+                            <button className="btn btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSubmit}
+                                disabled={selectedTestIds.length === 0 || submitting || (discountPct > 20 && !discountReason)}
+                                style={{ minWidth: '150px' }}
+                            >
+                                {submitting ? 'Creating...' : 'Create Order'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Orders list */}
-            <div className="orders-table-container">
+            <div className="orders-table-container" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {loading ? <div className="loading">Loading orders...</div> : (
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Patient</th>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.length === 0 ? (
-                                <tr><td colSpan={5} className="empty">No orders found</td></tr>
-                            ) : (
-                                orders.map(order => (
-                                    <tr key={order.id}>
-                                        <td><code>{order.order_uid}</code></td>
-                                        <td>
-                                            {order.patient_name} <br />
-                                            <small className="text-muted">{order.patient_uid}</small>
-                                        </td>
-                                        <td>{new Date(order.order_date).toLocaleDateString()}</td>
-                                        <td>₹{(order.net_amount || order.total_amount).toLocaleString()}</td>
-                                        <td>
-                                            <span className={`badge ${order.payment_status === 'PAID' ? 'badge-success' : order.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>
-                                                {order.payment_status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                        <table className="table">
+                            <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--color-bg-tertiary)' }}>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Patient</th>
+                                    <th>Referring Doctor</th>
+                                    <th>Date</th>
+                                    <th style={{ textAlign: 'right' }}>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.length === 0 ? (
+                                    <tr><td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No recent orders</td></tr>
+                                ) : (
+                                    orders.map(order => (
+                                        <tr key={order.id} style={{ borderLeft: order.payment_status === 'PAID' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
+                                            <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{order.order_uid}</code></td>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{order.patient_name}</div>
+                                                <small className="text-muted">{order.patient_uid}</small>
+                                            </td>
+                                            <td>{order.doctor_name || <span className="text-muted">-</span>}</td>
+                                            <td>{new Date(order.order_date).toLocaleDateString()}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{(order.net_amount || order.total_amount).toLocaleString()}</td>
+                                            <td>
+                                                <span className={`badge ${order.payment_status === 'PAID' ? 'badge-success' : order.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>
+                                                    {order.payment_status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>

@@ -1175,6 +1175,14 @@ function getMigrations() {
           0, 0, 0, datetime('now')
         FROM tests WHERE is_active = 1;
       `
+    },
+    {
+      name: '015_add_referring_doctor_to_orders',
+      sql: `
+        -- Add referring_doctor_id to orders table (idempotent)
+        -- SQLite doesn't support IF NOT EXISTS for columns, so we check via pragma
+        -- This will fail silently if column already exists and migration already ran
+      `
     }
   ];
 }

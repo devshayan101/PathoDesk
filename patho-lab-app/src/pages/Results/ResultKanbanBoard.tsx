@@ -52,9 +52,19 @@ export default function ResultKanbanBoard({ samples, onSelectSample, searchQuery
                                 <div className="card-body">
                                     <p className="patient-name">{sample.patient_name}</p>
                                     <p className="test-name">{sample.test_name}</p>
+                                    {sample.doctor_name && (
+                                        <p className="doctor-name">
+                                            <span className="label">Ref:</span> {sample.doctor_name}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="card-footer">
                                     <span className="order-uid">{sample.order_uid}</span>
+                                    {sample.received_at && (
+                                        <span className="sample-date" style={{ fontSize: '0.7rem' }}>
+                                            {new Date(sample.received_at).toLocaleDateString()}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ))}

@@ -157,63 +157,73 @@ export default function Invoices() {
 
             <div className="invoices-layout">
                 {/* Invoice List */}
-                <div className="invoices-list-panel">
+                <div className="invoices-list-panel" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {loading ? (
                         <div className="loading">Loading...</div>
                     ) : filteredInvoices.length === 0 ? (
                         <div className="empty-state">No invoices found</div>
                     ) : (
-                        <table className="invoices-table">
-                            <thead>
-                                <tr>
-                                    <th>Invoice #</th>
-                                    <th>Patient</th>
-                                    <th>Date</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                    <th>Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredInvoices.map(invoice => (
-                                    <tr
-                                        key={invoice.id}
-                                        className={selectedInvoice?.id === invoice.id ? 'selected' : ''}
-                                        onClick={() => handleViewInvoice(invoice)}
-                                    >
-                                        <td className="invoice-number">{invoice.invoice_number}</td>
-                                        <td>
-                                            <div className="patient-info">
-                                                <span className="patient-name">{invoice.patient_name}</span>
-                                                <span className="patient-uid">{invoice.patient_uid}</span>
-                                            </div>
-                                        </td>
-                                        <td className="date">{formatDate(invoice.created_at)}</td>
-                                        <td className="amount">{formatCurrency(invoice.total_amount)}</td>
-                                        <td>{getStatusBadge(invoice.status)}</td>
-                                        <td className={`balance ${invoice.balance_due > 0 ? 'due' : ''}`}>
-                                            {invoice.status === 'FINALIZED'
-                                                ? (invoice.balance_due > 0 ? formatCurrency(invoice.balance_due) : 'Paid')
-                                                : '-'
-                                            }
-                                        </td>
+                        <div className="table-container" style={{ overflowY: 'auto', flex: 1 }}>
+                            <table className="table">
+                                <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--color-bg-tertiary)' }}>
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Patient</th>
+                                        <th>Date</th>
+                                        <th style={{ textAlign: 'right' }}>Amount</th>
+                                        <th>Status</th>
+                                        <th style={{ textAlign: 'right' }}>Balance</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredInvoices.map(invoice => (
+                                        <tr
+                                            key={invoice.id}
+                                            className={selectedInvoice?.id === invoice.id ? 'selected' : ''}
+                                            onClick={() => handleViewInvoice(invoice)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                background: selectedInvoice?.id === invoice.id ? 'var(--color-bg-tertiary)' : 'transparent',
+                                                borderLeft: selectedInvoice?.id === invoice.id ? '3px solid var(--color-accent)' : '3px solid transparent'
+                                            }}
+                                        >
+                                            <td style={{ fontWeight: 600 }}>{invoice.invoice_number}</td>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{invoice.patient_name}</div>
+                                                <small className="text-muted">{invoice.patient_uid}</small>
+                                            </td>
+                                            <td>{formatDate(invoice.created_at)}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(invoice.total_amount)}</td>
+                                            <td>{getStatusBadge(invoice.status)}</td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                {invoice.status === 'FINALIZED'
+                                                    ? (invoice.balance_due > 0 ? (
+                                                        <span style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{formatCurrency(invoice.balance_due)}</span>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--color-success)' }}>Paid</span>
+                                                    ))
+                                                    : '-'
+                                                }
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
 
                 {/* Invoice Detail */}
-                <div className="invoice-detail-panel">
+                <div className="invoice-detail-panel" style={{ overflowY: 'auto', padding: '1rem' }}>
                     {selectedInvoice ? (
-                        <>
-                            <div className="detail-header">
+                        <div className="invoice-paper" style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-lg)', color: 'black' }}>
+                            <div className="detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
                                 <div>
-                                    <h2>{selectedInvoice.invoice_number}</h2>
+                                    <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#333' }}>INVOICE</h2>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '0.5rem 0' }}>{selectedInvoice.invoice_number}</div>
                                     {getStatusBadge(selectedInvoice.status)}
                                 </div>
-                                <div className="detail-actions">
+                                <div className="detail-actions print-hidden" style={{ display: 'flex', gap: '0.5rem' }}>
                                     {selectedInvoice.status === 'DRAFT' && (
                                         <button
                                             className="btn btn-success"
@@ -233,81 +243,83 @@ export default function Invoices() {
                                             💳 Record Payment
                                         </button>
                                     )}
-                                    <button className="btn" onClick={() => window.print()}>
+                                    <button className="btn btn-secondary" onClick={() => window.print()}>
                                         🖨️ Print
                                     </button>
                                 </div>
                             </div>
 
                             <div className="detail-body">
-                                <div className="info-section">
-                                    <div className="info-row">
-                                        <label>Patient:</label>
-                                        <span>{selectedInvoice.patient_name} ({selectedInvoice.patient_uid})</span>
+                                <div className="info-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: '#666', marginBottom: '0.25rem' }}>Bill To:</label>
+                                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{selectedInvoice.patient_name}</div>
+                                        <div style={{ color: '#444' }}>ID: {selectedInvoice.patient_uid}</div>
+                                        {selectedInvoice.doctor_name && (
+                                            <div style={{ marginTop: '0.5rem', color: '#555' }}>Ref: {selectedInvoice.doctor_name}</div>
+                                        )}
                                     </div>
-                                    <div className="info-row">
-                                        <label>Price List:</label>
-                                        <span>{selectedInvoice.price_list_name || 'Standard'}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <label>Date:</label>
-                                        <span>{formatDate(selectedInvoice.created_at)}</span>
-                                    </div>
-                                    {selectedInvoice.doctor_name && (
+                                    <div style={{ textAlign: 'right' }}>
                                         <div className="info-row">
-                                            <label>Referred By:</label>
-                                            <span>{selectedInvoice.doctor_name}</span>
+                                            <label style={{ color: '#666', marginRight: '1rem' }}>Date:</label>
+                                            <span style={{ fontWeight: 600 }}>{formatDate(selectedInvoice.created_at)}</span>
                                         </div>
-                                    )}
+                                        <div className="info-row">
+                                            <label style={{ color: '#666', marginRight: '1rem' }}>Price List:</label>
+                                            <span>{selectedInvoice.price_list_name || 'Standard'}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <h4>Items</h4>
-                                <table className="items-table">
+                                <h4 style={{ borderBottom: '1px solid #000', paddingBottom: '0.5rem', marginBottom: '0.5rem', textTransform: 'uppercase', fontSize: '0.85rem' }}>Test Details</h4>
+                                <table className="items-table" style={{ width: '100%', marginBottom: '2rem', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr>
-                                            <th>Description</th>
-                                            <th>Price</th>
-                                            <th>GST</th>
-                                            <th>Total</th>
+                                        <tr style={{ background: '#f9f9f9' }}>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem' }}>Description</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem', width: '100px' }}>Price</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem', width: '80px' }}>GST</th>
+                                            <th style={{ textAlign: 'right', padding: '0.5rem', width: '120px' }}>Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {selectedInvoice.items?.map((item: any) => (
-                                            <tr key={item.id}>
-                                                <td>{item.description}</td>
-                                                <td>{formatCurrency(item.unit_price)}</td>
-                                                <td>{item.gst_rate > 0 ? `${item.gst_rate}%` : '-'}</td>
-                                                <td>{formatCurrency(item.line_total)}</td>
+                                            <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '0.75rem 0.5rem' }}>{item.description}</td>
+                                                <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem' }}>{formatCurrency(item.unit_price)}</td>
+                                                <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem' }}>{item.gst_rate > 0 ? `${item.gst_rate}%` : '-'}</td>
+                                                <td style={{ textAlign: 'right', padding: '0.75rem 0.5rem', fontWeight: 600 }}>{formatCurrency(item.line_total)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
 
-                                <div className="totals-section">
-                                    <div className="total-row">
-                                        <span>Subtotal</span>
-                                        <span>{formatCurrency(selectedInvoice.subtotal)}</span>
-                                    </div>
-                                    {selectedInvoice.discount_amount > 0 && (
-                                        <div className="total-row discount">
-                                            <span>Discount</span>
-                                            <span>- {formatCurrency(selectedInvoice.discount_amount)}</span>
+                                <div className="totals-section" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <div style={{ width: '250px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
+                                            <span>Subtotal</span>
+                                            <span>{formatCurrency(selectedInvoice.subtotal)}</span>
                                         </div>
-                                    )}
-                                    {selectedInvoice.gst_amount > 0 && (
-                                        <div className="total-row">
-                                            <span>GST</span>
-                                            <span>{formatCurrency(selectedInvoice.gst_amount)}</span>
+                                        {selectedInvoice.discount_amount > 0 && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: 'var(--color-critical)' }}>
+                                                <span>Discount</span>
+                                                <span>- {formatCurrency(selectedInvoice.discount_amount)}</span>
+                                            </div>
+                                        )}
+                                        {selectedInvoice.gst_amount > 0 && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: '#666' }}>
+                                                <span>GST</span>
+                                                <span>{formatCurrency(selectedInvoice.gst_amount)}</span>
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', marginTop: '0.5rem', borderTop: '2px solid #000', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                            <span>Total</span>
+                                            <span>{formatCurrency(selectedInvoice.total_amount)}</span>
                                         </div>
-                                    )}
-                                    <div className="total-row grand-total">
-                                        <span>Total</span>
-                                        <span>{formatCurrency(selectedInvoice.total_amount)}</span>
                                     </div>
                                 </div>
 
                                 {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
-                                    <>
+                                    <div className="payments-section">
                                         <h4>Payments</h4>
                                         <table className="payments-table">
                                             <thead>
@@ -342,10 +354,10 @@ export default function Invoices() {
                                                 </span>
                                             </div>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
-                        </>
+                        </div>
                     ) : (
                         <div className="no-selection">
                             Select an invoice to view details

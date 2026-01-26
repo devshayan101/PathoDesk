@@ -13,6 +13,8 @@ interface SampleForResultEntry {
   test_name: string;
   test_version_id: number;
   status: string;
+  doctor_name?: string;
+  received_at?: string;
 }
 
 interface ResultData {
@@ -64,13 +66,16 @@ export function listPendingSamples(): SampleForResultEntry[] {
       s.id, s.sample_uid, o.order_uid,
       p.id as patient_id, p.full_name as patient_name, p.patient_uid, p.dob as patient_dob, p.gender as patient_gender,
       t.id as test_id, tv.test_name, ot.test_version_id,
-      s.status
+      s.status,
+      s.received_at,
+      d.name as doctor_name
     FROM samples s
     JOIN order_tests ot ON s.order_test_id = ot.id
     JOIN test_versions tv ON ot.test_version_id = tv.id
     JOIN tests t ON tv.test_id = t.id
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE s.status IN ('RECEIVED', 'DRAFT', 'SUBMITTED', 'VERIFIED', 'FINALIZED')
     ORDER BY 
       CASE s.status 

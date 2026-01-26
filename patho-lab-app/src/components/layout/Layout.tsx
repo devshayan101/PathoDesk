@@ -15,6 +15,8 @@ const navItems = [
     { path: '/admin', label: 'Admin', roles: ['admin'] },
 ];
 
+import { ThemeToggle } from './ThemeToggle';
+
 export function Header() {
     const { session, logout } = useAuthStore();
 
@@ -37,6 +39,7 @@ export function Header() {
             </nav>
 
             <div className="header-user">
+                <ThemeToggle />
                 <div className="user-dropdown">
                     <span className="user-name">{session?.fullName}</span>
                     <span className="user-role">({session?.role})</span>

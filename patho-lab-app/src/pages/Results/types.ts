@@ -5,6 +5,8 @@ export interface Sample {
     patient_name: string;
     test_name: string;
     status: string;
+    doctor_name?: string;
+    received_at?: string;
 }
 
 export interface RefRange {

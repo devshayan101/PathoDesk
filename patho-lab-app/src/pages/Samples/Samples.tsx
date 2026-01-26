@@ -109,7 +109,7 @@ export default function SamplesPage() {
                 </button>
             </div>
 
-            <div className="samples-table-container">
+            <div className="samples-table-container" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                 {loading ? <div className="loading">Loading samples...</div> : (
                     <table className="table">
                         <thead>
@@ -119,18 +119,18 @@ export default function SamplesPage() {
                                 <th>Patient</th>
                                 <th>Test</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {samples.length === 0 ? (
-                                <tr><td colSpan={6} className="empty">No samples found</td></tr>
+                                <tr><td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No samples awaiting accession</td></tr>
                             ) : (
                                 samples.map(sample => (
-                                    <tr key={sample.id}>
-                                        <td><code>{sample.sample_uid}</code></td>
-                                        <td><code>{sample.order_uid}</code></td>
-                                        <td>{sample.patient_name}</td>
+                                    <tr key={sample.id} style={{ borderLeft: sample.status === 'RECEIVED' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
+                                        <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{sample.sample_uid}</code></td>
+                                        <td><code style={{ color: 'var(--color-text-secondary)' }}>{sample.order_uid}</code></td>
+                                        <td style={{ fontWeight: 500 }}>{sample.patient_name}</td>
                                         <td>{sample.test_name}</td>
                                         <td>
                                             <span className={`badge ${sample.status === 'RECEIVED' ? 'badge-success' :
@@ -139,19 +139,21 @@ export default function SamplesPage() {
                                                 {sample.status}
                                             </span>
                                         </td>
-                                        <td className="action-buttons">
+                                        <td className="action-buttons" style={{ textAlign: 'right' }}>
                                             <button
                                                 className="btn btn-secondary btn-sm"
                                                 onClick={() => handlePrintBarcode(sample)}
+                                                style={{ marginRight: '0.5rem' }}
+                                                title="Print Barcode"
                                             >
-                                                Print Barcode
+                                                🖨️ <span className="text-hidden-sm">Barcode</span>
                                             </button>
                                             {sample.status === 'COLLECTED' && (
                                                 <button
                                                     className="btn btn-primary btn-sm"
                                                     onClick={() => handleReceive(sample.id)}
                                                 >
-                                                    Mark Received
+                                                    ✓ Mark Received
                                                 </button>
                                             )}
                                         </td>

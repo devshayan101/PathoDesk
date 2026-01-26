@@ -3,8 +3,9 @@
     display: flex;
     flex-direction: column;
     padding: 1rem;
-    background-color: #f8f9fa;
+    background-color: var(--color-bg-secondary);
     overflow: hidden;
+    color: var(--color-text-primary);
 }
 
 .page-header-actions {
@@ -14,11 +15,17 @@
     margin-bottom: 1rem;
 }
 
+.page-title {
+    color: var(--color-text-primary);
+}
+
 .search-bar .search-input {
     width: 300px;
     padding: 0.5rem;
-    border-radius: 6px;
-    border: 1px solid #ddd;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
 }
 
 /* Kanban Board */
@@ -33,33 +40,35 @@
 .kanban-column {
     flex: 1;
     min-width: 280px;
-    background: #ebecf0;
-    border-radius: 8px;
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     max-height: 100%;
+    border: 1px solid var(--color-border);
 }
 
 .column-header {
     padding: 0.75rem 1rem;
     font-weight: 600;
     font-size: 0.95rem;
-    color: #444;
-    border-bottom: 1px solid #ddd;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #e2e4e8;
-    border-radius: 8px 8px 0 0;
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .count-badge {
-    background: #fff;
+    background: var(--color-bg-card);
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--color-text-muted);
     font-weight: 700;
+    border: 1px solid var(--color-border);
 }
 
 .column-content {
@@ -73,70 +82,91 @@
 
 /* Kanban Card */
 .kanban-card {
-    background: white;
-    border-radius: 6px;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-md);
     padding: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
     transition: transform 0.1s, box-shadow 0.1s;
     border-left: 4px solid transparent;
+    border: 1px solid var(--color-border);
+    /* Add border for dark mode vis */
+    border-left-width: 4px;
+    /* Maintain left border width */
 }
 
 .kanban-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-dark);
 }
 
 .col-pending .kanban-card {
-    border-left-color: #f59e0b;
+    border-left-color: var(--color-warning);
 }
 
 .col-in_progress .kanban-card {
-    border-left-color: #3b82f6;
+    border-left-color: var(--color-accent);
 }
 
 .col-to_verify .kanban-card {
-    border-left-color: #8b5cf6;
+    border-left-color: var(--color-accent-secondary);
 }
 
 .col-completed .kanban-card {
-    border-left-color: #10b981;
+    border-left-color: var(--color-success);
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--color-text-muted);
     margin-bottom: 0.25rem;
 }
 
 .sample-uid {
     font-weight: 600;
-    color: #444;
+    color: var(--color-text-secondary);
 }
 
 .patient-name {
     font-weight: 600;
     font-size: 0.95rem;
     margin: 0;
-    color: #1f2937;
+    color: var(--color-text-primary);
 }
 
 .test-name {
     font-size: 0.85rem;
-    color: #4b5563;
+    color: var(--color-text-secondary);
     margin: 0.25rem 0 0;
 }
 
 .card-footer {
     margin-top: 0.75rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--color-border);
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     display: flex;
     justify-content: space-between;
+}
+
+/* Doctor Name Label */
+.doctor-name {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.doctor-name .label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
 }
 
 /* Result Entry Form Layout */
@@ -144,6 +174,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    color: var(--color-text-primary);
 }
 
 .form-header {
@@ -166,11 +197,12 @@
 }
 
 .panel {
-    background: white;
-    border-radius: 8px;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
     padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
     overflow-y: auto;
+    border: 1px solid var(--color-border);
 }
 
 .panel-left {
@@ -194,10 +226,10 @@
 .panel-section h3 {
     font-size: 0.9rem;
     text-transform: uppercase;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     margin-bottom: 0.75rem;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border);
     padding-bottom: 0.25rem;
 }
 
@@ -209,7 +241,7 @@
 
 .info-item .label {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: var(--color-text-muted);
 }
 
 .result-table {
@@ -222,31 +254,34 @@
 .result-table th {
     text-align: left;
     padding: 0.75rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--color-bg-tertiary);
+    border-bottom: 1px solid var(--color-border);
     font-size: 0.85rem;
-    color: #374151;
+    color: var(--color-text-secondary);
     position: sticky;
     top: 0;
 }
 
 .result-table td {
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
     vertical-align: middle;
+    color: var(--color-text-primary);
 }
 
 .result-input {
     width: 100%;
     padding: 0.4rem 0.6rem;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: 0.95rem;
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
 }
 
 .result-input:focus {
-    border-color: #3b82f6;
+    border-color: var(--color-accent);
     outline: none;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
@@ -260,18 +295,18 @@
 }
 
 .flag-high {
-    background-color: #fee2e2;
-    color: #b91c1c;
+    background-color: rgba(220, 38, 38, 0.2);
+    color: var(--color-error);
 }
 
 .flag-low {
-    background-color: #fef3c7;
-    color: #b45309;
+    background-color: rgba(245, 158, 11, 0.2);
+    color: var(--color-warning);
 }
 
 .flag-critical_high,
 .flag-critical_low {
-    background-color: #ef4444;
+    background-color: var(--color-error);
     color: white;
     animation: pulse 2s infinite;
 }
@@ -281,7 +316,7 @@
     display: flex;
     gap: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--color-border);
     justify-content: flex-end;
 }
 
@@ -289,12 +324,12 @@
     display: flex;
     justify-content: space-between;
     padding: 0.4rem 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
     font-size: 0.9rem;
 }
 
 .delta-warning {
-    color: #d97706;
+    color: var(--color-warning);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -328,15 +363,17 @@
 }
 
 .modal {
-    background: white;
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
     padding: 2rem;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     width: 400px;
     max-width: 90%;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
 }
 
 .critical-header {
-    color: #ef4444;
+    color: var(--color-error);
     margin-bottom: 1rem;
 }
