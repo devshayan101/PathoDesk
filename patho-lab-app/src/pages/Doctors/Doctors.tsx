@@ -31,6 +31,16 @@ export default function DoctorsPage() {
         priceListId: ''
     });
 
+    // Commission Statement State
+    const [showStatementModal, setShowStatementModal] = useState(false);
+    const [statementLoading, setStatementLoading] = useState(false);
+    const [selectedDoctorForStatement, setSelectedDoctorForStatement] = useState<Doctor | null>(null);
+    const [statementData, setStatementData] = useState<any>(null);
+    const [statementPeriod, setStatementPeriod] = useState({
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear()
+    });
+
     useEffect(() => {
         loadDoctors();
         loadPriceLists();
@@ -52,11 +62,38 @@ export default function DoctorsPage() {
     const loadPriceLists = async () => {
         try {
             if (window.electronAPI) {
-                const data = await window.electronAPI.billing.listPriceLists();
+                // Use priceLists.list() instead of billing.listPriceLists()
+                const data = await window.electronAPI.priceLists.list();
                 setPriceLists(data);
             }
         } catch (e) {
             console.error('Failed to load price lists:', e);
+        }
+    };
+
+    const handleViewStatement = async (doctor: Doctor) => {
+        setSelectedDoctorForStatement(doctor);
+        setShowStatementModal(true);
+        await loadStatement(doctor.id, statementPeriod.month, statementPeriod.year);
+    };
+
+    const loadStatement = async (doctorId: number, month: number, year: number) => {
+        setStatementLoading(true);
+        try {
+            if (window.electronAPI) {
+                const data = await window.electronAPI.commissions.getStatement(doctorId, month, year);
+                setStatementData(data);
+            }
+        } catch (e) {
+            console.error('Failed to load statement:', e);
+        }
+        setStatementLoading(false);
+    };
+
+    const handlePeriodChange = async (newMonth: number, newYear: number) => {
+        setStatementPeriod({ month: newMonth, year: newYear });
+        if (selectedDoctorForStatement) {
+            await loadStatement(selectedDoctorForStatement.id, newMonth, newYear);
         }
     };
 
@@ -155,7 +192,13 @@ export default function DoctorsPage() {
                                 doctors.map(doctor => (
                                     <tr key={doctor.id} className={doctor.is_active ? '' : 'inactive-row'}>
                                         <td><code>{doctor.doctor_code}</code></td>
-                                        <td>{doctor.name}</td>
+                                        <td
+                                            onClick={() => handleViewStatement(doctor)}
+                                            style={{ cursor: 'pointer', color: '#3498db', fontWeight: 500 }}
+                                            title="Click to view commission statement"
+                                        >
+                                            {doctor.name}
+                                        </td>
                                         <td>{doctor.specialty || '—'}</td>
                                         <td>{doctor.phone || '—'}</td>
                                         <td>
@@ -309,6 +352,106 @@ export default function DoctorsPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Commission Statement Modal */}
+            {showStatementModal && selectedDoctorForStatement && (
+                <div className="modal-overlay" onClick={() => setShowStatementModal(false)}>
+                    <div className="modal" style={{ maxWidth: '900px', width: '90%' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Commission Statement - {selectedDoctorForStatement.name}</h2>
+                            <button className="close-btn" onClick={() => setShowStatementModal(false)}>×</button>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="filters-row" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>Month</label>
+                                    <select
+                                        className="input"
+                                        value={statementPeriod.month}
+                                        onChange={e => handlePeriodChange(parseInt(e.target.value), statementPeriod.year)}
+                                    >
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                            <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('default', { month: 'long' })}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label>Year</label>
+                                    <select
+                                        className="input"
+                                        value={statementPeriod.year}
+                                        onChange={e => handlePeriodChange(statementPeriod.month, parseInt(e.target.value))}
+                                    >
+                                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="summary-badges" style={{ marginLeft: 'auto', display: 'flex', gap: '1rem' }}>
+                                    <div className="badge badge-info" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
+                                        Tests: <strong>{statementData?.summary?.testCount || 0}</strong>
+                                    </div>
+                                    <div className="badge badge-success" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
+                                        Total: <strong>₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {statementLoading ? (
+                                <div className="loading">Loading statement...</div>
+                            ) : (
+                                <div className="table-container" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Patient</th>
+                                                <th>Test</th>
+                                                <th style={{ textAlign: 'right' }}>Price</th>
+                                                <th style={{ textAlign: 'right' }}>Commission</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {!statementData?.items || statementData.items.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="empty-row">No commissions found for this period</td>
+                                                </tr>
+                                            ) : (
+                                                <>
+                                                    {statementData.items.map((item: any, index: number) => (
+                                                        <tr key={index}>
+                                                            <td>{new Date(item.invoice_date).toLocaleDateString()}</td>
+                                                            <td>
+                                                                <div>{item.patient_name}</div>
+                                                                <small style={{ color: '#888' }}>{item.invoice_number}</small>
+                                                            </td>
+                                                            <td>{item.test_description}</td>
+                                                            <td style={{ textAlign: 'right' }}>₹{item.test_price.toFixed(2)}</td>
+                                                            <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#27ae60' }}>
+                                                                ₹{item.commission_amount.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr style={{ background: '#f8f9fa', fontWeight: 'bold' }}>
+                                                        <td colSpan={4} style={{ textAlign: 'right' }}>Total Commission:</td>
+                                                        <td style={{ textAlign: 'right', color: '#27ae60', fontSize: '1.2rem' }}>
+                                                            ₹{statementData?.summary?.totalCommission?.toFixed(2) || '0.00'}
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="modal-actions" style={{ borderTop: '1px solid #eee', marginTop: '1rem', paddingTop: '1rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowStatementModal(false)}>Close</button>
+                        </div>
                     </div>
                 </div>
             )}
