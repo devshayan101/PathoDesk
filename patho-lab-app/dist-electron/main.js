@@ -2016,6 +2016,223 @@ function getMigrations() {
         -- Ensure tests created via wizard can be identified
         -- We will use status='DRAFT' for ongoing wizard flows
       `
+    },
+    {
+      name: "007_seed_common_tests",
+      sql: `
+        -- 1. Hematology Updates
+        -- 1.1 Update CBC (Test ID 1) - Add missing parameters
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory) VALUES 
+          (1, 'MCV', 'MCV', 'NUMERIC', 'fL', 6, 1),
+          (1, 'MCH', 'MCH', 'NUMERIC', 'pg', 7, 1),
+          (1, 'MCHC', 'MCHC', 'NUMERIC', 'g/dL', 8, 1),
+          (1, 'RDW', 'RDW-CV', 'NUMERIC', '%', 9, 1),
+          (1, 'NEUT', 'Neutrophils', 'NUMERIC', '%', 10, 1),
+          (1, 'LYMPH', 'Lymphocytes', 'NUMERIC', '%', 11, 1),
+          (1, 'MONO', 'Monocytes', 'NUMERIC', '%', 12, 1),
+          (1, 'EOS', 'Eosinophils', 'NUMERIC', '%', 13, 1),
+          (1, 'BASO', 'Basophils', 'NUMERIC', '%', 14, 1);
+        
+        -- CBC Reference Ranges (Male/Female/All)
+        -- MCV
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) 
+        SELECT id, 'A', 0, 36500, 80, 96, datetime('now') FROM test_parameters WHERE parameter_code = 'MCV';
+        -- MCH
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) 
+        SELECT id, 'A', 0, 36500, 27, 33, datetime('now') FROM test_parameters WHERE parameter_code = 'MCH';
+        -- MCHC
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) 
+        SELECT id, 'A', 0, 36500, 32, 36, datetime('now') FROM test_parameters WHERE parameter_code = 'MCHC';
+        -- RDW
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) 
+        SELECT id, 'A', 0, 36500, 11.5, 14.5, datetime('now') FROM test_parameters WHERE parameter_code = 'RDW';
+        
+        -- DLC Ranges
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) SELECT id, 'A', 0, 36500, 40, 70, datetime('now') FROM test_parameters WHERE parameter_code = 'NEUT';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) SELECT id, 'A', 0, 36500, 20, 40, datetime('now') FROM test_parameters WHERE parameter_code = 'LYMPH';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) SELECT id, 'A', 0, 36500, 2, 8, datetime('now') FROM test_parameters WHERE parameter_code = 'MONO';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) SELECT id, 'A', 0, 36500, 1, 6, datetime('now') FROM test_parameters WHERE parameter_code = 'EOS';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) SELECT id, 'A', 0, 36500, 0, 1, datetime('now') FROM test_parameters WHERE parameter_code = 'BASO';
+
+        -- 1.2 ESR
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('ESR', 1);
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='ESR'), 'Erythrocyte Sedimentation Rate', 'Hematology', 'Westergren', 'Whole Blood', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='Erythrocyte Sedimentation Rate'), 'ESR', 'ESR (1st Hour)', 'NUMERIC', 'mm/hr', 1, 1);
+        
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        VALUES 
+        ((SELECT id FROM test_parameters WHERE parameter_code='ESR'), 'M', 0, 36500, 0, 15, datetime('now')),
+        ((SELECT id FROM test_parameters WHERE parameter_code='ESR'), 'F', 0, 36500, 0, 20, datetime('now'));
+
+
+        -- 2. Biochemistry
+        -- 2.1 Glucose (FBS, PPBS, RBS)
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('FBS', 1), ('PPBS', 1), ('RBS', 1);
+        
+        -- FBS
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='FBS'), 'Fasting Blood Sugar', 'Biochemistry', 'GOD-POD', 'Fluoride Plasma', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='Fasting Blood Sugar'), 'GLU_F', 'Fasting Plasma Glucose', 'NUMERIC', 'mg/dL', 1, 1);
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        VALUES ((SELECT id FROM test_parameters WHERE parameter_code='GLU_F'), 'A', 0, 36500, 70, 99, datetime('now'));
+
+        -- PPBS
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='PPBS'), 'Post Prandial Blood Sugar', 'Biochemistry', 'GOD-POD', 'Fluoride Plasma', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='Post Prandial Blood Sugar'), 'GLU_PP', 'Plasma Glucose (PP)', 'NUMERIC', 'mg/dL', 1, 1);
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, upper_limit, effective_from)
+        VALUES ((SELECT id FROM test_parameters WHERE parameter_code='GLU_PP'), 'A', 0, 36500, 140, datetime('now'));
+
+        -- RBS
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='RBS'), 'Random Blood Sugar', 'Biochemistry', 'GOD-POD', 'Fluoride Plasma', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='Random Blood Sugar'), 'GLU_R', 'Random Plasma Glucose', 'NUMERIC', 'mg/dL', 1, 1);
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        VALUES ((SELECT id FROM test_parameters WHERE parameter_code='GLU_R'), 'A', 0, 36500, 70, 140, datetime('now'));
+
+
+        -- 2.4 Lipid Profile
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('LIPID', 1);
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='LIPID'), 'Lipid Profile', 'Biochemistry', 'Analyzer', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory, formula) VALUES 
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'CHOL', 'Total Cholesterol', 'NUMERIC', 'mg/dL', 1, 1, NULL),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'TRIG', 'Triglycerides', 'NUMERIC', 'mg/dL', 2, 1, NULL),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'HDL', 'HDL Cholesterol', 'NUMERIC', 'mg/dL', 3, 1, NULL),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'LDL', 'LDL Cholesterol', 'NUMERIC', 'mg/dL', 4, 1, NULL),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'VLDL', 'VLDL Cholesterol', 'NUMERIC', 'mg/dL', 5, 1, NULL),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'TC_HDL', 'TC / HDL Ratio', 'CALCULATED', 'Ratio', 6, 0, 'CHOL / HDL');
+
+        -- Lipid Ref Ranges
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 200, datetime('now') FROM test_parameters WHERE parameter_code = 'CHOL';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 150, datetime('now') FROM test_parameters WHERE parameter_code = 'TRIG';
+        
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, effective_from)
+        SELECT id, 'M', 0, 36500, 40, datetime('now') FROM test_parameters WHERE parameter_code = 'HDL';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, effective_from)
+        SELECT id, 'F', 0, 36500, 50, datetime('now') FROM test_parameters WHERE parameter_code = 'HDL';
+        
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 100, datetime('now') FROM test_parameters WHERE parameter_code = 'LDL';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 5, 40, datetime('now') FROM test_parameters WHERE parameter_code = 'VLDL';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 5.0, datetime('now') FROM test_parameters WHERE parameter_code = 'TC_HDL';
+
+        -- 4. Hormones (Thyroid Profile)
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('TFT', 1);
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='TFT'), 'Thyroid Function Test', 'Immunology', 'CLIA', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory) VALUES 
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'T3', 'Triiodothyronine (T3)', 'NUMERIC', 'ng/mL', 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'T4', 'Thyroxine (T4)', 'NUMERIC', 'µg/dL', 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'TSH', 'Thyroid Stimulating Hormone', 'NUMERIC', 'µIU/mL', 3, 1);
+
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 0.8, 2.0, datetime('now') FROM test_parameters WHERE parameter_code = 'T3';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 5.0, 12.0, datetime('now') FROM test_parameters WHERE parameter_code = 'T4';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 0.4, 4.0, datetime('now') FROM test_parameters WHERE parameter_code = 'TSH';
+
+        -- 5. Clinical Pathology (Urine Routine)
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('CUE', 1);
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='CUE'), 'Urine Routine Examination', 'Clinical Pathology', 'Microscopy/Dipstick', 'Urine', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory) VALUES 
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_COL', 'Color', 'TEXT', NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_APP', 'Appearance', 'TEXT', NULL, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_PH', 'pH', 'NUMERIC', NULL, 3, 0),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_SG', 'Specific Gravity', 'NUMERIC', NULL, 4, 0),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_PRO', 'Protein', 'TEXT', NULL, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_SUG', 'Sugar', 'TEXT', NULL, 6, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_RBC', 'RBC', 'TEXT', '/HPF', 7, 0),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'U_PUS', 'Pus Cells', 'TEXT', '/HPF', 8, 0);
+
+        -- 6. Coagulation
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('COAG', 1);
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='COAG'), 'Coagulation Profile', 'Hematology', 'Coagulometer', 'Citrated Plasma', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory) VALUES 
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'PT', 'Prothrombin Time (PT)', 'NUMERIC', 'sec', 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'INR', 'INR', 'NUMERIC', 'Ratio', 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'APTT', 'APTT', 'NUMERIC', 'sec', 3, 1);
+
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 11, 13.5, datetime('now') FROM test_parameters WHERE parameter_code = 'PT';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 0.8, 1.2, datetime('now') FROM test_parameters WHERE parameter_code = 'INR';
+        INSERT OR IGNORE INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from)
+        SELECT id, 'A', 0, 36500, 25, 35, datetime('now') FROM test_parameters WHERE parameter_code = 'APTT';
+
+        -- 7. Serology
+        INSERT OR IGNORE INTO tests (test_code, is_active) VALUES ('HBSAG', 1), ('HIV', 1), ('WIDAL', 1);
+
+        -- HBsAg
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='HBSAG'), 'HBsAg', 'Serology', 'Immunochromatography', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='HBsAg'), 'HBSAG_RES', 'Result', 'TEXT', NULL, 1, 1);
+        
+        -- HIV
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='HIV'), 'HIV I & II', 'Serology', 'Immunochromatography', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory)
+        VALUES ((SELECT id FROM test_versions WHERE test_name='HIV I & II'), 'HIV_RES', 'Result', 'TEXT', NULL, 1, 1);
+
+        -- Widal
+        INSERT OR IGNORE INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at)
+        VALUES ((SELECT id FROM tests WHERE test_code='WIDAL'), 'Widal Test', 'Serology', 'Agglutination', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+        INSERT OR IGNORE INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, display_order, is_mandatory) VALUES
+        ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'STO', 'Salmonella Typhi O', 'TEXT', NULL, 1, 1),
+        ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'STH', 'Salmonella Typhi H', 'TEXT', NULL, 2, 1),
+        ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'SPA', 'Salmonella Para Typhi AH', 'TEXT', NULL, 3, 1),
+        ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'SPB', 'Salmonella Para Typhi BH', 'TEXT', NULL, 4, 1),
+        ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'WIDAL_IMP', 'Impression', 'TEXT', NULL, 5, 0);
+
+      `
+    },
+    {
+      name: "008_fix_sample_status_constraint",
+      sql: `
+        -- Recreate samples table with updated CHECK constraint for result workflow statuses
+        
+        -- 1. Rename existing table
+        ALTER TABLE samples RENAME TO samples_old;
+        
+        -- 2. Create new table with all columns (including those from migrations 003 and 004)
+        CREATE TABLE samples (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sample_uid TEXT UNIQUE NOT NULL,
+          order_test_id INTEGER NOT NULL REFERENCES order_tests(id),
+          collected_at TEXT,
+          received_at TEXT,
+          status TEXT CHECK (status IN ('COLLECTED','RECEIVED','REJECTED','DRAFT','SUBMITTED','VERIFIED','FINALIZED')) NOT NULL,
+          rejection_reason TEXT,
+          verified_by INTEGER REFERENCES users(id),
+          verified_at TEXT
+        );
+        
+        -- 3. Copy data
+        INSERT INTO samples (id, sample_uid, order_test_id, collected_at, received_at, status, rejection_reason, verified_by, verified_at)
+        SELECT id, sample_uid, order_test_id, collected_at, received_at, status, rejection_reason, verified_by, verified_at
+        FROM samples_old;
+        
+        -- 4. Drop old table
+        DROP TABLE samples_old;
+      `
     }
   ];
 }
@@ -2587,10 +2804,14 @@ function saveResultValues(data) {
     run("DELETE FROM test_results WHERE order_test_id = ?", [sample.order_test_id]);
     for (const val of data.values) {
       if (!val.value) continue;
+      let flag = val.abnormalFlag || null;
+      if (flag === "CRITICAL_LOW" || flag === "CRITICAL_HIGH") {
+        flag = "CRITICAL";
+      }
       runWithId(`
         INSERT INTO test_results (order_test_id, parameter_id, result_value, abnormal_flag, entered_at, entered_by)
         VALUES (?, ?, ?, ?, datetime('now'), ?)
-      `, [sample.order_test_id, val.parameterId, val.value, val.abnormalFlag || "", 1]);
+      `, [sample.order_test_id, val.parameterId, val.value, flag, 1]);
     }
     run(`UPDATE samples SET status = 'DRAFT' WHERE id = ?`, [data.sampleId]);
     return { success: true };

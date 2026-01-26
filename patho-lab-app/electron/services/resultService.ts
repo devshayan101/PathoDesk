@@ -239,10 +239,16 @@ export function saveResultValues(data: {
     for (const val of data.values) {
       if (!val.value) continue; // Skip empty values
 
+      // Normalize abnormal flag: empty -> null, CRITICAL_LOW/HIGH -> CRITICAL
+      let flag: string | null = val.abnormalFlag || null;
+      if (flag === 'CRITICAL_LOW' || flag === 'CRITICAL_HIGH') {
+        flag = 'CRITICAL';
+      }
+
       runWithId(`
         INSERT INTO test_results (order_test_id, parameter_id, result_value, abnormal_flag, entered_at, entered_by)
         VALUES (?, ?, ?, ?, datetime('now'), ?)
-      `, [sample.order_test_id, val.parameterId, val.value, val.abnormalFlag || '', 1]); // TODO: Use actual user ID
+      `, [sample.order_test_id, val.parameterId, val.value, flag, 1]); // TODO: Use actual user ID
     }
 
     // Update sample status to DRAFT if not already
