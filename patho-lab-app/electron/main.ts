@@ -97,6 +97,10 @@ function registerIpcHandlers() {
     return testService.getTestParameters(testVersionId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.TEST_DELETE, (_, testId: number) => {
+    return testService.deleteTest(testId)
+  })
+
   // Test Wizard
   ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFTS, () => {
     return testService.getDrafts()
@@ -120,6 +124,24 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_PUBLISH, (_, id: number) => {
     return testService.publishTest(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT_FROM_EXISTING, (_, testId: number) => {
+    return testService.createDraftFromExisting(testId)
+  })
+
+  // We need a way to get draft details (which is essentially getTest + getParameters)
+  ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFT, (_, versionId: number) => {
+    const version = testService.getTest(versionId) // This actually gets by test_id? No, getTest gets by test_id.
+    // Wait, getTest(testId) returns the latest version.
+    // We need getTestVersion(versionId).
+    // Let's check testService again.
+    // testService.getTest takes testId.
+    // We need a new service method getTestVersion(versionId).
+    // I missed adding that to testService.ts. 
+    // Actually, I can use a direct query here or better, add it to service.
+    // For now, let's implement the handler by calling a new service method I will add.
+    return testService.getTestVersion(versionId)
   })
 
   // Reference Ranges

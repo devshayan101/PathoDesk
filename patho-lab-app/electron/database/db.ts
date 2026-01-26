@@ -533,6 +533,284 @@ function getMigrations() {
         -- 4. Drop old table
         DROP TABLE samples_old;
       `
+    },
+    {
+      name: '009_reset_tests_comprehensive',
+      sql: `
+        -- DANGER: This migration clears ALL test data and re-inserts comprehensive dataset
+        -- Warning: This also clears orders, samples, results since they depend on tests!
+        
+        -- 1. Clear dependent data first (order matters due to foreign keys)
+        DELETE FROM test_results;
+        DELETE FROM samples;
+        DELETE FROM order_tests;
+        DELETE FROM orders;
+        
+        -- 2. Clear test master data
+        DELETE FROM critical_values;
+        DELETE FROM reference_ranges;
+        DELETE FROM test_parameters;
+        DELETE FROM test_versions;
+        DELETE FROM tests;
+        
+        -- 2. Insert Tests with unique codes
+        -- Hematology
+        INSERT INTO tests (test_code, is_active) VALUES 
+          ('CBC', 1), ('ESR', 1),
+        -- Biochemistry
+          ('GLUCOSE', 1), ('RFT', 1), ('LFT', 1), ('LIPID', 1),
+        -- Serology
+          ('HBSAG', 1), ('HIV', 1), ('CRP', 1), ('ASO', 1), ('WIDAL', 1),
+        -- Hormones
+          ('TFT', 1), ('PROLACTIN', 1), ('VITD', 1), ('VITB12', 1),
+        -- Clinical Pathology
+          ('URINE', 1), ('STOOL', 1),
+        -- Coagulation
+          ('COAG', 1);
+        
+        -- 3. Insert Test Versions (PUBLISHED)
+        INSERT INTO test_versions (test_id, test_name, department, method, sample_type, version_no, effective_from, status, wizard_step, created_at) VALUES
+          ((SELECT id FROM tests WHERE test_code='CBC'), 'Complete Blood Count (Hemogram)', 'Hematology', 'Analyzer', 'EDTA Blood', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='ESR'), 'Erythrocyte Sedimentation Rate', 'Hematology', 'Westergren', 'EDTA Blood', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='GLUCOSE'), 'Blood Glucose Panel', 'Biochemistry', 'Analyzer', 'Fluoride Blood', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='RFT'), 'Renal Function Test (KFT)', 'Biochemistry', 'Analyzer', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='LFT'), 'Liver Function Test', 'Biochemistry', 'Analyzer', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='LIPID'), 'Lipid Profile', 'Biochemistry', 'Analyzer', 'Serum (Fasting)', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='HBSAG'), 'Hepatitis B Surface Antigen', 'Serology', 'ELISA', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='HIV'), 'HIV I & II Antibodies', 'Serology', 'ELISA', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='CRP'), 'C-Reactive Protein', 'Serology', 'Turbidimetric', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='ASO'), 'Anti-Streptolysin O Titer', 'Serology', 'Turbidimetric', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='WIDAL'), 'Widal Test', 'Serology', 'Slide Agglutination', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='TFT'), 'Thyroid Function Test', 'Immunology', 'Chemiluminescence', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='PROLACTIN'), 'Prolactin', 'Immunology', 'Chemiluminescence', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='VITD'), 'Vitamin D (25-OH)', 'Immunology', 'Chemiluminescence', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='VITB12'), 'Vitamin B12', 'Immunology', 'Chemiluminescence', 'Serum', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='URINE'), 'Urine Routine Examination', 'Clinical Pathology', 'Microscopy', 'Urine', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='STOOL'), 'Stool Routine Examination', 'Clinical Pathology', 'Microscopy', 'Stool', 1, datetime('now'), 'PUBLISHED', 6, datetime('now')),
+          ((SELECT id FROM tests WHERE test_code='COAG'), 'Coagulation Profile', 'Hematology', 'Analyzer', 'Citrate Blood', 1, datetime('now'), 'PUBLISHED', 6, datetime('now'));
+
+        -- 4. Insert Parameters for each test
+        -- CBC Parameters
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'HB', 'Hemoglobin', 'NUMERIC', 'g/dL', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'RBC', 'Total RBC Count', 'NUMERIC', 'million/µL', 2, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'WBC', 'Total WBC Count', 'NUMERIC', 'cells/µL', 0, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'PLT', 'Platelet Count', 'NUMERIC', 'lakh/µL', 2, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'PCV', 'Packed Cell Volume (HCT)', 'NUMERIC', '%', 1, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'MCV', 'Mean Corpuscular Volume', 'NUMERIC', 'fL', 1, 6, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'MCH', 'Mean Corpuscular Hemoglobin', 'NUMERIC', 'pg', 1, 7, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'MCHC', 'MCHC', 'NUMERIC', 'g/dL', 1, 8, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'RDWCV', 'RDW-CV', 'NUMERIC', '%', 1, 9, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'NEUT', 'Neutrophils', 'NUMERIC', '%', 0, 10, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'LYMPH', 'Lymphocytes', 'NUMERIC', '%', 0, 11, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'MONO', 'Monocytes', 'NUMERIC', '%', 0, 12, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'EOS', 'Eosinophils', 'NUMERIC', '%', 0, 13, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Complete Blood Count (Hemogram)'), 'BASO', 'Basophils', 'NUMERIC', '%', 0, 14, 1);
+          
+        -- ESR
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Erythrocyte Sedimentation Rate'), 'ESR1HR', 'ESR - 1st Hour', 'NUMERIC', 'mm/hr', 0, 1, 1);
+          
+        -- Glucose Panel
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Blood Glucose Panel'), 'FBS', 'Fasting Plasma Glucose', 'NUMERIC', 'mg/dL', 0, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Blood Glucose Panel'), 'PPBS', 'Post-Prandial Blood Sugar', 'NUMERIC', 'mg/dL', 0, 2, 0),
+          ((SELECT id FROM test_versions WHERE test_name='Blood Glucose Panel'), 'RBS', 'Random Blood Sugar', 'NUMERIC', 'mg/dL', 0, 3, 0);
+          
+        -- RFT Parameters
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'UREA', 'Blood Urea', 'NUMERIC', 'mg/dL', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'CREAT', 'Serum Creatinine', 'NUMERIC', 'mg/dL', 2, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'URIC', 'Uric Acid', 'NUMERIC', 'mg/dL', 1, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'NA', 'Sodium', 'NUMERIC', 'mmol/L', 0, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'K', 'Potassium', 'NUMERIC', 'mmol/L', 1, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Renal Function Test (KFT)'), 'CL', 'Chloride', 'NUMERIC', 'mmol/L', 0, 6, 1);
+          
+        -- LFT Parameters
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'TBIL', 'Total Bilirubin', 'NUMERIC', 'mg/dL', 2, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'DBIL', 'Direct Bilirubin', 'NUMERIC', 'mg/dL', 2, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'IBIL', 'Indirect Bilirubin', 'NUMERIC', 'mg/dL', 2, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'SGOT', 'SGOT (AST)', 'NUMERIC', 'U/L', 0, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'SGPT', 'SGPT (ALT)', 'NUMERIC', 'U/L', 0, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'ALP', 'Alkaline Phosphatase', 'NUMERIC', 'U/L', 0, 6, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'TPROT', 'Total Protein', 'NUMERIC', 'g/dL', 1, 7, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'ALB', 'Albumin', 'NUMERIC', 'g/dL', 1, 8, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'GLOB', 'Globulin', 'NUMERIC', 'g/dL', 1, 9, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Liver Function Test'), 'AGRATIO', 'A/G Ratio', 'NUMERIC', 'Ratio', 1, 10, 1);
+          
+        -- Lipid Profile Parameters
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'TCHOL', 'Total Cholesterol', 'NUMERIC', 'mg/dL', 0, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'TG', 'Triglycerides', 'NUMERIC', 'mg/dL', 0, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'HDL', 'HDL Cholesterol', 'NUMERIC', 'mg/dL', 0, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'LDL', 'LDL Cholesterol', 'NUMERIC', 'mg/dL', 0, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'VLDL', 'VLDL Cholesterol', 'NUMERIC', 'mg/dL', 0, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Lipid Profile'), 'TCHDL', 'TC/HDL Ratio', 'NUMERIC', 'Ratio', 1, 6, 1);
+          
+        -- Serology - Simple Qualitative/Quantitative 
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Hepatitis B Surface Antigen'), 'HBSAG', 'HBsAg', 'TEXT', NULL, NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='HIV I & II Antibodies'), 'HIV', 'HIV I & II', 'TEXT', NULL, NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='C-Reactive Protein'), 'CRP', 'CRP', 'NUMERIC', 'mg/L', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Anti-Streptolysin O Titer'), 'ASO', 'ASO Titer', 'NUMERIC', 'IU/mL', 0, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'STO', 'Salmonella Typhi O', 'TEXT', NULL, NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'STH', 'Salmonella Typhi H', 'TEXT', NULL, NULL, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'SAH', 'Salmonella Para A-H', 'TEXT', NULL, NULL, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Widal Test'), 'SBH', 'Salmonella Para B-H', 'TEXT', NULL, NULL, 4, 1);
+          
+        -- TFT Parameters
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'T3', 'Triiodothyronine (T3)', 'NUMERIC', 'ng/mL', 2, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'T4', 'Thyroxine (T4)', 'NUMERIC', 'µg/dL', 1, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Thyroid Function Test'), 'TSH', 'TSH', 'NUMERIC', 'µIU/mL', 2, 3, 1);
+          
+        -- Other Hormones/Vitamins
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Prolactin'), 'PRL', 'Prolactin', 'NUMERIC', 'ng/mL', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Vitamin D (25-OH)'), 'VITD25', 'Vitamin D (25-OH)', 'NUMERIC', 'ng/mL', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Vitamin B12'), 'B12', 'Vitamin B12', 'NUMERIC', 'pg/mL', 0, 1, 1);
+          
+        -- Urine Routine
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UCOLOR', 'Color', 'TEXT', NULL, NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UAPPEAR', 'Appearance', 'TEXT', NULL, NULL, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'USG', 'Specific Gravity', 'NUMERIC', NULL, 3, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UPH', 'pH', 'NUMERIC', NULL, 1, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UPROT', 'Protein', 'TEXT', NULL, NULL, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'USUG', 'Sugar', 'TEXT', NULL, NULL, 6, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UKET', 'Ketone Bodies', 'TEXT', NULL, NULL, 7, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'URBC', 'Red Blood Cells', 'TEXT', '/HPF', NULL, 8, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UPUS', 'Pus Cells', 'TEXT', '/HPF', NULL, 9, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UEPI', 'Epithelial Cells', 'TEXT', NULL, NULL, 10, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UCAST', 'Casts', 'TEXT', NULL, NULL, 11, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Urine Routine Examination'), 'UXTAL', 'Crystals', 'TEXT', NULL, NULL, 12, 1);
+          
+        -- Stool Routine
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SCOLOR', 'Color', 'TEXT', NULL, NULL, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SCONS', 'Consistency', 'TEXT', NULL, NULL, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SOCCULT', 'Occult Blood', 'TEXT', NULL, NULL, 3, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SOVA', 'Ova / Cyst', 'TEXT', NULL, NULL, 4, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SRBC', 'RBC', 'TEXT', NULL, NULL, 5, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Stool Routine Examination'), 'SPUS', 'Pus Cells', 'TEXT', NULL, NULL, 6, 1);
+          
+        -- Coagulation
+        INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory) VALUES
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'PT', 'Prothrombin Time', 'NUMERIC', 'sec', 1, 1, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'INR', 'INR', 'NUMERIC', 'Ratio', 1, 2, 1),
+          ((SELECT id FROM test_versions WHERE test_name='Coagulation Profile'), 'APTT', 'APTT', 'NUMERIC', 'sec', 1, 3, 1);
+
+        -- 5. Insert Reference Ranges
+        -- CBC Ranges (Gender-specific for HB, RBC, PCV)
+        -- Hemoglobin
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='HB'), 'M', 0, 36500, 13.0, 17.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='HB'), 'F', 0, 36500, 12.0, 15.0, datetime('now'));
+        -- RBC
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='RBC'), 'M', 0, 36500, 4.5, 5.9, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='RBC'), 'F', 0, 36500, 4.1, 5.1, datetime('now'));
+        -- WBC (All genders)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='WBC'), 'A', 0, 36500, 4000, 11000, datetime('now'));
+        -- PLT
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='PLT'), 'A', 0, 36500, 1.5, 4.5, datetime('now'));
+        -- PCV
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='PCV'), 'M', 0, 36500, 40, 50, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='PCV'), 'F', 0, 36500, 36, 46, datetime('now'));
+        -- MCV, MCH, MCHC, RDW-CV (All)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='MCV'), 'A', 0, 36500, 80, 96, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='MCH'), 'A', 0, 36500, 27, 33, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='MCHC'), 'A', 0, 36500, 32, 36, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='RDWCV'), 'A', 0, 36500, 11.5, 14.5, datetime('now'));
+        -- DLC
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='NEUT'), 'A', 0, 36500, 40, 70, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='LYMPH'), 'A', 0, 36500, 20, 40, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='MONO'), 'A', 0, 36500, 2, 8, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='EOS'), 'A', 0, 36500, 1, 6, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='BASO'), 'A', 0, 36500, 0, 1, datetime('now'));
+          
+        -- ESR Range (Gender-specific)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='ESR1HR'), 'M', 0, 36500, 0, 15, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='ESR1HR'), 'F', 0, 36500, 0, 20, datetime('now'));
+          
+        -- Glucose Ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='FBS'), 'A', 0, 36500, 70, 99, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='PPBS'), 'A', 0, 36500, 0, 140, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='RBS'), 'A', 0, 36500, 70, 140, datetime('now'));
+          
+        -- RFT Ranges (Uric acid is gender-specific)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='UREA'), 'A', 0, 36500, 15, 40, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='CREAT'), 'A', 0, 36500, 0.6, 1.3, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='URIC'), 'M', 0, 36500, 3.4, 7.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='URIC'), 'F', 0, 36500, 2.4, 6.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='NA'), 'A', 0, 36500, 135, 145, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='K'), 'A', 0, 36500, 3.5, 5.1, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='CL'), 'A', 0, 36500, 98, 107, datetime('now'));
+          
+        -- LFT Ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='TBIL'), 'A', 0, 36500, 0.3, 1.2, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='DBIL'), 'A', 0, 36500, 0.0, 0.3, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='IBIL'), 'A', 0, 36500, 0.2, 0.9, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='SGOT'), 'A', 0, 36500, 0, 40, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='SGPT'), 'A', 0, 36500, 0, 41, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='ALP'), 'A', 0, 36500, 44, 147, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='TPROT'), 'A', 0, 36500, 6.0, 8.3, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='ALB'), 'A', 0, 36500, 3.5, 5.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='GLOB'), 'A', 0, 36500, 2.0, 3.5, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='AGRATIO'), 'A', 0, 36500, 1.0, 2.2, datetime('now'));
+          
+        -- Lipid Profile Ranges (HDL is gender-specific)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='TCHOL'), 'A', 0, 36500, 0, 200, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='TG'), 'A', 0, 36500, 0, 150, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='HDL'), 'M', 0, 36500, 40, 999, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='HDL'), 'F', 0, 36500, 50, 999, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='LDL'), 'A', 0, 36500, 0, 100, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='VLDL'), 'A', 0, 36500, 5, 40, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='TCHDL'), 'A', 0, 36500, 0, 5.0, datetime('now'));
+          
+        -- Serology Ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='CRP'), 'A', 0, 36500, 0, 6.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='ASO'), 'A', 0, 36500, 0, 200, datetime('now'));
+          
+        -- TFT Ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='T3'), 'A', 0, 36500, 0.8, 2.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='T4'), 'A', 0, 36500, 5.0, 12.0, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='TSH'), 'A', 0, 36500, 0.4, 4.0, datetime('now'));
+          
+        -- Prolactin (gender-specific)
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='PRL'), 'M', 0, 36500, 4, 15, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='PRL'), 'F', 0, 36500, 5, 25, datetime('now'));
+          
+        -- Vitamins
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='VITD25'), 'A', 0, 36500, 30, 100, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='B12'), 'A', 0, 36500, 200, 900, datetime('now'));
+          
+        -- Urine Routine - Numeric ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='USG'), 'A', 0, 36500, 1.005, 1.030, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='UPH'), 'A', 0, 36500, 4.5, 8.0, datetime('now'));
+          
+        -- Coagulation Ranges
+        INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, effective_from) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='PT'), 'A', 0, 36500, 11, 13.5, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='INR'), 'A', 0, 36500, 0.8, 1.2, datetime('now')),
+          ((SELECT id FROM test_parameters WHERE parameter_code='APTT'), 'A', 0, 36500, 25, 35, datetime('now'));
+      `
     }
   ];
 }

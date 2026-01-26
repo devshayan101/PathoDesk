@@ -7,6 +7,7 @@ interface Sample {
     sample_uid: string;
     order_uid: string;
     patient_name: string;
+    test_name: string;
     status: string;
 }
 
@@ -256,7 +257,7 @@ export default function ResultsPage() {
                     <option value="">-- Select Sample --</option>
                     {pendingSamples.map(sample => (
                         <option key={sample.id} value={sample.id}>
-                            {sample.sample_uid} - {sample.patient_name} ({sample.status})
+                            {sample.sample_uid} | {sample.test_name} | {sample.patient_name} ({sample.status})
                         </option>
                     ))}
                 </select>

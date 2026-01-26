@@ -10,6 +10,7 @@ interface TestDraft {
 }
 
 interface WizardProps {
+    initialDraftId?: number;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -24,9 +25,9 @@ enum WizardStep {
     REVIEW = 6
 }
 
-export default function TestWizard({ onClose, onSuccess }: WizardProps) {
+export default function TestWizard({ initialDraftId, onClose, onSuccess }: WizardProps) {
     const [currentStep, setCurrentStep] = useState<WizardStep>(WizardStep.TEST_BASICS);
-    const [draftId, setDraftId] = useState<number | null>(null);
+    const [draftId, setDraftId] = useState<number | null>(initialDraftId || null);
     const [loading, setLoading] = useState(false);
 
     // Step 1: Basics State
@@ -42,9 +43,44 @@ export default function TestWizard({ onClose, onSuccess }: WizardProps) {
     // Step 2: Parameters State
     const [parameters, setParameters] = useState<any[]>([]);
 
-    // Load draft if continuing? 
-    // For now, we assume "Create New" starts fresh. 
-    // TODO: Support continuing drafts.
+    useEffect(() => {
+        if (initialDraftId) {
+            loadDraftData(initialDraftId);
+        }
+    }, [initialDraftId]);
+
+    const loadDraftData = async (id: number) => {
+        setLoading(true);
+        try {
+            if (window.electronAPI) {
+                // Load details
+                const version = await window.electronAPI.testWizard.getDraft(id);
+                if (version) {
+                    setBasics({
+                        testCode: '', // Code is in 'tests' table, not 'test_versions', but we might not need it for display or can fetch it if needed. 
+                        // Wait, creating draft from existing keeps same test ID. The user can't change Test Code easily here? 
+                        // Actually, test code is in `tests` table. `test_versions` has `test_id`.
+                        // For simplicity, we might skip showing/editing Test Code if it's an existing test.
+                        // Or fetch it. `getDraft` returns TestVersionRow.
+                        // Ideally we should join to get test_code.
+                        testName: version.test_name,
+                        department: version.department,
+                        method: version.method,
+                        sampleType: version.sample_type,
+                        reportGroup: version.report_group || ''
+                    });
+                    setCurrentStep(version.wizard_step || 1);
+                }
+
+                // Load parameters
+                const params = await window.electronAPI.tests.getParameters(id);
+                setParameters(params);
+            }
+        } catch (e) {
+            console.error('Failed to load draft:', e);
+        }
+        setLoading(false);
+    };
 
     const handleCreateDraft = async () => {
         if (!basics.testCode || !basics.testName) {

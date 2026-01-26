@@ -147,6 +147,7 @@ export const IPC_CHANNELS = {
     TEST_GET: 'test:get',
     TEST_CREATE: 'test:create',
     TEST_UPDATE: 'test:update',
+    TEST_DELETE: 'test:delete',
 
     // Test Wizard
     TEST_WIZARD_GET_DRAFTS: 'testWizard:getDrafts',
@@ -155,6 +156,8 @@ export const IPC_CHANNELS = {
     TEST_WIZARD_UPDATE_STEP: 'testWizard:updateStep',
     TEST_WIZARD_SAVE_PARAMS: 'testWizard:saveParams',
     TEST_WIZARD_PUBLISH: 'testWizard:publish',
+    TEST_WIZARD_CREATE_DRAFT_FROM_EXISTING: 'testWizard:createDraftFromExisting',
+    TEST_WIZARD_GET_DRAFT: 'testWizard:getDraft', // To load draft details
 
     // Parameters
     PARAMETER_LIST: 'parameter:list',

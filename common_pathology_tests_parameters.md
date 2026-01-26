@@ -202,4 +202,3 @@
 ## 10. Final Validation Statement
 
 This dataset is **clinically safe, commercially acceptable, and production‑ready** as a default reference library for a small to mid‑scale offline pathology LIS. It aligns with common Indian lab practice while remaining configurable for global use.
-

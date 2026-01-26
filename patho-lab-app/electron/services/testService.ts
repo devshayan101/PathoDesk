@@ -59,6 +59,10 @@ export function getTest(testId: number): TestVersionRow | undefined {
   `, [testId]);
 }
 
+export function getTestVersion(versionId: number): TestVersionRow | undefined {
+  return queryOne<TestVersionRow>('SELECT * FROM test_versions WHERE id = ?', [versionId]);
+}
+
 export function getTestParameters(testVersionId: number): ParameterRow[] {
   return queryAll<ParameterRow>(`
     SELECT * FROM test_parameters WHERE test_version_id = ? ORDER BY display_order
@@ -259,4 +263,65 @@ export function publishTest(versionId: number): void {
 
   run("UPDATE test_versions SET status = 'PUBLISHED', wizard_step = 6 WHERE id = ?", [versionId]);
 }
+
+export function deleteTest(testId: number): void {
+  run('UPDATE tests SET is_active = 0 WHERE id = ?', [testId]);
+}
+
+export function createDraftFromExisting(testId: number): number {
+  // 1. Get latest version
+  const latest = queryOne<TestVersionRow>('SELECT * FROM test_versions WHERE test_id = ? ORDER BY version_no DESC LIMIT 1', [testId]);
+  if (!latest) throw new Error('Test version not found');
+
+  // 2. If already DRAFT, return it
+  if ((latest as any).status === 'DRAFT') return latest.id;
+
+  // 3. Create NEW draft version based on latest
+  const nextVersion = latest.version_no + 1;
+  const newVersionId = runWithId(`
+    INSERT INTO test_versions(
+      test_id, test_name, department, method, sample_type, report_group,
+      version_no, effective_from, status, wizard_step, created_at, interpretation_template
+    ) VALUES(?, ?, ?, ?, ?, ?, ?, datetime('now'), 'DRAFT', 1, datetime('now'), ?)
+  `, [
+    latest.test_id, latest.test_name, latest.department, latest.method,
+    latest.sample_type, latest.report_group, nextVersion,
+    (latest as any).interpretation_template || null
+  ]);
+
+  // 4. Copy Parameters
+  const params = getTestParameters(latest.id);
+  const paramMap = new Map<string, number>(); // code -> newId (for mapping ref ranges)
+
+  for (const param of params) {
+    const newParamId = runWithId(`
+      INSERT INTO test_parameters (
+        test_version_id, parameter_code, parameter_name, data_type, 
+        unit, decimal_precision, display_order, is_mandatory, formula
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newVersionId, param.parameter_code, param.parameter_name, param.data_type,
+      param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.formula
+    ]);
+    paramMap.set(param.parameter_code, newParamId);
+  }
+
+  // 5. Copy Reference Ranges
+  // We need to fetch ranges for each OLD parameter and insert for NEW parameter
+  for (const oldParam of params) {
+    const newParamId = paramMap.get(oldParam.parameter_code);
+    if (newParamId) {
+      const ranges = listReferenceRanges(oldParam.id);
+      for (const range of ranges) {
+        run(`
+                INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, display_text, effective_from)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+               `, [newParamId, range.gender, range.age_min_days, range.age_max_days, range.lower_limit, range.upper_limit, range.display_text]);
+      }
+    }
+  }
+
+  return newVersionId;
+}
+
 

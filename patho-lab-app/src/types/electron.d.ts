@@ -16,7 +16,10 @@ export interface ElectronAPI {
     tests: {
         list: () => Promise<any[]>;
         get: (testId: number) => Promise<any>;
+        list: () => Promise<any[]>;
+        get: (testId: number) => Promise<any>;
         getParameters: (testVersionId: number) => Promise<any[]>;
+        delete: (testId: number) => Promise<void>;
     };
     testWizard: {
         getDrafts: () => Promise<any[]>;
@@ -24,7 +27,11 @@ export interface ElectronAPI {
         updateDraft: (id: number, data: any) => Promise<void>;
         updateStep: (id: number, step: number) => Promise<void>;
         saveParams: (id: number, params: any[]) => Promise<void>;
+        updateStep: (id: number, step: number) => Promise<void>;
+        saveParams: (id: number, params: any[]) => Promise<void>;
         publish: (id: number) => Promise<void>;
+        createDraftFromExisting: (testId: number) => Promise<number>;
+        getDraft: (versionId: number) => Promise<any>;
     };
     refRanges: {
         list: (parameterId: number) => Promise<any[]>;

@@ -33,6 +33,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
     getParameters: (testVersionId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId),
+    delete: (testId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_DELETE, testId),
   },
 
   // Test Wizard
@@ -49,6 +51,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_SAVE_PARAMS, id, params),
     publish: (id: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_PUBLISH, id),
+    createDraftFromExisting: (testId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_CREATE_DRAFT_FROM_EXISTING, testId),
+    getDraft: (versionId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TEST_WIZARD_GET_DRAFT, versionId),
   },
 
   // Orders
