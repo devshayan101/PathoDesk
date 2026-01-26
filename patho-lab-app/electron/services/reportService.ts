@@ -31,6 +31,10 @@ interface ReportData {
         method: string;
         sample_type: string;
     };
+    referringDoctor?: {
+        name: string;
+        specialty?: string;
+    } | null;
     results: ResultItem[];
 }
 
@@ -79,17 +83,19 @@ export function getReportData(sampleId: number): ReportData | null {
 
     if (!sample) return null;
 
-    // Get patient and test info
+    // Get patient, test, and doctor info
     const orderData = queryOne<any>(`
     SELECT 
       p.id as patient_id, p.patient_uid, p.full_name, p.dob, p.gender, p.phone, p.address,
-      t.id as test_id, t.test_code, tv.test_name, tv.department, tv.method, tv.sample_type
+      t.id as test_id, t.test_code, tv.test_name, tv.department, tv.method, tv.sample_type,
+      d.name as doctor_name, d.specialty as doctor_specialty
     FROM samples s
     JOIN order_tests ot ON s.order_test_id = ot.id
     JOIN test_versions tv ON ot.test_version_id = tv.id
     JOIN tests t ON tv.test_id = t.id
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE s.id = ?
   `, [sampleId]);
 
@@ -152,6 +158,10 @@ export function getReportData(sampleId: number): ReportData | null {
             method: orderData.method,
             sample_type: orderData.sample_type
         },
+        referringDoctor: orderData.doctor_name ? {
+            name: orderData.doctor_name,
+            specialty: orderData.doctor_specialty
+        } : null,
         results: formattedResults
     };
 }

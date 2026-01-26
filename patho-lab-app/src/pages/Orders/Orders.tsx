@@ -23,7 +23,14 @@ interface Order {
     order_date: string;
     payment_status: string;
     total_amount: number;
-    test_names?: string; // Derived in frontend or query
+    test_names?: string;
+    doctor_name?: string;
+}
+
+interface Doctor {
+    id: number;
+    doctor_code: string;
+    name: string;
 }
 
 export default function OrdersPage() {
@@ -31,9 +38,11 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [tests, setTests] = useState<Test[]>([]);
     const [patients, setPatients] = useState<Patient[]>([]);
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
 
     // Form state
     const [selectedPatientId, setSelectedPatientId] = useState<number | ''>('');
+    const [selectedDoctorId, setSelectedDoctorId] = useState<number | ''>('');
     const [selectedTestIds, setSelectedTestIds] = useState<number[]>([]);
     const [discount, setDiscount] = useState('');
     const [loading, setLoading] = useState(true);
@@ -46,15 +55,16 @@ export default function OrdersPage() {
         setLoading(true);
         try {
             if (window.electronAPI) {
-                const [ordersData, testsData, patientsData] = await Promise.all([
+                const [ordersData, testsData, patientsData, doctorsData] = await Promise.all([
                     window.electronAPI.orders.list(),
                     window.electronAPI.tests.list(),
-                    window.electronAPI.patients.list()
+                    window.electronAPI.patients.list(),
+                    window.electronAPI.doctors.list()
                 ]);
                 setOrders(ordersData);
-                // Map DB tests to UI format (add placeholder price if missing)
                 setTests(testsData.map((t: any) => ({ ...t, price: 500 })));
                 setPatients(patientsData);
+                setDoctors(doctorsData);
             }
         } catch (e) {
             console.error('Failed to load data:', e);
@@ -76,15 +86,17 @@ export default function OrdersPage() {
                 const result = await window.electronAPI.orders.create({
                     patientId: Number(selectedPatientId),
                     testVersionIds: selectedTestIds,
-                    discount: Number(discount) || 0
+                    discount: Number(discount) || 0,
+                    referringDoctorId: selectedDoctorId ? Number(selectedDoctorId) : null
                 });
 
                 if (result.success) {
                     setShowForm(false);
                     setSelectedPatientId('');
+                    setSelectedDoctorId('');
                     setSelectedTestIds([]);
                     setDiscount('');
-                    loadData(); // Refresh list
+                    loadData();
                 } else {
                     alert('Failed to create order: ' + result.error);
                 }
@@ -124,6 +136,22 @@ export default function OrdersPage() {
                                 {patients.map(p => (
                                     <option key={p.id} value={p.id}>
                                         {p.full_name} ({p.patient_uid})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Referring Doctor (Optional)</label>
+                            <select
+                                className="input"
+                                value={selectedDoctorId}
+                                onChange={(e) => setSelectedDoctorId(e.target.value ? Number(e.target.value) : '')}
+                            >
+                                <option value="">-- Walk-in / No Referral --</option>
+                                {doctors.map(d => (
+                                    <option key={d.id} value={d.id}>
+                                        {d.name} ({d.doctor_code})
                                     </option>
                                 ))}
                             </select>

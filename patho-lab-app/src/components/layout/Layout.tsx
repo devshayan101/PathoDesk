@@ -9,6 +9,7 @@ const navItems = [
     { path: '/samples', label: 'Samples', roles: ['admin', 'technician', 'pathologist'] },
     { path: '/results', label: 'Results', roles: ['admin', 'technician', 'pathologist'] },
     { path: '/test-master', label: 'Test Master', roles: ['admin'] },
+    { path: '/doctors', label: 'Doctors', roles: ['admin', 'receptionist'] },
     { path: '/admin', label: 'Admin', roles: ['admin'] },
 ];
 

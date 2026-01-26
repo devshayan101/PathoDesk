@@ -140,6 +140,24 @@ const api = {
     update: (key: string, value: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_UPDATE, key, value),
   },
+
+  // Doctors
+  doctors: {
+    list: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_LIST),
+    listAll: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_LIST_ALL),
+    get: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_GET, id),
+    create: (data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_UPDATE, id, data),
+    toggleActive: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_TOGGLE_ACTIVE, id),
+    search: (query: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_SEARCH, query),
+  },
 }
 
 // Expose to window

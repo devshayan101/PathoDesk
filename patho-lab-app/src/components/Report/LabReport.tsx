@@ -151,6 +151,10 @@ interface ReportData {
         abnormal_flag: string | null;
         ref_range_text: string | null;
     }[];
+    referringDoctor?: {
+        name: string;
+        specialty?: string;
+    } | null;
 }
 
 interface LabSettings {
@@ -218,7 +222,7 @@ function formatFlag(flag: string | null): string {
 }
 
 export default function LabReport({ data, labSettings }: Props) {
-    const { sample, patient, test, results } = data;
+    const { sample, patient, test, results, referringDoctor } = data;
 
     return (
         <Document>
@@ -276,6 +280,22 @@ export default function LabReport({ data, labSettings }: Props) {
                         <Text style={styles.value}>{test.method}</Text>
                     </View>
                 </View>
+
+                {/* Referred By */}
+                {referringDoctor && (
+                    <View style={[styles.patientSection, { marginBottom: 10 }]}>
+                        <View style={styles.patientCol}>
+                            <Text style={styles.label}>Referred By</Text>
+                            <Text style={styles.value}>{referringDoctor.name}</Text>
+                        </View>
+                        {referringDoctor.specialty && (
+                            <View style={styles.patientCol}>
+                                <Text style={styles.label}>Specialty</Text>
+                                <Text style={styles.value}>{referringDoctor.specialty}</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {/* Test Name */}
                 <Text style={styles.testHeader}>{test.test_name}</Text>

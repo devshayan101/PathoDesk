@@ -866,6 +866,31 @@ function getMigrations() {
           ('report_footer', 'This report is electronically generated and valid without signature.'),
           ('disclaimer', 'Results should be correlated with clinical findings. Consult your physician for interpretation.');
       `
+    },
+    {
+      name: '012_doctors_referral',
+      sql: `
+        -- Doctors table for referring physicians
+        CREATE TABLE IF NOT EXISTS doctors (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          specialty TEXT,
+          phone TEXT,
+          clinic_address TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Add referring doctor to orders
+        ALTER TABLE orders ADD COLUMN referring_doctor_id INTEGER REFERENCES doctors(id);
+        
+        -- Insert sample doctors
+        INSERT INTO doctors (doctor_code, name, specialty, phone) VALUES
+          ('DR001', 'Dr. Ramesh Kumar', 'General Physician', '+91 98765 11111'),
+          ('DR002', 'Dr. Priya Sharma', 'Cardiologist', '+91 98765 22222'),
+          ('DR003', 'Dr. Suresh Patel', 'Orthopedic', '+91 98765 33333');
+      `
     }
   ];
 }

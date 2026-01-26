@@ -196,4 +196,13 @@ export const IPC_CHANNELS = {
     // Lab Settings
     LAB_SETTINGS_GET: 'labSettings:get',
     LAB_SETTINGS_UPDATE: 'labSettings:update',
+
+    // Doctors
+    DOCTOR_LIST: 'doctor:list',
+    DOCTOR_LIST_ALL: 'doctor:listAll',
+    DOCTOR_GET: 'doctor:get',
+    DOCTOR_CREATE: 'doctor:create',
+    DOCTOR_UPDATE: 'doctor:update',
+    DOCTOR_TOGGLE_ACTIVE: 'doctor:toggleActive',
+    DOCTOR_SEARCH: 'doctor:search',
 } as const;
