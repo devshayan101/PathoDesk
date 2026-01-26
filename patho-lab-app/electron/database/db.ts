@@ -811,6 +811,39 @@ function getMigrations() {
           ((SELECT id FROM test_parameters WHERE parameter_code='INR'), 'A', 0, 36500, 0.8, 1.2, datetime('now')),
           ((SELECT id FROM test_parameters WHERE parameter_code='APTT'), 'A', 0, 36500, 25, 35, datetime('now'));
       `
+    },
+    {
+      name: '010_add_critical_values',
+      sql: `
+        -- Insert critical values for key parameters
+        -- Critical values trigger immediate clinical alerts
+        
+        -- CBC Critical Values
+        INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='HB'), 7.0, 20.0),    -- Hemoglobin
+          ((SELECT id FROM test_parameters WHERE parameter_code='WBC'), 2000, 30000), -- WBC
+          ((SELECT id FROM test_parameters WHERE parameter_code='PLT'), 0.5, 10.0);   -- Platelets (lakh/µL)
+          
+        -- Glucose Critical Values
+        INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='FBS'), 40, 400),   -- Fasting glucose
+          ((SELECT id FROM test_parameters WHERE parameter_code='RBS'), 40, 500);   -- Random glucose
+          
+        -- RFT Critical Values
+        INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='K'), 2.5, 6.5),      -- Potassium
+          ((SELECT id FROM test_parameters WHERE parameter_code='NA'), 120, 160),     -- Sodium
+          ((SELECT id FROM test_parameters WHERE parameter_code='CREAT'), NULL, 10.0); -- Creatinine (high only)
+          
+        -- LFT Critical Values
+        INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='TBIL'), NULL, 15.0); -- Total Bilirubin
+          
+        -- Coagulation Critical Values
+        INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES
+          ((SELECT id FROM test_parameters WHERE parameter_code='INR'), NULL, 5.0),
+          ((SELECT id FROM test_parameters WHERE parameter_code='PT'), NULL, 30.0);
+      `
     }
   ];
 }
