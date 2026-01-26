@@ -57,7 +57,7 @@ interface PreviousResult {
   test_date: string;
 }
 
-// Get pending samples (status = RECEIVED, ready for result entry)
+// Get samples for result entry/viewing (all workflow stages)
 export function listPendingSamples(): SampleForResultEntry[] {
   return queryAll<SampleForResultEntry>(`
     SELECT 
@@ -71,8 +71,16 @@ export function listPendingSamples(): SampleForResultEntry[] {
     JOIN tests t ON tv.test_id = t.id
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
-    WHERE s.status = 'RECEIVED'
-    ORDER BY s.received_at ASC
+    WHERE s.status IN ('RECEIVED', 'DRAFT', 'SUBMITTED', 'VERIFIED', 'FINALIZED')
+    ORDER BY 
+      CASE s.status 
+        WHEN 'RECEIVED' THEN 1 
+        WHEN 'DRAFT' THEN 2 
+        WHEN 'SUBMITTED' THEN 3 
+        WHEN 'VERIFIED' THEN 4 
+        WHEN 'FINALIZED' THEN 5 
+      END,
+      s.received_at DESC
   `);
 }
 

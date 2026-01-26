@@ -62,6 +62,7 @@ export function createOrder(data: {
   patientId: number;
   testVersionIds: number[];
   discount?: number;
+  referringDoctorId?: number | null;
 }): { success: boolean; orderId?: number; orderUid?: string; error?: string } {
   try {
     const orderUid = `ORD-${Date.now().toString(36).toUpperCase()}`;
@@ -73,9 +74,9 @@ export function createOrder(data: {
 
     // Insert order
     const orderId = runWithId(`
-      INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status)
-      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING')
-    `, [orderUid, data.patientId, totalAmount, discount, netAmount]);
+      INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status, referring_doctor_id)
+      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING', ?)
+    `, [orderUid, data.patientId, totalAmount, discount, netAmount, data.referringDoctorId || null]);
 
     // Insert order tests and auto-generate samples
     for (const testVersionId of data.testVersionIds) {

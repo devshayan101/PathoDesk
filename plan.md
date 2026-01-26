@@ -73,26 +73,27 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 4: Result Entry (Clinical Core) ⏳ NEXT
+### Phase 4: Result Entry (Clinical Core) ✅ COMPLETED
 **Duration: ~6-8 hours**
 
-- [ ] Connect result entry to database
-- [ ] Parameter grid with real test data
-- [ ] Reference range lookup by patient age/gender
-- [ ] Abnormal flagging (H/L/Critical) with database storage
-- [ ] Delta check implementation
-- [ ] Verification/finalization workflow
+- [x] Connect result entry to database
+- [x] Parameter grid with real test data
+- [x] Reference range lookup by patient age/gender
+- [x] Abnormal flagging (H/L/Critical) with database storage
+- [x] Delta check implementation
+- [x] Critical values trigger with modal alert
+- [x] Verification/finalization workflow
 
 ---
 
-### Phase 5: Report Generation
+### Phase 5: Report Generation ✅ COMPLETED
 **Duration: ~5-6 hours**
 
-- [ ] PDF report template with @react-pdf/renderer
-- [ ] Report preview modal
-- [ ] Lab letterhead configuration
-- [ ] Digital signature placeholder
-- [ ] Print functionality
+- [x] PDF report template with @react-pdf/renderer
+- [x] Report preview modal
+- [x] Lab letterhead configuration
+- [x] Digital signature placeholder
+- [x] Print/Download functionality
 
 ---
 
@@ -127,30 +128,26 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 7: Doctor Referral & Commission Management
+### Phase 7: Doctor Referral & Commission Management ✅ 7.1 COMPLETED
 **Duration: ~6-8 hours**
 *Reference: doctor_referral_pricing_commission_management_prd.md*
 
-#### 7.1 Database Schema
-- [ ] Create tables: `doctors`, `doctor_price_lists`, `doctor_test_prices`
-- [ ] Create tables: `doctor_commissions`, `commission_settlements`
+#### 7.1 Core Doctor Referral (Complete)
+- [x] Create `doctors` table (migration 012)
+- [x] Add `referring_doctor_id` to orders table
+- [x] Doctor CRUD service & IPC handlers
+- [x] Doctors page (Admin menu)
+- [x] Doctor dropdown in Order Creation
+- [x] Show "Referred By" on reports
 
-#### 7.2 Doctor Master
-- [ ] Doctor CRUD (name, specialty, contact, commission model)
-- [ ] Link doctor to price list (doctor-specific or shared)
-- [ ] Default commission rate (% or flat)
+#### 7.2 Doctor Pricing (Future)
+- [ ] Doctor-specific price lists
+- [ ] Billing integration
 
-#### 7.3 Doctor Pricing at Billing
-- [ ] Select referring doctor on patient/order
-- [ ] Auto-select doctor's price list
-- [ ] Calculate commission per invoice item (stored immutably)
-- [ ] Lab margin calculation (hidden from doctor)
-
-#### 7.4 Commission Reporting
-- [ ] Monthly commission aggregation per doctor
-- [ ] Generate Doctor Commission Statement (PDF/Excel)
-- [ ] Settlement tracking (Paid/Partially Paid/Outstanding)
-- [ ] Manual override with reason (admin-only)
+#### 7.3 Commission Management (Future)
+- [ ] Commission calculation per invoice
+- [ ] Monthly statements
+- [ ] Settlement tracking
 
 ---
 

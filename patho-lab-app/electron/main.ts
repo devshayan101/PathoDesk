@@ -10,6 +10,8 @@ import * as orderService from './services/orderService'
 import * as sampleService from './services/sampleService'
 import * as userService from './services/userService'
 import * as resultService from './services/resultService'
+import * as reportService from './services/reportService'
+import * as doctorService from './services/doctorService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -253,6 +255,50 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.RESULT_GET_PREVIOUS, (_, patientId: number, testId: number, currentSampleId: number) => {
     return resultService.getPreviousResults(patientId, testId, currentSampleId)
+  })
+
+  // Reports
+  ipcMain.handle(IPC_CHANNELS.REPORT_GET_DATA, (_, sampleId: number) => {
+    return reportService.getReportData(sampleId)
+  })
+
+  // Lab Settings
+  ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_GET, () => {
+    return reportService.getLabSettings()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_UPDATE, (_, key: string, value: string) => {
+    reportService.updateLabSetting(key, value)
+    return { success: true }
+  })
+
+  // Doctors
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_LIST, () => {
+    return doctorService.listDoctors()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_LIST_ALL, () => {
+    return doctorService.listAllDoctors()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_GET, (_, id: number) => {
+    return doctorService.getDoctor(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_CREATE, (_, data) => {
+    return doctorService.createDoctor(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_UPDATE, (_, id: number, data) => {
+    return doctorService.updateDoctor(id, data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_TOGGLE_ACTIVE, (_, id: number) => {
+    return doctorService.toggleDoctorActive(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_SEARCH, (_, query: string) => {
+    return doctorService.searchDoctors(query)
   })
 }
 

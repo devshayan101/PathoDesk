@@ -9,6 +9,7 @@ import SamplesPage from './pages/Samples/Samples';
 import ResultsPage from './pages/Results/Results';
 import TestMasterPage from './pages/TestMaster/TestMaster';
 import AdminPage from './pages/Admin/Admin';
+import DoctorsPage from './pages/Doctors/Doctors';
 import './index.css';
 
 // Protected route wrapper
@@ -80,6 +81,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctors"
+          element={
+            <ProtectedRoute>
+              <DoctorsPage />
             </ProtectedRoute>
           }
         />

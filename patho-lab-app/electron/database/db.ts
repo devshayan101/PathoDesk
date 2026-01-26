@@ -844,6 +844,53 @@ function getMigrations() {
           ((SELECT id FROM test_parameters WHERE parameter_code='INR'), NULL, 5.0),
           ((SELECT id FROM test_parameters WHERE parameter_code='PT'), NULL, 30.0);
       `
+    },
+    {
+      name: '011_lab_settings',
+      sql: `
+        -- Lab settings for report letterhead and configuration
+        CREATE TABLE IF NOT EXISTS lab_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          setting_key TEXT UNIQUE NOT NULL,
+          setting_value TEXT
+        );
+        
+        -- Insert default lab settings
+        INSERT INTO lab_settings (setting_key, setting_value) VALUES
+          ('lab_name', 'PathoCare Diagnostics'),
+          ('address_line1', '123 Medical Complex, Main Road'),
+          ('address_line2', 'City - 400001'),
+          ('phone', '+91 98765 43210'),
+          ('email', 'reports@pathocare.com'),
+          ('nabl_accreditation', 'NABL-MC-XXXX'),
+          ('report_footer', 'This report is electronically generated and valid without signature.'),
+          ('disclaimer', 'Results should be correlated with clinical findings. Consult your physician for interpretation.');
+      `
+    },
+    {
+      name: '012_doctors_referral',
+      sql: `
+        -- Doctors table for referring physicians
+        CREATE TABLE IF NOT EXISTS doctors (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          specialty TEXT,
+          phone TEXT,
+          clinic_address TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Add referring doctor to orders
+        ALTER TABLE orders ADD COLUMN referring_doctor_id INTEGER REFERENCES doctors(id);
+        
+        -- Insert sample doctors
+        INSERT INTO doctors (doctor_code, name, specialty, phone) VALUES
+          ('DR001', 'Dr. Ramesh Kumar', 'General Physician', '+91 98765 11111'),
+          ('DR002', 'Dr. Priya Sharma', 'Cardiologist', '+91 98765 22222'),
+          ('DR003', 'Dr. Suresh Patel', 'Orthopedic', '+91 98765 33333');
+      `
     }
   ];
 }

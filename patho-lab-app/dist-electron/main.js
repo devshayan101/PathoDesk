@@ -2544,6 +2544,53 @@ function getMigrations() {
           ((SELECT id FROM test_parameters WHERE parameter_code='INR'), NULL, 5.0),
           ((SELECT id FROM test_parameters WHERE parameter_code='PT'), NULL, 30.0);
       `
+    },
+    {
+      name: "011_lab_settings",
+      sql: `
+        -- Lab settings for report letterhead and configuration
+        CREATE TABLE IF NOT EXISTS lab_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          setting_key TEXT UNIQUE NOT NULL,
+          setting_value TEXT
+        );
+        
+        -- Insert default lab settings
+        INSERT INTO lab_settings (setting_key, setting_value) VALUES
+          ('lab_name', 'PathoCare Diagnostics'),
+          ('address_line1', '123 Medical Complex, Main Road'),
+          ('address_line2', 'City - 400001'),
+          ('phone', '+91 98765 43210'),
+          ('email', 'reports@pathocare.com'),
+          ('nabl_accreditation', 'NABL-MC-XXXX'),
+          ('report_footer', 'This report is electronically generated and valid without signature.'),
+          ('disclaimer', 'Results should be correlated with clinical findings. Consult your physician for interpretation.');
+      `
+    },
+    {
+      name: "012_doctors_referral",
+      sql: `
+        -- Doctors table for referring physicians
+        CREATE TABLE IF NOT EXISTS doctors (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          doctor_code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          specialty TEXT,
+          phone TEXT,
+          clinic_address TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        
+        -- Add referring doctor to orders
+        ALTER TABLE orders ADD COLUMN referring_doctor_id INTEGER REFERENCES doctors(id);
+        
+        -- Insert sample doctors
+        INSERT INTO doctors (doctor_code, name, specialty, phone) VALUES
+          ('DR001', 'Dr. Ramesh Kumar', 'General Physician', '+91 98765 11111'),
+          ('DR002', 'Dr. Priya Sharma', 'Cardiologist', '+91 98765 22222'),
+          ('DR003', 'Dr. Suresh Patel', 'Orthopedic', '+91 98765 33333');
+      `
     }
   ];
 }
@@ -2893,9 +2940,9 @@ function createOrder(data) {
     const discount = data.discount || 0;
     const netAmount = totalAmount - discount;
     const orderId = runWithId(`
-      INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status)
-      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING')
-    `, [orderUid, data.patientId, totalAmount, discount, netAmount]);
+      INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status, referring_doctor_id)
+      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING', ?)
+    `, [orderUid, data.patientId, totalAmount, discount, netAmount, data.referringDoctorId || null]);
     for (const testVersionId of data.testVersionIds) {
       const orderTestId = runWithId(`
         INSERT INTO order_tests (order_id, test_version_id, status, price)
@@ -3057,8 +3104,16 @@ function listPendingSamples() {
     JOIN tests t ON tv.test_id = t.id
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
-    WHERE s.status = 'RECEIVED'
-    ORDER BY s.received_at ASC
+    WHERE s.status IN ('RECEIVED', 'DRAFT', 'SUBMITTED', 'VERIFIED', 'FINALIZED')
+    ORDER BY 
+      CASE s.status 
+        WHEN 'RECEIVED' THEN 1 
+        WHEN 'DRAFT' THEN 2 
+        WHEN 'SUBMITTED' THEN 3 
+        WHEN 'VERIFIED' THEN 4 
+        WHEN 'FINALIZED' THEN 5 
+      END,
+      s.received_at DESC
   `);
 }
 function calculateAgeDays(dob) {
@@ -3225,6 +3280,187 @@ function finalizeResults(sampleId) {
     return { success: false, error: error.message };
   }
 }
+function getLabSettings() {
+  const rows = queryAll("SELECT setting_key, setting_value FROM lab_settings");
+  const settings = {};
+  for (const row of rows) {
+    settings[row.setting_key] = row.setting_value || "";
+  }
+  return settings;
+}
+function updateLabSetting(key, value) {
+  const existing = queryOne("SELECT 1 FROM lab_settings WHERE setting_key = ?", [key]);
+  if (existing) {
+    const db2 = require("../database/db");
+    db2.run("UPDATE lab_settings SET setting_value = ? WHERE setting_key = ?", [value, key]);
+  } else {
+    const db2 = require("../database/db");
+    db2.run("INSERT INTO lab_settings (setting_key, setting_value) VALUES (?, ?)", [key, value]);
+  }
+}
+function getReportData(sampleId) {
+  const sample = queryOne(`
+    SELECT 
+      s.id, s.sample_uid, s.received_at, s.status, s.verified_at,
+      u.full_name as verified_by_name
+    FROM samples s
+    LEFT JOIN users u ON s.verified_by = u.id
+    WHERE s.id = ?
+  `, [sampleId]);
+  if (!sample) return null;
+  const orderData = queryOne(`
+    SELECT 
+      p.id as patient_id, p.patient_uid, p.full_name, p.dob, p.gender, p.phone, p.address,
+      t.id as test_id, t.test_code, tv.test_name, tv.department, tv.method, tv.sample_type,
+      d.name as doctor_name, d.specialty as doctor_specialty
+    FROM samples s
+    JOIN order_tests ot ON s.order_test_id = ot.id
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+    JOIN tests t ON tv.test_id = t.id
+    JOIN orders o ON ot.order_id = o.id
+    JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
+    WHERE s.id = ?
+  `, [sampleId]);
+  if (!orderData) return null;
+  const results = queryAll(`
+    SELECT 
+      tp.parameter_code, tp.parameter_name, 
+      tr.result_value, tp.unit, tr.abnormal_flag,
+      rr.lower_limit, rr.upper_limit
+    FROM samples s
+    JOIN order_tests ot ON s.order_test_id = ot.id
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+    JOIN test_parameters tp ON tp.test_version_id = tv.id
+    LEFT JOIN test_results tr ON tr.order_test_id = ot.id AND tr.parameter_id = tp.id
+    LEFT JOIN reference_ranges rr ON rr.parameter_id = tp.id 
+      AND (rr.gender = ? OR rr.gender = 'A')
+    WHERE s.id = ?
+    ORDER BY tp.display_order
+  `, [orderData.gender, sampleId]);
+  const formattedResults = results.map((r) => ({
+    parameter_code: r.parameter_code,
+    parameter_name: r.parameter_name,
+    result_value: r.result_value || "",
+    unit: r.unit,
+    abnormal_flag: r.abnormal_flag,
+    ref_range_text: r.lower_limit !== null && r.upper_limit !== null ? `${r.lower_limit} - ${r.upper_limit}` : r.lower_limit !== null ? `> ${r.lower_limit}` : r.upper_limit !== null ? `< ${r.upper_limit}` : null
+  }));
+  return {
+    sample: {
+      id: sample.id,
+      sample_uid: sample.sample_uid,
+      received_at: sample.received_at,
+      status: sample.status,
+      verified_at: sample.verified_at,
+      verified_by_name: sample.verified_by_name
+    },
+    patient: {
+      id: orderData.patient_id,
+      patient_uid: orderData.patient_uid,
+      full_name: orderData.full_name,
+      dob: orderData.dob,
+      gender: orderData.gender,
+      phone: orderData.phone,
+      address: orderData.address
+    },
+    test: {
+      id: orderData.test_id,
+      test_code: orderData.test_code,
+      test_name: orderData.test_name,
+      department: orderData.department,
+      method: orderData.method,
+      sample_type: orderData.sample_type
+    },
+    referringDoctor: orderData.doctor_name ? {
+      name: orderData.doctor_name,
+      specialty: orderData.doctor_specialty
+    } : null,
+    results: formattedResults
+  };
+}
+function listDoctors() {
+  return queryAll(`
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    FROM doctors
+    WHERE is_active = 1
+    ORDER BY name ASC
+  `);
+}
+function listAllDoctors() {
+  return queryAll(`
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    FROM doctors
+    ORDER BY name ASC
+  `);
+}
+function getDoctor(id) {
+  return queryOne("SELECT * FROM doctors WHERE id = ?", [id]) || null;
+}
+function createDoctor(data) {
+  try {
+    const id = runWithId(`
+      INSERT INTO doctors (doctor_code, name, specialty, phone, clinic_address, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `, [data.doctorCode, data.name, data.specialty || null, data.phone || null, data.clinicAddress || null]);
+    return { success: true, id };
+  } catch (error) {
+    console.error("Create doctor error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function updateDoctor(id, data) {
+  try {
+    const updates = [];
+    const values = [];
+    if (data.doctorCode !== void 0) {
+      updates.push("doctor_code = ?");
+      values.push(data.doctorCode);
+    }
+    if (data.name !== void 0) {
+      updates.push("name = ?");
+      values.push(data.name);
+    }
+    if (data.specialty !== void 0) {
+      updates.push("specialty = ?");
+      values.push(data.specialty || null);
+    }
+    if (data.phone !== void 0) {
+      updates.push("phone = ?");
+      values.push(data.phone || null);
+    }
+    if (data.clinicAddress !== void 0) {
+      updates.push("clinic_address = ?");
+      values.push(data.clinicAddress || null);
+    }
+    if (updates.length === 0) {
+      return { success: true };
+    }
+    values.push(id);
+    run(`UPDATE doctors SET ${updates.join(", ")} WHERE id = ?`, values);
+    return { success: true };
+  } catch (error) {
+    console.error("Update doctor error:", error);
+    return { success: false, error: error.message };
+  }
+}
+function toggleDoctorActive(id) {
+  try {
+    run("UPDATE doctors SET is_active = 1 - is_active WHERE id = ?", [id]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+function searchDoctors(query) {
+  return queryAll(`
+    SELECT id, doctor_code, name, specialty, phone, clinic_address, is_active, created_at
+    FROM doctors
+    WHERE is_active = 1 AND (name LIKE ? OR doctor_code LIKE ?)
+    ORDER BY name ASC
+    LIMIT 20
+  `, [`%${query}%`, `%${query}%`]);
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -3280,7 +3516,20 @@ const IPC_CHANNELS = {
   USER_CREATE: "user:create",
   USER_UPDATE: "user:update",
   USER_TOGGLE_ACTIVE: "user:toggleActive",
-  ROLE_LIST: "role:list"
+  ROLE_LIST: "role:list",
+  // Reports
+  REPORT_GET_DATA: "report:getData",
+  // Lab Settings
+  LAB_SETTINGS_GET: "labSettings:get",
+  LAB_SETTINGS_UPDATE: "labSettings:update",
+  // Doctors
+  DOCTOR_LIST: "doctor:list",
+  DOCTOR_LIST_ALL: "doctor:listAll",
+  DOCTOR_GET: "doctor:get",
+  DOCTOR_CREATE: "doctor:create",
+  DOCTOR_UPDATE: "doctor:update",
+  DOCTOR_TOGGLE_ACTIVE: "doctor:toggleActive",
+  DOCTOR_SEARCH: "doctor:search"
 };
 createRequire(import.meta.url);
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
@@ -3452,6 +3701,37 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.RESULT_GET_PREVIOUS, (_, patientId, testId, currentSampleId) => {
     return getPreviousResults(patientId, testId, currentSampleId);
+  });
+  ipcMain.handle(IPC_CHANNELS.REPORT_GET_DATA, (_, sampleId) => {
+    return getReportData(sampleId);
+  });
+  ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_GET, () => {
+    return getLabSettings();
+  });
+  ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_UPDATE, (_, key, value) => {
+    updateLabSetting(key, value);
+    return { success: true };
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_LIST, () => {
+    return listDoctors();
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_LIST_ALL, () => {
+    return listAllDoctors();
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_GET, (_, id) => {
+    return getDoctor(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_CREATE, (_, data) => {
+    return createDoctor(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_UPDATE, (_, id, data) => {
+    return updateDoctor(id, data);
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_TOGGLE_ACTIVE, (_, id) => {
+    return toggleDoctorActive(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.DOCTOR_SEARCH, (_, query) => {
+    return searchDoctors(query);
   });
 }
 app.on("window-all-closed", () => {

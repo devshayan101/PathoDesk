@@ -55,7 +55,20 @@ const IPC_CHANNELS = {
   USER_CREATE: "user:create",
   USER_UPDATE: "user:update",
   USER_TOGGLE_ACTIVE: "user:toggleActive",
-  ROLE_LIST: "role:list"
+  ROLE_LIST: "role:list",
+  // Reports
+  REPORT_GET_DATA: "report:getData",
+  // Lab Settings
+  LAB_SETTINGS_GET: "labSettings:get",
+  LAB_SETTINGS_UPDATE: "labSettings:update",
+  // Doctors
+  DOCTOR_LIST: "doctor:list",
+  DOCTOR_LIST_ALL: "doctor:listAll",
+  DOCTOR_GET: "doctor:get",
+  DOCTOR_CREATE: "doctor:create",
+  DOCTOR_UPDATE: "doctor:update",
+  DOCTOR_TOGGLE_ACTIVE: "doctor:toggleActive",
+  DOCTOR_SEARCH: "doctor:search"
 };
 const api = {
   // Auth
@@ -128,6 +141,25 @@ const api = {
     verify: (sampleId, verifiedBy) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_VERIFY, sampleId, verifiedBy),
     finalize: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_FINALIZE, sampleId),
     getPrevious: (patientId, testId, currentSampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.RESULT_GET_PREVIOUS, patientId, testId, currentSampleId)
+  },
+  // Reports
+  reports: {
+    getData: (sampleId) => electron.ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_DATA, sampleId)
+  },
+  // Lab Settings
+  labSettings: {
+    get: () => electron.ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_GET),
+    update: (key, value) => electron.ipcRenderer.invoke(IPC_CHANNELS.LAB_SETTINGS_UPDATE, key, value)
+  },
+  // Doctors
+  doctors: {
+    list: () => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_LIST),
+    listAll: () => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_LIST_ALL),
+    get: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_GET, id),
+    create: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_CREATE, data),
+    update: (id, data) => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_UPDATE, id, data),
+    toggleActive: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_TOGGLE_ACTIVE, id),
+    search: (query) => electron.ipcRenderer.invoke(IPC_CHANNELS.DOCTOR_SEARCH, query)
   }
 };
 electron.contextBridge.exposeInMainWorld("electronAPI", api);
