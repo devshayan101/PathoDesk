@@ -12,6 +12,7 @@ interface Doctor {
     price_list_id?: number;
     is_active: number;
     created_at: string;
+    pending_commission?: number;
 }
 
 interface DoctorInput {
@@ -25,24 +26,30 @@ interface DoctorInput {
     priceListId?: number;
 }
 
-// List all active doctors
+// List all active doctors with pending commission
 export function listDoctors(): Doctor[] {
     return queryAll<Doctor>(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
-           commission_model, commission_rate, price_list_id, is_active, created_at
-    FROM doctors
-    WHERE is_active = 1
-    ORDER BY name ASC
+    SELECT d.id, d.doctor_code, d.name, d.specialty, d.phone, d.clinic_address, 
+           d.commission_model, d.commission_rate, d.price_list_id, d.is_active, d.created_at,
+           COALESCE(SUM(dc.commission_amount), 0) as pending_commission
+    FROM doctors d
+    LEFT JOIN doctor_commissions dc ON d.id = dc.doctor_id AND dc.settlement_id IS NULL AND dc.is_cancelled = 0
+    WHERE d.is_active = 1
+    GROUP BY d.id
+    ORDER BY d.name ASC
   `);
 }
 
-// List all doctors (including inactive, for admin)
+// List all doctors (including inactive, for admin) with pending commission
 export function listAllDoctors(): Doctor[] {
     return queryAll<Doctor>(`
-    SELECT id, doctor_code, name, specialty, phone, clinic_address, 
-           commission_model, commission_rate, price_list_id, is_active, created_at
-    FROM doctors
-    ORDER BY name ASC
+    SELECT d.id, d.doctor_code, d.name, d.specialty, d.phone, d.clinic_address, 
+           d.commission_model, d.commission_rate, d.price_list_id, d.is_active, d.created_at,
+           COALESCE(SUM(dc.commission_amount), 0) as pending_commission
+    FROM doctors d
+    LEFT JOIN doctor_commissions dc ON d.id = dc.doctor_id AND dc.settlement_id IS NULL AND dc.is_cancelled = 0
+    GROUP BY d.id
+    ORDER BY d.name ASC
   `);
 }
 
