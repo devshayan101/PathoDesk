@@ -154,8 +154,9 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 8: QC & Audit ✅ COMPLETED
+### Phase 8: QC & Audit ✅ COMPLETED (⚡ ADDON FEATURE)
 **Duration: ~4-5 hours**
+**💰 Pricing: Extra cost addon - requires license with QC_AUDIT module enabled**
 
 #### 8.1 Audit Trail System ✅
 - [x] `auditService.ts` with logging & diff functions
@@ -172,6 +173,7 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 #### 8.3 Navigation & Integration ✅
 - [x] Routes added to App.tsx
 - [x] Nav links in sidebar (QC for technicians, Audit Log for admin/auditor)
+- [ ] Hide QC & Audit nav items when module not licensed
 
 #### 8.4 QC-Result Integration (From PRD) ✅
 - [x] QC status visible during result entry (show last QC date/status)
@@ -183,6 +185,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Authentication logging (login, logout, failure events)
 - [x] Added REPORT_PREVIEW, REPORT_PRINT, REPORT_REPRINT, QC_OVERRIDE actions
 - [x] Reason field mandatory for QC overrides
+
+#### 8.6 License Gating (NEW)
+- [ ] QC & Audit module gated by `QC_AUDIT` license flag
+- [ ] Show "Upgrade Required" message when accessing unlicensed QC/Audit pages
+- [ ] Hide QC/Audit menu items for unlicensed installations
 
 ---
 
@@ -210,7 +217,7 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 #### 9.4 Feature Gating
 - [ ] Billing & report finalization blocked when expired (read-only access)
 - [ ] Trial: watermark on reports, analyzer/commission disabled
-- [ ] QC & Audit always enabled (never gated)
+- [ ] **QC & Audit: ADDON module** (gated by `QC_AUDIT` license flag)
 - [ ] Clock rollback detection (last-run timestamp)
 
 #### 9.5 Audit & Security

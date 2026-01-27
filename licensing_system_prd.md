@@ -40,13 +40,13 @@ This is the **only model suitable** for offline pathology labs.
 
 ## 4. License Types Supported
 
-| License Type | Purpose                         |
-| ------------ | ------------------------------- |
-| Trial        | Evaluation (time‑limited)       |
-| Annual       | Subscription license            |
-| Perpetual    | One‑time purchase               |
-| Enterprise   | All modules enabled             |
-| Add‑On       | Analyzer, QC, Inventory, Backup |
+| License Type | Purpose                                    |
+| ------------ | ------------------------------------------ |
+| Trial        | Evaluation (time‑limited)                  |
+| Annual       | Subscription license                       |
+| Perpetual    | One‑time purchase                          |
+| Enterprise   | All modules enabled                        |
+| Add‑On       | Analyzer, **QC & Audit**, Inventory, Backup |
 
 ---
 
@@ -56,11 +56,18 @@ Licenses control **features and usage**, not raw data access.
 
 ### Controlled Attributes
 
-- Enabled modules (Billing, QC, Inventory, Analyzer, Doctor Commission)
+- Enabled modules (Billing, **QC & Audit**, Inventory, Analyzer, Doctor Commission)
 - License validity (start / expiry)
 - Maximum logical users
 - Lab identity
 - Machine binding level
+
+### Module Classification
+
+| Module Type | Modules Included | Pricing |
+| ----------- | ---------------- | ------- |
+| Core (Base License) | Patient, Orders, Results, Reports, Basic Billing | Included |
+| Add-On (Extra Cost) | **QC & Audit**, Analyzer Integration, Advanced Inventory, Doctor Commission | Per-module pricing |
 
 ---
 
@@ -326,9 +333,31 @@ Fingerprint is stored as a **SHA‑256 hash**.
 - Time‑limited (e.g., 15–30 days)
 - Watermark on reports
 - Analyzer & commission modules disabled
-- Audit & QC always enabled
+- **QC & Audit disabled** (addon module, available only with paid license)
 
 Clock rollback detection is mandatory.
+
+---
+
+## 13.1 QC & Audit Module (Add-On)
+
+**Pricing Model:** Extra cost addon - requires `QC_AUDIT` module flag in license.
+
+### Features Included
+- Daily QC entry with Westgard rules
+- Levey-Jennings charting
+- QC-Result integration (fail blocks finalization)
+- Complete audit trail with diff logging
+- Audit log viewer with filtering
+
+### Access Control
+- Without `QC_AUDIT` module: QC & Audit menu items hidden, pages show "Upgrade Required"
+- With `QC_AUDIT` module: Full access to all QC and Audit features
+
+### Value Proposition
+- Required for NABL/CAP accreditation compliance
+- Complete traceability for regulatory audits
+- Quality assurance for accurate results
 
 ---
 
