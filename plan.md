@@ -130,11 +130,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 7: Doctor Referral & Commission Management ✅ 7.1 COMPLETED
+### Phase 7: Doctor Referral & Commission Management ✅ COMPLETED
 **Duration: ~6-8 hours**
 *Reference: doctor_referral_pricing_commission_management_prd.md*
 
-#### 7.1 Core Doctor Referral (Complete)
+#### 7.1 Core Doctor Referral ✅ COMPLETE
 - [x] Create `doctors` table (migration 012)
 - [x] Add `referring_doctor_id` to orders table
 - [x] Doctor CRUD service & IPC handlers
@@ -142,14 +142,15 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Doctor dropdown in Order Creation
 - [x] Show "Referred By" on reports
 
-#### 7.2 Doctor Pricing (Future)
-- [ ] Doctor-specific price lists
-- [ ] Billing integration
+#### 7.2 Doctor Pricing ✅ COMPLETE
+- [x] Doctor-specific price lists (database schema, doctor.price_list_id)
+- [x] Billing integration (auto-select doctor's price list in Order Creation)
 
-#### 7.3 Commission Management (Future)
-- [ ] Commission calculation per invoice
-- [ ] Monthly statements
-- [ ] Settlement tracking
+#### 7.3 Commission Management ✅ COMPLETE
+- [x] Commission calculation per invoice (auto-calculated in invoiceService)
+- [x] Monthly statements (Doctors page modal with period selection)
+- [x] Settlement tracking (commission_settlements table, service, IPC)
+- [x] Payment recording with PDF receipt generation
 
 ---
 

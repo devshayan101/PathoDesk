@@ -41,6 +41,7 @@ interface Doctor {
     id: number;
     doctor_code: string;
     name: string;
+    price_list_id?: number;
 }
 
 interface PriceList {
@@ -60,6 +61,7 @@ export default function OrdersPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [priceLists, setPriceLists] = useState<PriceList[]>([]);
     const [testPrices, setTestPrices] = useState<Map<number, TestPrice>>(new Map());
+    const [defaultPriceListId, setDefaultPriceListId] = useState<number | ''>('');
 
     // Form state
     const [selectedPatientId, setSelectedPatientId] = useState<number | ''>('');
@@ -101,8 +103,10 @@ export default function OrdersPage() {
             const defaultPl = priceListsData.find((pl: PriceList) => pl.is_default === 1);
             if (defaultPl) {
                 setSelectedPriceListId(defaultPl.id);
+                setDefaultPriceListId(defaultPl.id);
             } else if (priceListsData.length > 0) {
                 setSelectedPriceListId(priceListsData[0].id);
+                setDefaultPriceListId(priceListsData[0].id);
             }
         } catch (e) {
             console.error('Failed to load data:', e);
@@ -136,6 +140,30 @@ export default function OrdersPage() {
         setSelectedTestIds(prev =>
             prev.includes(testVersionId) ? prev.filter(id => id !== testVersionId) : [...prev, testVersionId]
         );
+    };
+
+    // Handle doctor selection - auto-select doctor's price list if available
+    const handleDoctorChange = (doctorId: number | '') => {
+        setSelectedDoctorId(doctorId);
+
+        if (doctorId) {
+            // Find the selected doctor and check if they have a price list assigned
+            const doctor = doctors.find(d => d.id === doctorId);
+            if (doctor?.price_list_id) {
+                // Auto-select the doctor's price list
+                setSelectedPriceListId(doctor.price_list_id);
+            } else {
+                // Doctor has no specific price list, use default
+                if (defaultPriceListId) {
+                    setSelectedPriceListId(defaultPriceListId);
+                }
+            }
+        } else {
+            // No doctor selected (Walk-in), reset to default price list
+            if (defaultPriceListId) {
+                setSelectedPriceListId(defaultPriceListId);
+            }
+        }
     };
 
     const handleSubmit = async () => {
@@ -259,13 +287,13 @@ export default function OrdersPage() {
                                         <select
                                             className="input"
                                             value={selectedDoctorId}
-                                            onChange={(e) => setSelectedDoctorId(e.target.value ? Number(e.target.value) : '')}
+                                            onChange={(e) => handleDoctorChange(e.target.value ? Number(e.target.value) : '')}
                                             style={{ width: '100%' }}
                                         >
                                             <option value="">-- Walk-in / Self --</option>
                                             {doctors.map(d => (
                                                 <option key={d.id} value={d.id}>
-                                                    {d.name} ({d.doctor_code})
+                                                    {d.name} ({d.doctor_code}){d.price_list_id ? ' ★' : ''}
                                                 </option>
                                             ))}
                                         </select>
