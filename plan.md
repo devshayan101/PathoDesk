@@ -173,42 +173,115 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Routes added to App.tsx
 - [x] Nav links in sidebar (QC for technicians, Audit Log for admin/auditor)
 
+#### 8.4 QC-Result Integration (From PRD) ✅
+- [x] QC status visible during result entry (show last QC date/status)
+- [x] QC fail blocks report finalization
+- [x] Pathologist override with reason (logged to audit)
+- [ ] QC Reports: daily log, trend chart, failure/override report (deferred)
+
+#### 8.5 Audit Enhancements (From PRD) ✅
+- [x] Authentication logging (login, logout, failure events)
+- [x] Added REPORT_PREVIEW, REPORT_PRINT, REPORT_REPRINT, QC_OVERRIDE actions
+- [x] Reason field mandatory for QC overrides
+
 ---
 
 ### Phase 9: Licensing System
-**Duration: ~4-5 hours**
+**Duration: ~5-6 hours**
+*Reference: licensing_system_prd.md*
 
-- [ ] License file format (JSON + signature)
-- [ ] RSA/ECDSA signature verification
-- [ ] Machine binding (hardware ID)
-- [ ] License status display
-- [ ] Grace period handling
-- [ ] Billing module gating by license state
+#### 9.1 License File Format
+- [ ] Signed JSON structure (lab_name, issued_to, machine_id_hash, edition, modules, expiry)
+- [ ] RSA-PSS digital signature verification
+- [ ] Trial/Annual/Perpetual license types
+
+#### 9.2 Machine Binding (Three Modes)
+- [ ] **None**: Trial licenses (no binding, clock rollback detection)
+- [ ] **Soft**: Annual licenses (tolerant mismatch, warning + grace)
+- [ ] **Strict**: Perpetual licenses (exact match required)
+- [ ] Hardware fingerprint: Windows GUID + Disk Serial + CPU ID (SHA-256)
+
+#### 9.3 License States & UI
+- [ ] States: Valid, Near Expiry, Grace Period, Expired, Invalid/Tampered
+- [ ] License status badge in header
+- [ ] Settings page: view license, upload new, show machine ID
+- [ ] Grace period: 7-14 days configurable
+
+#### 9.4 Feature Gating
+- [ ] Billing & report finalization blocked when expired (read-only access)
+- [ ] Trial: watermark on reports, analyzer/commission disabled
+- [ ] QC & Audit always enabled (never gated)
+- [ ] Clock rollback detection (last-run timestamp)
+
+#### 9.5 Audit & Security
+- [ ] License events logged (load, validation, expiry, block)
+- [ ] Code obfuscation (optional, deployment phase)
 
 ---
 
 ### Phase 10: Polish & Deployment
 **Duration: ~4-5 hours**
 
-- [ ] Error boundaries
-- [ ] Crash recovery
+#### 10.1 Reliability
+- [ ] Error boundaries for React components
+- [ ] Draft result recovery (auto-save)
+- [ ] Power failure resilience
+
+#### 10.2 Data Protection
+- [ ] Manual backup to file
+- [ ] Restore from backup (with audit continuity)
+- [ ] Database integrity checks
+
+#### 10.3 Deployment
 - [ ] Windows installer (NSIS/Electron Builder)
-- [ ] Documentation
+- [ ] Auto-updater (optional)
+- [ ] Documentation (user manual, admin guide)
 
 ---
 
 ## Verification Plan
+*Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 
-### Manual Testing
-1. Authentication flow with role-based access
-2. Patient & Order workflow
-3. Result Entry with validation
-4. Report generation & printing
-5. Billing with price lists and discounts
-6. Doctor commission calculation and statements
-7. License validation (Trial/Valid/Expired modes)
+### E2E Clinical Workflow Tests
+- TC-E2E-01: Patient → Order → Sample → Result → Report
+- TC-E2E-02: Draft result recovery after power failure
+
+### Test Master & Reference Range Tests
+- TC-TM-01: Create new test via wizard
+- TC-TM-02: Edit test after reports exist (versioning)
+
+### Pricing & Billing Tests
+- TC-BILL-01: Standard price list billing
+- TC-BILL-02: Doctor referral pricing & commission
+
+### Doctor Commission Tests
+- TC-DR-01: Monthly aggregation & export
+
+### QC Module Tests
+- TC-QC-01: QC pass allows reporting
+- TC-QC-02: QC fail blocks finalization (override requires pathologist + reason)
+
+### Audit Trail Tests
+- TC-AUD-01: Result edit audit (old/new values logged)
+- TC-AUD-02: Billing audit (cancellation logged with reason)
+
+### Licensing Tests
+- TC-LIC-01: Expired license blocks billing
+- TC-LIC-02: Grace period warning displayed
+
+### Backup & Restore Tests
+- TC-BKP-01: Backup integrity, audit logs preserved
+
+### Security & Role Tests
+- TC-SEC-01: Role-based access (technician cannot change prices)
+
+### Negative & Edge Case Tests
+- Duplicate sample ID blocked
+- Zero billing without remark blocked
+- Finalized report edit blocked
+- Clock rollback detected in audit
 
 ---
 
-**Estimated Total Development Time: 60-75 hours**
+**Estimated Total Development Time: 70-85 hours**
 
