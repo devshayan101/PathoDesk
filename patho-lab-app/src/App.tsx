@@ -12,6 +12,8 @@ import AdminPage from './pages/Admin/Admin';
 import DoctorsPage from './pages/Doctors/Doctors';
 import PriceListsPage from './pages/Admin/PriceLists';
 import InvoicesPage from './pages/Billing/Invoices';
+import QCPage from './pages/QC/QC';
+import AuditLogPage from './pages/Audit/AuditLog';
 import './index.css';
 
 // Protected route wrapper
@@ -107,6 +109,22 @@ function App() {
           element={
             <ProtectedRoute>
               <InvoicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/qc"
+          element={
+            <ProtectedRoute>
+              <QCPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit"
+          element={
+            <ProtectedRoute>
+              <AuditLogPage />
             </ProtectedRoute>
           }
         />

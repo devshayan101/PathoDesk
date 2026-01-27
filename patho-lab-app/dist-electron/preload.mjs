@@ -112,7 +112,25 @@ const IPC_CHANNELS = {
   COMMISSION_CREATE_SETTLEMENT: "commission:createSettlement",
   COMMISSION_RECORD_PAYMENT: "commission:recordPayment",
   COMMISSION_GET_SETTLEMENT: "commission:getSettlement",
-  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements"
+  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements",
+  // QC (Quality Control)
+  QC_PARAMETER_LIST: "qc:parameterList",
+  QC_PARAMETER_GET: "qc:parameterGet",
+  QC_PARAMETER_CREATE: "qc:parameterCreate",
+  QC_PARAMETER_UPDATE: "qc:parameterUpdate",
+  QC_ENTRY_RECORD: "qc:entryRecord",
+  QC_ENTRY_REVIEW: "qc:entryReview",
+  QC_ENTRY_LIST: "qc:entryList",
+  QC_TODAY_STATUS: "qc:todayStatus",
+  QC_LEVEY_JENNINGS: "qc:leveyJennings",
+  QC_RULES_LIST: "qc:rulesList",
+  QC_WESTGARD_CHECK: "qc:westgardCheck",
+  // Audit
+  AUDIT_LOG: "audit:log",
+  AUDIT_GET_LOGS: "audit:getLogs",
+  AUDIT_ENTITY_HISTORY: "audit:entityHistory",
+  AUDIT_RECENT_ACTIVITY: "audit:recentActivity",
+  AUDIT_STATS: "audit:stats"
 };
 const api = {
   // Auth
@@ -260,6 +278,28 @@ const api = {
     recordPayment: (settlementId, amount, paymentMode, paymentReference, remarks, userId) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_RECORD_PAYMENT, settlementId, amount, paymentMode, paymentReference, remarks, userId),
     getSettlement: (settlementId) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_GET_SETTLEMENT, settlementId),
     listSettlements: (options) => electron.ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, options)
+  },
+  // QC (Quality Control)
+  qc: {
+    listParameters: (options) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_LIST, options),
+    getParameter: (id) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_GET, id),
+    createParameter: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_CREATE, data),
+    updateParameter: (id, data, userId) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_UPDATE, id, data, userId),
+    recordEntry: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_RECORD, data),
+    reviewEntry: (entryId, acceptanceStatus, reviewedBy, remarks) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_REVIEW, entryId, acceptanceStatus, reviewedBy, remarks),
+    listEntries: (options) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_LIST, options),
+    getTodayStatus: () => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_TODAY_STATUS),
+    getLeveyJennings: (qcParameterId, count) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_LEVEY_JENNINGS, qcParameterId, count),
+    listRules: () => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_RULES_LIST),
+    checkWestgard: (qcParameterId) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_WESTGARD_CHECK, qcParameterId)
+  },
+  // Audit Trail
+  audit: {
+    log: (input) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUDIT_LOG, input),
+    getLogs: (options) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUDIT_GET_LOGS, options),
+    getEntityHistory: (entity, entityId) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUDIT_ENTITY_HISTORY, entity, entityId),
+    getRecentActivity: (limit) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUDIT_RECENT_ACTIVITY, limit),
+    getStats: (fromDate, toDate) => electron.ipcRenderer.invoke(IPC_CHANNELS.AUDIT_STATS, fromDate, toDate)
   },
   // Alias for billing (for backward compatibility and clearer naming)
   get billing() {

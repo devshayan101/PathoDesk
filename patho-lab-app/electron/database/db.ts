@@ -1183,6 +1183,65 @@ function getMigrations() {
         -- SQLite doesn't support IF NOT EXISTS for columns, so we check via pragma
         -- This will fail silently if column already exists and migration already ran
       `
+    },
+    {
+      name: '016_qc_tables',
+      sql: `
+        -- QC Parameters: Define what parameters are tracked for QC
+        CREATE TABLE IF NOT EXISTS qc_parameters (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          parameter_code TEXT NOT NULL,
+          parameter_name TEXT NOT NULL,
+          unit TEXT,
+          level TEXT CHECK (level IN ('LOW', 'NORMAL', 'HIGH')) NOT NULL,
+          target_mean REAL NOT NULL,
+          target_sd REAL NOT NULL,
+          lot_number TEXT,
+          expiry_date TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL,
+          created_by INTEGER REFERENCES users(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_qc_parameters_test ON qc_parameters(test_id);
+        
+        -- QC Entries: Daily QC values entered by technicians
+        CREATE TABLE IF NOT EXISTS qc_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          qc_parameter_id INTEGER NOT NULL REFERENCES qc_parameters(id),
+          entry_date TEXT NOT NULL,
+          observed_value REAL NOT NULL,
+          deviation_sd REAL,
+          status TEXT CHECK (status IN ('PASS', 'WARNING', 'FAIL', 'REJECTED')) DEFAULT 'PASS',
+          remarks TEXT,
+          entered_by INTEGER NOT NULL REFERENCES users(id),
+          entered_at TEXT NOT NULL,
+          reviewed_by INTEGER REFERENCES users(id),
+          reviewed_at TEXT,
+          acceptance_status TEXT CHECK (acceptance_status IN ('PENDING', 'ACCEPTED', 'CORRECTIVE_ACTION')) DEFAULT 'PENDING'
+        );
+        CREATE INDEX IF NOT EXISTS idx_qc_entries_parameter ON qc_entries(qc_parameter_id);
+        CREATE INDEX IF NOT EXISTS idx_qc_entries_date ON qc_entries(entry_date);
+        
+        -- QC Rules: Westgard rules configuration (optional advanced feature)
+        CREATE TABLE IF NOT EXISTS qc_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rule_code TEXT UNIQUE NOT NULL,
+          rule_name TEXT NOT NULL,
+          description TEXT,
+          is_warning INTEGER DEFAULT 0,
+          is_rejection INTEGER DEFAULT 1
+        );
+        
+        -- Insert default Westgard rules
+        INSERT INTO qc_rules (rule_code, rule_name, description, is_warning, is_rejection) VALUES
+          ('1_2s', '1:2s Rule (Warning)', 'Single control exceeds mean ± 2SD', 1, 0),
+          ('1_3s', '1:3s Rule', 'Single control exceeds mean ± 3SD', 0, 1),
+          ('2_2s', '2:2s Rule', 'Two consecutive controls exceed same mean ± 2SD limit', 0, 1),
+          ('R_4s', 'R:4s Rule', 'Range between two controls exceeds 4SD', 0, 1),
+          ('4_1s', '4:1s Rule', 'Four consecutive controls exceed same mean ± 1SD limit', 0, 1),
+          ('10x', '10x Rule', 'Ten consecutive controls on same side of mean', 0, 1);
+      `
     }
   ];
 }

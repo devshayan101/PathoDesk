@@ -154,12 +154,24 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 ---
 
-### Phase 8: QC & Audit
+### Phase 8: QC & Audit ✅ COMPLETED
 **Duration: ~4-5 hours**
 
-- [ ] Daily QC entry screens
-- [ ] Audit trail logging (all edits)
-- [ ] Audit report generation
+#### 8.1 Audit Trail System ✅
+- [x] `auditService.ts` with logging & diff functions
+- [x] IPC handlers for audit operations
+- [x] Audit Log page with filtering & detail view
+
+#### 8.2 Daily QC Entry ✅
+- [x] Database migration `016_qc_tables` (qc_parameters, qc_entries, qc_rules)
+- [x] `qcService.ts` with Westgard rules implementation
+- [x] QC page with daily entry, history view, and setup tabs
+- [x] Automatic deviation calculation & status (PASS/WARNING/FAIL)
+- [x] Levey-Jennings charting data support
+
+#### 8.3 Navigation & Integration ✅
+- [x] Routes added to App.tsx
+- [x] Nav links in sidebar (QC for technicians, Audit Log for admin/auditor)
 
 ---
 

@@ -259,6 +259,31 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, options),
   },
 
+  // QC (Quality Control)
+  qc: {
+    listParameters: (options?: any) => ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_LIST, options),
+    getParameter: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_GET, id),
+    createParameter: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_CREATE, data),
+    updateParameter: (id: number, data: any, userId?: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_PARAMETER_UPDATE, id, data, userId),
+    recordEntry: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_RECORD, data),
+    reviewEntry: (entryId: number, acceptanceStatus: string, reviewedBy: number, remarks?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_REVIEW, entryId, acceptanceStatus, reviewedBy, remarks),
+    listEntries: (options?: any) => ipcRenderer.invoke(IPC_CHANNELS.QC_ENTRY_LIST, options),
+    getTodayStatus: () => ipcRenderer.invoke(IPC_CHANNELS.QC_TODAY_STATUS),
+    getLeveyJennings: (qcParameterId: number, count?: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_LEVEY_JENNINGS, qcParameterId, count),
+    listRules: () => ipcRenderer.invoke(IPC_CHANNELS.QC_RULES_LIST),
+    checkWestgard: (qcParameterId: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_WESTGARD_CHECK, qcParameterId),
+  },
+
+  // Audit Trail
+  audit: {
+    log: (input: any) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_LOG, input),
+    getLogs: (options?: any) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_GET_LOGS, options),
+    getEntityHistory: (entity: string, entityId: number) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_ENTITY_HISTORY, entity, entityId),
+    getRecentActivity: (limit?: number) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_RECENT_ACTIVITY, limit),
+    getStats: (fromDate: string, toDate: string) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_STATS, fromDate, toDate),
+  },
+
   // Alias for billing (for backward compatibility and clearer naming)
   get billing() {
     return this.priceLists

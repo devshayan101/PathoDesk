@@ -255,6 +255,26 @@ export const IPC_CHANNELS = {
     COMMISSION_RECORD_PAYMENT: 'commission:recordPayment',
     COMMISSION_GET_SETTLEMENT: 'commission:getSettlement',
     COMMISSION_LIST_SETTLEMENTS: 'commission:listSettlements',
+
+    // QC (Quality Control)
+    QC_PARAMETER_LIST: 'qc:parameterList',
+    QC_PARAMETER_GET: 'qc:parameterGet',
+    QC_PARAMETER_CREATE: 'qc:parameterCreate',
+    QC_PARAMETER_UPDATE: 'qc:parameterUpdate',
+    QC_ENTRY_RECORD: 'qc:entryRecord',
+    QC_ENTRY_REVIEW: 'qc:entryReview',
+    QC_ENTRY_LIST: 'qc:entryList',
+    QC_TODAY_STATUS: 'qc:todayStatus',
+    QC_LEVEY_JENNINGS: 'qc:leveyJennings',
+    QC_RULES_LIST: 'qc:rulesList',
+    QC_WESTGARD_CHECK: 'qc:westgardCheck',
+
+    // Audit
+    AUDIT_LOG: 'audit:log',
+    AUDIT_GET_LOGS: 'audit:getLogs',
+    AUDIT_ENTITY_HISTORY: 'audit:entityHistory',
+    AUDIT_RECENT_ACTIVITY: 'audit:recentActivity',
+    AUDIT_STATS: 'audit:stats',
 } as const;
 
 // Billing Types

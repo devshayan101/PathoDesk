@@ -2883,6 +2883,65 @@ function getMigrations() {
         -- SQLite doesn't support IF NOT EXISTS for columns, so we check via pragma
         -- This will fail silently if column already exists and migration already ran
       `
+    },
+    {
+      name: "016_qc_tables",
+      sql: `
+        -- QC Parameters: Define what parameters are tracked for QC
+        CREATE TABLE IF NOT EXISTS qc_parameters (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          test_id INTEGER NOT NULL REFERENCES tests(id),
+          parameter_code TEXT NOT NULL,
+          parameter_name TEXT NOT NULL,
+          unit TEXT,
+          level TEXT CHECK (level IN ('LOW', 'NORMAL', 'HIGH')) NOT NULL,
+          target_mean REAL NOT NULL,
+          target_sd REAL NOT NULL,
+          lot_number TEXT,
+          expiry_date TEXT,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL,
+          created_by INTEGER REFERENCES users(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_qc_parameters_test ON qc_parameters(test_id);
+        
+        -- QC Entries: Daily QC values entered by technicians
+        CREATE TABLE IF NOT EXISTS qc_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          qc_parameter_id INTEGER NOT NULL REFERENCES qc_parameters(id),
+          entry_date TEXT NOT NULL,
+          observed_value REAL NOT NULL,
+          deviation_sd REAL,
+          status TEXT CHECK (status IN ('PASS', 'WARNING', 'FAIL', 'REJECTED')) DEFAULT 'PASS',
+          remarks TEXT,
+          entered_by INTEGER NOT NULL REFERENCES users(id),
+          entered_at TEXT NOT NULL,
+          reviewed_by INTEGER REFERENCES users(id),
+          reviewed_at TEXT,
+          acceptance_status TEXT CHECK (acceptance_status IN ('PENDING', 'ACCEPTED', 'CORRECTIVE_ACTION')) DEFAULT 'PENDING'
+        );
+        CREATE INDEX IF NOT EXISTS idx_qc_entries_parameter ON qc_entries(qc_parameter_id);
+        CREATE INDEX IF NOT EXISTS idx_qc_entries_date ON qc_entries(entry_date);
+        
+        -- QC Rules: Westgard rules configuration (optional advanced feature)
+        CREATE TABLE IF NOT EXISTS qc_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rule_code TEXT UNIQUE NOT NULL,
+          rule_name TEXT NOT NULL,
+          description TEXT,
+          is_warning INTEGER DEFAULT 0,
+          is_rejection INTEGER DEFAULT 1
+        );
+        
+        -- Insert default Westgard rules
+        INSERT INTO qc_rules (rule_code, rule_name, description, is_warning, is_rejection) VALUES
+          ('1_2s', '1:2s Rule (Warning)', 'Single control exceeds mean ± 2SD', 1, 0),
+          ('1_3s', '1:3s Rule', 'Single control exceeds mean ± 3SD', 0, 1),
+          ('2_2s', '2:2s Rule', 'Two consecutive controls exceed same mean ± 2SD limit', 0, 1),
+          ('R_4s', 'R:4s Rule', 'Range between two controls exceeds 4SD', 0, 1),
+          ('4_1s', '4:1s Rule', 'Four consecutive controls exceed same mean ± 1SD limit', 0, 1),
+          ('10x', '10x Rule', 'Ten consecutive controls on same side of mean', 0, 1);
+      `
     }
   ];
 }
@@ -2913,7 +2972,7 @@ async function login(username, password) {
       fullName: user.full_name,
       role: user.role_name
     };
-    logAudit("user", user.id, "login");
+    logAudit$1("user", user.id, "login");
     console.log("AuthService: login successful, session created");
     return { success: true, session: currentSession };
   } catch (error) {
@@ -2923,14 +2982,14 @@ async function login(username, password) {
 }
 function logout() {
   if (currentSession) {
-    logAudit("user", currentSession.userId, "logout");
+    logAudit$1("user", currentSession.userId, "logout");
     currentSession = null;
   }
 }
 function getSession() {
   return currentSession;
 }
-function logAudit(entity, entityId, action) {
+function logAudit$1(entity, entityId, action) {
   try {
     run(
       `INSERT INTO audit_log (entity, entity_id, action, performed_by, performed_at) VALUES (?, ?, ?, ?, datetime('now'))`,
@@ -4780,6 +4839,446 @@ function getOutstandingDues() {
     ORDER BY balance_due DESC
   `);
 }
+function logAudit(input) {
+  const oldValueStr = input.oldValue ? JSON.stringify(input.oldValue) : null;
+  const newValueStr = input.newValue ? JSON.stringify(input.newValue) : null;
+  return runWithId(`
+        INSERT INTO audit_log (entity, entity_id, action, old_value, new_value, performed_by, performed_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+    input.entity,
+    input.entityId || null,
+    input.action,
+    oldValueStr,
+    newValueStr,
+    input.performedBy || null
+  ]);
+}
+function getAuditLogs(options = {}) {
+  const conditions = [];
+  const params = [];
+  if (options.entity) {
+    conditions.push("a.entity = ?");
+    params.push(options.entity);
+  }
+  if (options.entityId) {
+    conditions.push("a.entity_id = ?");
+    params.push(options.entityId);
+  }
+  if (options.action) {
+    conditions.push("a.action LIKE ?");
+    params.push(`%${options.action}%`);
+  }
+  if (options.userId) {
+    conditions.push("a.performed_by = ?");
+    params.push(options.userId);
+  }
+  if (options.fromDate) {
+    conditions.push("a.performed_at >= ?");
+    params.push(options.fromDate);
+  }
+  if (options.toDate) {
+    conditions.push("a.performed_at <= ?");
+    params.push(options.toDate + " 23:59:59");
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const countResult = queryOne(`
+        SELECT COUNT(*) as count FROM audit_log a ${whereClause}
+    `, params);
+  const total = (countResult == null ? void 0 : countResult.count) || 0;
+  const limit = options.limit || 50;
+  const offset = options.offset || 0;
+  const entries = queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        ${whereClause}
+        ORDER BY a.performed_at DESC
+        LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
+  return { entries, total };
+}
+function getEntityHistory(entity, entityId) {
+  return queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        WHERE a.entity = ? AND a.entity_id = ?
+        ORDER BY a.performed_at DESC
+    `, [entity, entityId]);
+}
+function getRecentActivity(limit = 20) {
+  return queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        ORDER BY a.performed_at DESC
+        LIMIT ?
+    `, [limit]);
+}
+function getActivityStats(fromDate, toDate) {
+  const totalResult = queryOne(`
+        SELECT COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byEntity = queryAll(`
+        SELECT entity, COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+        GROUP BY entity ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byAction = queryAll(`
+        SELECT action, COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+        GROUP BY action ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byUser = queryAll(`
+        SELECT a.performed_by as userId, COALESCE(u.username, 'System') as username, COUNT(*) as count 
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        WHERE a.performed_at >= ? AND a.performed_at <= ?
+        GROUP BY a.performed_by ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  return {
+    totalActions: (totalResult == null ? void 0 : totalResult.count) || 0,
+    byEntity,
+    byAction,
+    byUser
+  };
+}
+const ENTITIES = {
+  PATIENT: "PATIENT",
+  ORDER: "ORDER",
+  SAMPLE: "SAMPLE",
+  RESULT: "RESULT",
+  INVOICE: "INVOICE",
+  PAYMENT: "PAYMENT",
+  TEST: "TEST",
+  USER: "USER",
+  DOCTOR: "DOCTOR",
+  PRICE_LIST: "PRICE_LIST",
+  QC_ENTRY: "QC_ENTRY",
+  SETTINGS: "SETTINGS"
+};
+const ACTIONS = {
+  CREATE: "CREATE",
+  UPDATE: "UPDATE",
+  DELETE: "DELETE",
+  VIEW: "VIEW",
+  LOGIN: "LOGIN",
+  LOGOUT: "LOGOUT",
+  VERIFY: "VERIFY",
+  FINALIZE: "FINALIZE",
+  CANCEL: "CANCEL",
+  SUBMIT: "SUBMIT",
+  APPROVE: "APPROVE",
+  REJECT: "REJECT"
+};
+function createQCParameter(data) {
+  try {
+    const id = runWithId(`
+            INSERT INTO qc_parameters (test_id, parameter_code, parameter_name, unit, level, target_mean, target_sd, lot_number, expiry_date, is_active, created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), ?)
+        `, [
+      data.testId,
+      data.parameterCode,
+      data.parameterName,
+      data.unit || null,
+      data.level,
+      data.targetMean,
+      data.targetSd,
+      data.lotNumber || null,
+      data.expiryDate || null,
+      data.createdBy || null
+    ]);
+    logAudit({
+      entity: ENTITIES.QC_ENTRY,
+      entityId: id,
+      action: ACTIONS.CREATE,
+      newValue: data,
+      performedBy: data.createdBy
+    });
+    return { success: true, parameterId: id };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+function updateQCParameter(id, data, userId) {
+  try {
+    const old = getQCParameter(id);
+    if (!old) {
+      return { success: false, error: "QC Parameter not found" };
+    }
+    const updates = [];
+    const params = [];
+    if (data.parameterCode !== void 0) {
+      updates.push("parameter_code = ?");
+      params.push(data.parameterCode);
+    }
+    if (data.parameterName !== void 0) {
+      updates.push("parameter_name = ?");
+      params.push(data.parameterName);
+    }
+    if (data.unit !== void 0) {
+      updates.push("unit = ?");
+      params.push(data.unit);
+    }
+    if (data.level !== void 0) {
+      updates.push("level = ?");
+      params.push(data.level);
+    }
+    if (data.targetMean !== void 0) {
+      updates.push("target_mean = ?");
+      params.push(data.targetMean);
+    }
+    if (data.targetSd !== void 0) {
+      updates.push("target_sd = ?");
+      params.push(data.targetSd);
+    }
+    if (data.lotNumber !== void 0) {
+      updates.push("lot_number = ?");
+      params.push(data.lotNumber);
+    }
+    if (data.expiryDate !== void 0) {
+      updates.push("expiry_date = ?");
+      params.push(data.expiryDate);
+    }
+    if (data.isActive !== void 0) {
+      updates.push("is_active = ?");
+      params.push(data.isActive ? 1 : 0);
+    }
+    if (updates.length === 0) {
+      return { success: true };
+    }
+    params.push(id);
+    run(`UPDATE qc_parameters SET ${updates.join(", ")} WHERE id = ?`, params);
+    logAudit({
+      entity: ENTITIES.QC_ENTRY,
+      entityId: id,
+      action: ACTIONS.UPDATE,
+      oldValue: old,
+      newValue: data,
+      performedBy: userId
+    });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+function getQCParameter(id) {
+  return queryOne(`
+        SELECT qp.*, t.test_code, tv.test_name
+        FROM qc_parameters qp
+        JOIN tests t ON qp.test_id = t.id
+        LEFT JOIN test_versions tv ON t.id = tv.test_id AND tv.status = 'PUBLISHED'
+        WHERE qp.id = ?
+    `, [id]) || null;
+}
+function listQCParameters(options = {}) {
+  const conditions = [];
+  const params = [];
+  if (options.testId) {
+    conditions.push("qp.test_id = ?");
+    params.push(options.testId);
+  }
+  if (options.activeOnly !== false) {
+    conditions.push("qp.is_active = 1");
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  return queryAll(`
+        SELECT qp.*, t.test_code, tv.test_name
+        FROM qc_parameters qp
+        JOIN tests t ON qp.test_id = t.id
+        LEFT JOIN test_versions tv ON t.id = tv.test_id AND tv.status = 'PUBLISHED'
+        ${whereClause}
+        ORDER BY t.test_code, qp.level
+    `, params);
+}
+function recordQCEntry(data) {
+  try {
+    const param = getQCParameter(data.qcParameterId);
+    if (!param) {
+      return { success: false, error: "QC Parameter not found" };
+    }
+    const deviationSd = param.target_sd > 0 ? (data.observedValue - param.target_mean) / param.target_sd : 0;
+    let status = "PASS";
+    if (Math.abs(deviationSd) >= 3) {
+      status = "FAIL";
+    } else if (Math.abs(deviationSd) >= 2) {
+      status = "WARNING";
+    }
+    const id = runWithId(`
+            INSERT INTO qc_entries (qc_parameter_id, entry_date, observed_value, deviation_sd, status, remarks, entered_by, entered_at, acceptance_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), 'PENDING')
+        `, [
+      data.qcParameterId,
+      data.entryDate,
+      data.observedValue,
+      deviationSd,
+      status,
+      data.remarks || null,
+      data.enteredBy
+    ]);
+    logAudit({
+      entity: ENTITIES.QC_ENTRY,
+      entityId: id,
+      action: ACTIONS.CREATE,
+      newValue: { ...data, deviationSd, status },
+      performedBy: data.enteredBy
+    });
+    return { success: true, entryId: id, status, deviationSd };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+function reviewQCEntry(entryId, acceptanceStatus, reviewedBy, remarks) {
+  try {
+    const entry = queryOne("SELECT * FROM qc_entries WHERE id = ?", [entryId]);
+    if (!entry) {
+      return { success: false, error: "QC Entry not found" };
+    }
+    run(`
+            UPDATE qc_entries 
+            SET acceptance_status = ?, reviewed_by = ?, reviewed_at = datetime('now'), remarks = COALESCE(?, remarks)
+            WHERE id = ?
+        `, [acceptanceStatus, reviewedBy, remarks, entryId]);
+    logAudit({
+      entity: ENTITIES.QC_ENTRY,
+      entityId: entryId,
+      action: ACTIONS.APPROVE,
+      oldValue: { acceptance_status: entry.acceptance_status },
+      newValue: { acceptance_status: acceptanceStatus, remarks },
+      performedBy: reviewedBy
+    });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+function getQCEntries(options = {}) {
+  const conditions = [];
+  const params = [];
+  if (options.qcParameterId) {
+    conditions.push("e.qc_parameter_id = ?");
+    params.push(options.qcParameterId);
+  }
+  if (options.testId) {
+    conditions.push("qp.test_id = ?");
+    params.push(options.testId);
+  }
+  if (options.fromDate) {
+    conditions.push("e.entry_date >= ?");
+    params.push(options.fromDate);
+  }
+  if (options.toDate) {
+    conditions.push("e.entry_date <= ?");
+    params.push(options.toDate);
+  }
+  if (options.status) {
+    conditions.push("e.status = ?");
+    params.push(options.status);
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const limitClause = options.limit ? `LIMIT ${options.limit}` : "";
+  return queryAll(`
+        SELECT e.*, qp.parameter_name, qp.level, qp.target_mean, qp.target_sd, u.full_name as entered_by_name
+        FROM qc_entries e
+        JOIN qc_parameters qp ON e.qc_parameter_id = qp.id
+        LEFT JOIN users u ON e.entered_by = u.id
+        ${whereClause}
+        ORDER BY e.entry_date DESC, e.entered_at DESC
+        ${limitClause}
+    `, params);
+}
+function getTodayQCStatus() {
+  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const params = listQCParameters({ activeOnly: true });
+  return params.map((param) => {
+    const entries = getQCEntries({ qcParameterId: param.id, fromDate: today, toDate: today });
+    return {
+      parameter: param,
+      entries,
+      hasFailure: entries.some((e) => e.status === "FAIL"),
+      hasWarning: entries.some((e) => e.status === "WARNING")
+    };
+  });
+}
+function getLeveyJenningsData(qcParameterId, count = 30) {
+  const param = getQCParameter(qcParameterId);
+  if (!param) return null;
+  const entries = queryAll(`
+        SELECT entry_date, observed_value, deviation_sd, status
+        FROM qc_entries
+        WHERE qc_parameter_id = ?
+        ORDER BY entry_date DESC, entered_at DESC
+        LIMIT ?
+    `, [qcParameterId, count]);
+  return {
+    parameter: param,
+    entries: entries.reverse().map((e) => ({
+      date: e.entry_date,
+      value: e.observed_value,
+      deviation_sd: e.deviation_sd,
+      status: e.status
+    }))
+  };
+}
+function listQCRules() {
+  return queryAll("SELECT * FROM qc_rules ORDER BY rule_code");
+}
+function checkWestgardRules(qcParameterId) {
+  const entries = getQCEntries({ qcParameterId, limit: 10 });
+  const results = [];
+  if (entries.length === 0) return results;
+  const deviations = entries.map((e) => e.deviation_sd || 0);
+  if (Math.abs(deviations[0]) >= 3) {
+    results.push({
+      rule: "1:3s",
+      triggered: true,
+      isRejection: true,
+      message: `Latest value exceeds ±3SD (${deviations[0].toFixed(2)}SD)`
+    });
+  }
+  if (Math.abs(deviations[0]) >= 2 && Math.abs(deviations[0]) < 3) {
+    results.push({
+      rule: "1:2s",
+      triggered: true,
+      isRejection: false,
+      message: `Latest value exceeds ±2SD (${deviations[0].toFixed(2)}SD) - Warning`
+    });
+  }
+  if (entries.length >= 2 && deviations[0] >= 2 && deviations[1] >= 2 || deviations[0] <= -2 && deviations[1] <= -2) {
+    results.push({
+      rule: "2:2s",
+      triggered: true,
+      isRejection: true,
+      message: "Two consecutive values exceed same ±2SD limit"
+    });
+  }
+  if (entries.length >= 2) {
+    const range = Math.abs(deviations[0] - deviations[1]);
+    if (range >= 4) {
+      results.push({
+        rule: "R:4s",
+        triggered: true,
+        isRejection: true,
+        message: `Range between last two values exceeds 4SD (${range.toFixed(2)}SD)`
+      });
+    }
+  }
+  if (entries.length >= 10) {
+    const allPositive = deviations.slice(0, 10).every((d) => d > 0);
+    const allNegative = deviations.slice(0, 10).every((d) => d < 0);
+    if (allPositive || allNegative) {
+      results.push({
+        rule: "10x",
+        triggered: true,
+        isRejection: true,
+        message: "Last 10 values all on same side of mean (systematic shift)"
+      });
+    }
+  }
+  return results;
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -4892,7 +5391,25 @@ const IPC_CHANNELS = {
   COMMISSION_CREATE_SETTLEMENT: "commission:createSettlement",
   COMMISSION_RECORD_PAYMENT: "commission:recordPayment",
   COMMISSION_GET_SETTLEMENT: "commission:getSettlement",
-  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements"
+  COMMISSION_LIST_SETTLEMENTS: "commission:listSettlements",
+  // QC (Quality Control)
+  QC_PARAMETER_LIST: "qc:parameterList",
+  QC_PARAMETER_GET: "qc:parameterGet",
+  QC_PARAMETER_CREATE: "qc:parameterCreate",
+  QC_PARAMETER_UPDATE: "qc:parameterUpdate",
+  QC_ENTRY_RECORD: "qc:entryRecord",
+  QC_ENTRY_REVIEW: "qc:entryReview",
+  QC_ENTRY_LIST: "qc:entryList",
+  QC_TODAY_STATUS: "qc:todayStatus",
+  QC_LEVEY_JENNINGS: "qc:leveyJennings",
+  QC_RULES_LIST: "qc:rulesList",
+  QC_WESTGARD_CHECK: "qc:westgardCheck",
+  // Audit
+  AUDIT_LOG: "audit:log",
+  AUDIT_GET_LOGS: "audit:getLogs",
+  AUDIT_ENTITY_HISTORY: "audit:entityHistory",
+  AUDIT_RECENT_ACTIVITY: "audit:recentActivity",
+  AUDIT_STATS: "audit:stats"
 };
 createRequire(import.meta.url);
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
@@ -5210,6 +5727,54 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, (_, options) => {
     return listSettlements(options);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_LIST, (_, options) => {
+    return listQCParameters(options);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_GET, (_, id) => {
+    return getQCParameter(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_CREATE, (_, data) => {
+    return createQCParameter(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_UPDATE, (_, id, data, userId) => {
+    return updateQCParameter(id, data, userId);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_RECORD, (_, data) => {
+    return recordQCEntry(data);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_REVIEW, (_, entryId, acceptanceStatus, reviewedBy, remarks) => {
+    return reviewQCEntry(entryId, acceptanceStatus, reviewedBy, remarks);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_LIST, (_, options) => {
+    return getQCEntries(options);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_TODAY_STATUS, () => {
+    return getTodayQCStatus();
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_LEVEY_JENNINGS, (_, qcParameterId, count) => {
+    return getLeveyJenningsData(qcParameterId, count);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_RULES_LIST, () => {
+    return listQCRules();
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_WESTGARD_CHECK, (_, qcParameterId) => {
+    return checkWestgardRules(qcParameterId);
+  });
+  ipcMain.handle(IPC_CHANNELS.AUDIT_LOG, (_, input) => {
+    return { success: true, id: logAudit(input) };
+  });
+  ipcMain.handle(IPC_CHANNELS.AUDIT_GET_LOGS, (_, options) => {
+    return getAuditLogs(options);
+  });
+  ipcMain.handle(IPC_CHANNELS.AUDIT_ENTITY_HISTORY, (_, entity, entityId) => {
+    return getEntityHistory(entity, entityId);
+  });
+  ipcMain.handle(IPC_CHANNELS.AUDIT_RECENT_ACTIVITY, (_, limit) => {
+    return getRecentActivity(limit);
+  });
+  ipcMain.handle(IPC_CHANNELS.AUDIT_STATS, (_, fromDate, toDate) => {
+    return getActivityStats(fromDate, toDate);
   });
 }
 app.on("window-all-closed", () => {

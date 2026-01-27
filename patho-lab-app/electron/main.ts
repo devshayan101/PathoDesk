@@ -16,6 +16,8 @@ import * as billingService from './services/billingService'
 import * as invoiceService from './services/invoiceService'
 import * as paymentService from './services/paymentService'
 import * as commissionService from './services/commissionService'
+import * as auditService from './services/auditService'
+import * as qcService from './services/qcService'
 import { IPC_CHANNELS } from '../src/types'
 
 const require = createRequire(import.meta.url)
@@ -462,6 +464,72 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.COMMISSION_LIST_SETTLEMENTS, (_, options) => {
     return commissionService.listSettlements(options)
+  })
+
+  // QC (Quality Control)
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_LIST, (_, options) => {
+    return qcService.listQCParameters(options)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_GET, (_, id: number) => {
+    return qcService.getQCParameter(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_CREATE, (_, data) => {
+    return qcService.createQCParameter(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_PARAMETER_UPDATE, (_, id: number, data, userId?: number) => {
+    return qcService.updateQCParameter(id, data, userId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_RECORD, (_, data) => {
+    return qcService.recordQCEntry(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_REVIEW, (_, entryId: number, acceptanceStatus: string, reviewedBy: number, remarks?: string) => {
+    return qcService.reviewQCEntry(entryId, acceptanceStatus as any, reviewedBy, remarks)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_ENTRY_LIST, (_, options) => {
+    return qcService.getQCEntries(options)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_TODAY_STATUS, () => {
+    return qcService.getTodayQCStatus()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_LEVEY_JENNINGS, (_, qcParameterId: number, count?: number) => {
+    return qcService.getLeveyJenningsData(qcParameterId, count)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_RULES_LIST, () => {
+    return qcService.listQCRules()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_WESTGARD_CHECK, (_, qcParameterId: number) => {
+    return qcService.checkWestgardRules(qcParameterId)
+  })
+
+  // Audit
+  ipcMain.handle(IPC_CHANNELS.AUDIT_LOG, (_, input) => {
+    return { success: true, id: auditService.logAudit(input) }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUDIT_GET_LOGS, (_, options) => {
+    return auditService.getAuditLogs(options)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUDIT_ENTITY_HISTORY, (_, entity: string, entityId: number) => {
+    return auditService.getEntityHistory(entity, entityId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUDIT_RECENT_ACTIVITY, (_, limit?: number) => {
+    return auditService.getRecentActivity(limit)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AUDIT_STATS, (_, fromDate: string, toDate: string) => {
+    return auditService.getActivityStats(fromDate, toDate)
   })
 }
 
