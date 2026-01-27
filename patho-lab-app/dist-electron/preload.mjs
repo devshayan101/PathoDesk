@@ -125,6 +125,8 @@ const IPC_CHANNELS = {
   QC_LEVEY_JENNINGS: "qc:leveyJennings",
   QC_RULES_LIST: "qc:rulesList",
   QC_WESTGARD_CHECK: "qc:westgardCheck",
+  QC_TEST_STATUS: "qc:testStatus",
+  QC_OVERRIDE: "qc:override",
   // Audit
   AUDIT_LOG: "audit:log",
   AUDIT_GET_LOGS: "audit:getLogs",
@@ -291,7 +293,9 @@ const api = {
     getTodayStatus: () => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_TODAY_STATUS),
     getLeveyJennings: (qcParameterId, count) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_LEVEY_JENNINGS, qcParameterId, count),
     listRules: () => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_RULES_LIST),
-    checkWestgard: (qcParameterId) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_WESTGARD_CHECK, qcParameterId)
+    checkWestgard: (qcParameterId) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_WESTGARD_CHECK, qcParameterId),
+    getTestStatus: (testId) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_TEST_STATUS, testId),
+    override: (data) => electron.ipcRenderer.invoke(IPC_CHANNELS.QC_OVERRIDE, data)
   },
   // Audit Trail
   audit: {

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { queryOne, run } from '../database/db';
+import { queryOne } from '../database/db';
+import { logAudit, ENTITIES, ACTIONS } from './auditService';
 import type { Session } from '../../src/types';
 
 interface UserRow {
@@ -22,13 +23,33 @@ export async function login(username: string, password: string): Promise<{ succe
       SELECT u.id, u.username, u.password_hash, u.full_name, u.role_id, r.name as role_name, u.is_active
       FROM users u
       JOIN roles r ON u.role_id = r.id
-      WHERE u.username = ? AND u.is_active = 1
+      WHERE u.username = ?
     `, [username]);
 
-        console.log('AuthService: user found:', user ? { id: user.id, username: user.username, hashLength: user.password_hash?.length } : 'NOT FOUND');
+        console.log('AuthService: user found:', user ? { id: user.id, username: user.username } : 'NOT FOUND');
 
         if (!user) {
+            // Log failed login attempt (user not found)
+            logAudit({
+                entity: ENTITIES.USER,
+                entityId: null,
+                action: ACTIONS.LOGIN_FAILED,
+                newValue: { username, reason: 'User not found' },
+                performedBy: undefined
+            });
             return { success: false, error: 'Invalid username or password' };
+        }
+
+        // Check if user is active
+        if (user.is_active !== 1) {
+            logAudit({
+                entity: ENTITIES.USER,
+                entityId: user.id,
+                action: ACTIONS.LOGIN_FAILED,
+                newValue: { username, reason: 'Account inactive' },
+                performedBy: undefined
+            });
+            return { success: false, error: 'Account is inactive' };
         }
 
         console.log('AuthService: comparing password with hash...');
@@ -36,6 +57,14 @@ export async function login(username: string, password: string): Promise<{ succe
         console.log('AuthService: password valid:', valid);
 
         if (!valid) {
+            // Log failed login attempt (wrong password)
+            logAudit({
+                entity: ENTITIES.USER,
+                entityId: user.id,
+                action: ACTIONS.LOGIN_FAILED,
+                newValue: { username, reason: 'Invalid password' },
+                performedBy: undefined
+            });
             return { success: false, error: 'Invalid username or password' };
         }
 
@@ -46,8 +75,14 @@ export async function login(username: string, password: string): Promise<{ succe
             role: user.role_name as Session['role'],
         };
 
-        // Log the login
-        logAudit('user', user.id, 'login');
+        // Log successful login
+        logAudit({
+            entity: ENTITIES.USER,
+            entityId: user.id,
+            action: ACTIONS.LOGIN,
+            newValue: { username, role: user.role_name },
+            performedBy: user.id
+        });
 
         console.log('AuthService: login successful, session created');
         return { success: true, session: currentSession };
@@ -59,7 +94,13 @@ export async function login(username: string, password: string): Promise<{ succe
 
 export function logout(): void {
     if (currentSession) {
-        logAudit('user', currentSession.userId, 'logout');
+        logAudit({
+            entity: ENTITIES.USER,
+            entityId: currentSession.userId,
+            action: ACTIONS.LOGOUT,
+            newValue: { username: currentSession.username },
+            performedBy: currentSession.userId
+        });
         currentSession = null;
     }
 }
@@ -72,13 +113,3 @@ export function requireRole(roles: string[]): boolean {
     return currentSession !== null && roles.includes(currentSession.role);
 }
 
-function logAudit(entity: string, entityId: number, action: string): void {
-    try {
-        run(
-            `INSERT INTO audit_log (entity, entity_id, action, performed_by, performed_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-            [entity, entityId, action, currentSession?.userId ?? null]
-        );
-    } catch (e) {
-        console.error('Audit log error:', e);
-    }
-}

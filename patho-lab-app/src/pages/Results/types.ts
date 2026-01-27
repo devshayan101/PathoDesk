@@ -39,6 +39,8 @@ export interface ResultData {
     patient_uid: string;
     patient_age_days: number;
     patient_gender: string;
+    test_id: number;
+    test_version_id: number;
     test_name: string;
     status: string;
     parameters: ResultParameter[];

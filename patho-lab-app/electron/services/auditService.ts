@@ -17,7 +17,7 @@ interface AuditLogEntry {
 
 interface AuditLogInput {
     entity: string;
-    entityId?: number;
+    entityId?: number | null;
     action: string;
     oldValue?: any;
     newValue?: any;
@@ -228,12 +228,17 @@ export const ACTIONS = {
     VIEW: 'VIEW',
     LOGIN: 'LOGIN',
     LOGOUT: 'LOGOUT',
+    LOGIN_FAILED: 'LOGIN_FAILED',
     VERIFY: 'VERIFY',
     FINALIZE: 'FINALIZE',
     CANCEL: 'CANCEL',
     SUBMIT: 'SUBMIT',
     APPROVE: 'APPROVE',
-    REJECT: 'REJECT'
+    REJECT: 'REJECT',
+    REPORT_PREVIEW: 'REPORT_PREVIEW',
+    REPORT_PRINT: 'REPORT_PRINT',
+    REPORT_REPRINT: 'REPORT_REPRINT',
+    QC_OVERRIDE: 'QC_OVERRIDE'
 } as const;
 
 /**

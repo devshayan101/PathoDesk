@@ -479,3 +479,155 @@ export function checkWestgardRules(qcParameterId: number): {
 
     return results;
 }
+
+// ==================== QC STATUS FOR RESULT ENTRY ====================
+
+export interface TestQCStatus {
+    testId: number;
+    testCode: string;
+    hasQCConfigured: boolean;
+    status: 'PASS' | 'WARNING' | 'FAIL' | 'NOT_RUN' | 'NO_CONFIG';
+    lastQCDate: string | null;
+    lastQCValue: number | null;
+    message: string;
+    canFinalize: boolean;
+    failedParameters: string[];
+}
+
+/**
+ * Get QC status for a specific test - used to determine if results can be finalized
+ */
+export function getTestQCStatus(testId: number): TestQCStatus {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check if QC is configured for this test
+    const qcParams = listQCParameters({ testId, activeOnly: true });
+
+    if (qcParams.length === 0) {
+        // No QC configured for this test - allow finalization
+        return {
+            testId,
+            testCode: '',
+            hasQCConfigured: false,
+            status: 'NO_CONFIG',
+            lastQCDate: null,
+            lastQCValue: null,
+            message: 'No QC configured for this test',
+            canFinalize: true,
+            failedParameters: []
+        };
+    }
+
+    const testCode = qcParams[0].test_code || '';
+
+    // Check today's QC entries for all parameters
+    const failedParams: string[] = [];
+    const warningParams: string[] = [];
+    let hasEntriesToday = false;
+    let lastEntry: { date: string; value: number } | null = null;
+
+    for (const param of qcParams) {
+        const entries = getQCEntries({ qcParameterId: param.id, fromDate: today, toDate: today });
+
+        if (entries.length > 0) {
+            hasEntriesToday = true;
+            const latest = entries[0];
+            lastEntry = { date: latest.entry_date, value: latest.observed_value };
+
+            if (latest.status === 'FAIL') {
+                failedParams.push(`${param.parameter_name} (${param.level})`);
+            } else if (latest.status === 'WARNING') {
+                warningParams.push(`${param.parameter_name} (${param.level})`);
+            }
+        }
+    }
+
+    if (!hasEntriesToday) {
+        return {
+            testId,
+            testCode,
+            hasQCConfigured: true,
+            status: 'NOT_RUN',
+            lastQCDate: null,
+            lastQCValue: null,
+            message: 'QC not run today - run QC before finalizing results',
+            canFinalize: false,
+            failedParameters: []
+        };
+    }
+
+    if (failedParams.length > 0) {
+        return {
+            testId,
+            testCode,
+            hasQCConfigured: true,
+            status: 'FAIL',
+            lastQCDate: lastEntry?.date || null,
+            lastQCValue: lastEntry?.value || null,
+            message: `QC FAILED: ${failedParams.join(', ')}`,
+            canFinalize: false,
+            failedParameters: failedParams
+        };
+    }
+
+    if (warningParams.length > 0) {
+        return {
+            testId,
+            testCode,
+            hasQCConfigured: true,
+            status: 'WARNING',
+            lastQCDate: lastEntry?.date || null,
+            lastQCValue: lastEntry?.value || null,
+            message: `QC Warning: ${warningParams.join(', ')}`,
+            canFinalize: true, // Warnings allow finalization with alert
+            failedParameters: []
+        };
+    }
+
+    return {
+        testId,
+        testCode,
+        hasQCConfigured: true,
+        status: 'PASS',
+        lastQCDate: lastEntry?.date || null,
+        lastQCValue: lastEntry?.value || null,
+        message: 'QC passed',
+        canFinalize: true,
+        failedParameters: []
+    };
+}
+
+/**
+ * Override QC block for result finalization (pathologist only)
+ * Logs the override to audit trail with reason
+ */
+export function overrideQCBlock(data: {
+    testId: number;
+    sampleId: number;
+    reason: string;
+    overriddenBy: number;
+}): { success: boolean; error?: string } {
+    if (!data.reason || data.reason.trim().length < 10) {
+        return { success: false, error: 'Override reason must be at least 10 characters' };
+    }
+
+    try {
+        logAudit({
+            entity: ENTITIES.QC_ENTRY,
+            entityId: data.sampleId,
+            action: 'QC_OVERRIDE',
+            newValue: {
+                testId: data.testId,
+                sampleId: data.sampleId,
+                reason: data.reason,
+                qcStatus: getTestQCStatus(data.testId)
+            },
+            performedBy: data.overriddenBy
+        });
+
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+

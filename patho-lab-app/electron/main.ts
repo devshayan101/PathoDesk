@@ -511,6 +511,14 @@ function registerIpcHandlers() {
     return qcService.checkWestgardRules(qcParameterId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.QC_TEST_STATUS, (_, testId: number) => {
+    return qcService.getTestQCStatus(testId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.QC_OVERRIDE, (_, data) => {
+    return qcService.overrideQCBlock(data)
+  })
+
   // Audit
   ipcMain.handle(IPC_CHANNELS.AUDIT_LOG, (_, input) => {
     return { success: true, id: auditService.logAudit(input) }

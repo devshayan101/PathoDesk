@@ -377,3 +377,59 @@
     color: var(--color-error);
     margin-bottom: 1rem;
 }
+
+/* QC Status Styling */
+.badge-error {
+    background: var(--color-error);
+    color: white;
+}
+
+.qc-message {
+    font-size: 0.8rem;
+    color: var(--color-warning);
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+.qc-date {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+}
+
+/* Override Modal */
+.override-modal {
+    max-width: 500px;
+}
+
+.override-warning {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--color-warning);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    color: var(--color-warning);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.btn-warning {
+    background: var(--color-warning);
+    color: white;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.btn-warning:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

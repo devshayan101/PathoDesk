@@ -2945,25 +2945,187 @@ function getMigrations() {
     }
   ];
 }
+function logAudit(input) {
+  const oldValueStr = input.oldValue ? JSON.stringify(input.oldValue) : null;
+  const newValueStr = input.newValue ? JSON.stringify(input.newValue) : null;
+  return runWithId(`
+        INSERT INTO audit_log (entity, entity_id, action, old_value, new_value, performed_by, performed_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+    input.entity,
+    input.entityId || null,
+    input.action,
+    oldValueStr,
+    newValueStr,
+    input.performedBy || null
+  ]);
+}
+function getAuditLogs(options = {}) {
+  const conditions = [];
+  const params = [];
+  if (options.entity) {
+    conditions.push("a.entity = ?");
+    params.push(options.entity);
+  }
+  if (options.entityId) {
+    conditions.push("a.entity_id = ?");
+    params.push(options.entityId);
+  }
+  if (options.action) {
+    conditions.push("a.action LIKE ?");
+    params.push(`%${options.action}%`);
+  }
+  if (options.userId) {
+    conditions.push("a.performed_by = ?");
+    params.push(options.userId);
+  }
+  if (options.fromDate) {
+    conditions.push("a.performed_at >= ?");
+    params.push(options.fromDate);
+  }
+  if (options.toDate) {
+    conditions.push("a.performed_at <= ?");
+    params.push(options.toDate + " 23:59:59");
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const countResult = queryOne(`
+        SELECT COUNT(*) as count FROM audit_log a ${whereClause}
+    `, params);
+  const total = (countResult == null ? void 0 : countResult.count) || 0;
+  const limit = options.limit || 50;
+  const offset = options.offset || 0;
+  const entries = queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        ${whereClause}
+        ORDER BY a.performed_at DESC
+        LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
+  return { entries, total };
+}
+function getEntityHistory(entity, entityId) {
+  return queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        WHERE a.entity = ? AND a.entity_id = ?
+        ORDER BY a.performed_at DESC
+    `, [entity, entityId]);
+}
+function getRecentActivity(limit = 20) {
+  return queryAll(`
+        SELECT a.*, u.username, u.full_name
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        ORDER BY a.performed_at DESC
+        LIMIT ?
+    `, [limit]);
+}
+function getActivityStats(fromDate, toDate) {
+  const totalResult = queryOne(`
+        SELECT COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byEntity = queryAll(`
+        SELECT entity, COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+        GROUP BY entity ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byAction = queryAll(`
+        SELECT action, COUNT(*) as count FROM audit_log 
+        WHERE performed_at >= ? AND performed_at <= ?
+        GROUP BY action ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  const byUser = queryAll(`
+        SELECT a.performed_by as userId, COALESCE(u.username, 'System') as username, COUNT(*) as count 
+        FROM audit_log a
+        LEFT JOIN users u ON a.performed_by = u.id
+        WHERE a.performed_at >= ? AND a.performed_at <= ?
+        GROUP BY a.performed_by ORDER BY count DESC
+    `, [fromDate, toDate + " 23:59:59"]);
+  return {
+    totalActions: (totalResult == null ? void 0 : totalResult.count) || 0,
+    byEntity,
+    byAction,
+    byUser
+  };
+}
+const ENTITIES = {
+  PATIENT: "PATIENT",
+  ORDER: "ORDER",
+  SAMPLE: "SAMPLE",
+  RESULT: "RESULT",
+  INVOICE: "INVOICE",
+  PAYMENT: "PAYMENT",
+  TEST: "TEST",
+  USER: "USER",
+  DOCTOR: "DOCTOR",
+  PRICE_LIST: "PRICE_LIST",
+  QC_ENTRY: "QC_ENTRY",
+  SETTINGS: "SETTINGS"
+};
+const ACTIONS = {
+  CREATE: "CREATE",
+  UPDATE: "UPDATE",
+  DELETE: "DELETE",
+  VIEW: "VIEW",
+  LOGIN: "LOGIN",
+  LOGOUT: "LOGOUT",
+  LOGIN_FAILED: "LOGIN_FAILED",
+  VERIFY: "VERIFY",
+  FINALIZE: "FINALIZE",
+  CANCEL: "CANCEL",
+  SUBMIT: "SUBMIT",
+  APPROVE: "APPROVE",
+  REJECT: "REJECT",
+  REPORT_PREVIEW: "REPORT_PREVIEW",
+  REPORT_PRINT: "REPORT_PRINT",
+  REPORT_REPRINT: "REPORT_REPRINT",
+  QC_OVERRIDE: "QC_OVERRIDE"
+};
 let currentSession = null;
 async function login(username, password) {
-  var _a;
   console.log("AuthService: login attempt for user:", username);
   try {
     const user = queryOne(`
       SELECT u.id, u.username, u.password_hash, u.full_name, u.role_id, r.name as role_name, u.is_active
       FROM users u
       JOIN roles r ON u.role_id = r.id
-      WHERE u.username = ? AND u.is_active = 1
+      WHERE u.username = ?
     `, [username]);
-    console.log("AuthService: user found:", user ? { id: user.id, username: user.username, hashLength: (_a = user.password_hash) == null ? void 0 : _a.length } : "NOT FOUND");
+    console.log("AuthService: user found:", user ? { id: user.id, username: user.username } : "NOT FOUND");
     if (!user) {
+      logAudit({
+        entity: ENTITIES.USER,
+        entityId: null,
+        action: ACTIONS.LOGIN_FAILED,
+        newValue: { username, reason: "User not found" },
+        performedBy: void 0
+      });
       return { success: false, error: "Invalid username or password" };
+    }
+    if (user.is_active !== 1) {
+      logAudit({
+        entity: ENTITIES.USER,
+        entityId: user.id,
+        action: ACTIONS.LOGIN_FAILED,
+        newValue: { username, reason: "Account inactive" },
+        performedBy: void 0
+      });
+      return { success: false, error: "Account is inactive" };
     }
     console.log("AuthService: comparing password with hash...");
     const valid = await bcrypt.compare(password, user.password_hash);
     console.log("AuthService: password valid:", valid);
     if (!valid) {
+      logAudit({
+        entity: ENTITIES.USER,
+        entityId: user.id,
+        action: ACTIONS.LOGIN_FAILED,
+        newValue: { username, reason: "Invalid password" },
+        performedBy: void 0
+      });
       return { success: false, error: "Invalid username or password" };
     }
     currentSession = {
@@ -2972,7 +3134,13 @@ async function login(username, password) {
       fullName: user.full_name,
       role: user.role_name
     };
-    logAudit$1("user", user.id, "login");
+    logAudit({
+      entity: ENTITIES.USER,
+      entityId: user.id,
+      action: ACTIONS.LOGIN,
+      newValue: { username, role: user.role_name },
+      performedBy: user.id
+    });
     console.log("AuthService: login successful, session created");
     return { success: true, session: currentSession };
   } catch (error) {
@@ -2982,22 +3150,18 @@ async function login(username, password) {
 }
 function logout() {
   if (currentSession) {
-    logAudit$1("user", currentSession.userId, "logout");
+    logAudit({
+      entity: ENTITIES.USER,
+      entityId: currentSession.userId,
+      action: ACTIONS.LOGOUT,
+      newValue: { username: currentSession.username },
+      performedBy: currentSession.userId
+    });
     currentSession = null;
   }
 }
 function getSession() {
   return currentSession;
-}
-function logAudit$1(entity, entityId, action) {
-  try {
-    run(
-      `INSERT INTO audit_log (entity, entity_id, action, performed_by, performed_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-      [entity, entityId, action, (currentSession == null ? void 0 : currentSession.userId) ?? null]
-    );
-  } catch (e) {
-    console.error("Audit log error:", e);
-  }
 }
 function listPatients() {
   return queryAll("SELECT * FROM patients ORDER BY created_at DESC");
@@ -4839,140 +5003,6 @@ function getOutstandingDues() {
     ORDER BY balance_due DESC
   `);
 }
-function logAudit(input) {
-  const oldValueStr = input.oldValue ? JSON.stringify(input.oldValue) : null;
-  const newValueStr = input.newValue ? JSON.stringify(input.newValue) : null;
-  return runWithId(`
-        INSERT INTO audit_log (entity, entity_id, action, old_value, new_value, performed_by, performed_at)
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `, [
-    input.entity,
-    input.entityId || null,
-    input.action,
-    oldValueStr,
-    newValueStr,
-    input.performedBy || null
-  ]);
-}
-function getAuditLogs(options = {}) {
-  const conditions = [];
-  const params = [];
-  if (options.entity) {
-    conditions.push("a.entity = ?");
-    params.push(options.entity);
-  }
-  if (options.entityId) {
-    conditions.push("a.entity_id = ?");
-    params.push(options.entityId);
-  }
-  if (options.action) {
-    conditions.push("a.action LIKE ?");
-    params.push(`%${options.action}%`);
-  }
-  if (options.userId) {
-    conditions.push("a.performed_by = ?");
-    params.push(options.userId);
-  }
-  if (options.fromDate) {
-    conditions.push("a.performed_at >= ?");
-    params.push(options.fromDate);
-  }
-  if (options.toDate) {
-    conditions.push("a.performed_at <= ?");
-    params.push(options.toDate + " 23:59:59");
-  }
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const countResult = queryOne(`
-        SELECT COUNT(*) as count FROM audit_log a ${whereClause}
-    `, params);
-  const total = (countResult == null ? void 0 : countResult.count) || 0;
-  const limit = options.limit || 50;
-  const offset = options.offset || 0;
-  const entries = queryAll(`
-        SELECT a.*, u.username, u.full_name
-        FROM audit_log a
-        LEFT JOIN users u ON a.performed_by = u.id
-        ${whereClause}
-        ORDER BY a.performed_at DESC
-        LIMIT ? OFFSET ?
-    `, [...params, limit, offset]);
-  return { entries, total };
-}
-function getEntityHistory(entity, entityId) {
-  return queryAll(`
-        SELECT a.*, u.username, u.full_name
-        FROM audit_log a
-        LEFT JOIN users u ON a.performed_by = u.id
-        WHERE a.entity = ? AND a.entity_id = ?
-        ORDER BY a.performed_at DESC
-    `, [entity, entityId]);
-}
-function getRecentActivity(limit = 20) {
-  return queryAll(`
-        SELECT a.*, u.username, u.full_name
-        FROM audit_log a
-        LEFT JOIN users u ON a.performed_by = u.id
-        ORDER BY a.performed_at DESC
-        LIMIT ?
-    `, [limit]);
-}
-function getActivityStats(fromDate, toDate) {
-  const totalResult = queryOne(`
-        SELECT COUNT(*) as count FROM audit_log 
-        WHERE performed_at >= ? AND performed_at <= ?
-    `, [fromDate, toDate + " 23:59:59"]);
-  const byEntity = queryAll(`
-        SELECT entity, COUNT(*) as count FROM audit_log 
-        WHERE performed_at >= ? AND performed_at <= ?
-        GROUP BY entity ORDER BY count DESC
-    `, [fromDate, toDate + " 23:59:59"]);
-  const byAction = queryAll(`
-        SELECT action, COUNT(*) as count FROM audit_log 
-        WHERE performed_at >= ? AND performed_at <= ?
-        GROUP BY action ORDER BY count DESC
-    `, [fromDate, toDate + " 23:59:59"]);
-  const byUser = queryAll(`
-        SELECT a.performed_by as userId, COALESCE(u.username, 'System') as username, COUNT(*) as count 
-        FROM audit_log a
-        LEFT JOIN users u ON a.performed_by = u.id
-        WHERE a.performed_at >= ? AND a.performed_at <= ?
-        GROUP BY a.performed_by ORDER BY count DESC
-    `, [fromDate, toDate + " 23:59:59"]);
-  return {
-    totalActions: (totalResult == null ? void 0 : totalResult.count) || 0,
-    byEntity,
-    byAction,
-    byUser
-  };
-}
-const ENTITIES = {
-  PATIENT: "PATIENT",
-  ORDER: "ORDER",
-  SAMPLE: "SAMPLE",
-  RESULT: "RESULT",
-  INVOICE: "INVOICE",
-  PAYMENT: "PAYMENT",
-  TEST: "TEST",
-  USER: "USER",
-  DOCTOR: "DOCTOR",
-  PRICE_LIST: "PRICE_LIST",
-  QC_ENTRY: "QC_ENTRY",
-  SETTINGS: "SETTINGS"
-};
-const ACTIONS = {
-  CREATE: "CREATE",
-  UPDATE: "UPDATE",
-  DELETE: "DELETE",
-  VIEW: "VIEW",
-  LOGIN: "LOGIN",
-  LOGOUT: "LOGOUT",
-  VERIFY: "VERIFY",
-  FINALIZE: "FINALIZE",
-  CANCEL: "CANCEL",
-  SUBMIT: "SUBMIT",
-  APPROVE: "APPROVE",
-  REJECT: "REJECT"
-};
 function createQCParameter(data) {
   try {
     const id = runWithId(`
@@ -5279,6 +5309,114 @@ function checkWestgardRules(qcParameterId) {
   }
   return results;
 }
+function getTestQCStatus(testId) {
+  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const qcParams = listQCParameters({ testId, activeOnly: true });
+  if (qcParams.length === 0) {
+    return {
+      testId,
+      testCode: "",
+      hasQCConfigured: false,
+      status: "NO_CONFIG",
+      lastQCDate: null,
+      lastQCValue: null,
+      message: "No QC configured for this test",
+      canFinalize: true,
+      failedParameters: []
+    };
+  }
+  const testCode = qcParams[0].test_code || "";
+  const failedParams = [];
+  const warningParams = [];
+  let hasEntriesToday = false;
+  let lastEntry = null;
+  for (const param of qcParams) {
+    const entries = getQCEntries({ qcParameterId: param.id, fromDate: today, toDate: today });
+    if (entries.length > 0) {
+      hasEntriesToday = true;
+      const latest = entries[0];
+      lastEntry = { date: latest.entry_date, value: latest.observed_value };
+      if (latest.status === "FAIL") {
+        failedParams.push(`${param.parameter_name} (${param.level})`);
+      } else if (latest.status === "WARNING") {
+        warningParams.push(`${param.parameter_name} (${param.level})`);
+      }
+    }
+  }
+  if (!hasEntriesToday) {
+    return {
+      testId,
+      testCode,
+      hasQCConfigured: true,
+      status: "NOT_RUN",
+      lastQCDate: null,
+      lastQCValue: null,
+      message: "QC not run today - run QC before finalizing results",
+      canFinalize: false,
+      failedParameters: []
+    };
+  }
+  if (failedParams.length > 0) {
+    return {
+      testId,
+      testCode,
+      hasQCConfigured: true,
+      status: "FAIL",
+      lastQCDate: (lastEntry == null ? void 0 : lastEntry.date) || null,
+      lastQCValue: (lastEntry == null ? void 0 : lastEntry.value) || null,
+      message: `QC FAILED: ${failedParams.join(", ")}`,
+      canFinalize: false,
+      failedParameters: failedParams
+    };
+  }
+  if (warningParams.length > 0) {
+    return {
+      testId,
+      testCode,
+      hasQCConfigured: true,
+      status: "WARNING",
+      lastQCDate: (lastEntry == null ? void 0 : lastEntry.date) || null,
+      lastQCValue: (lastEntry == null ? void 0 : lastEntry.value) || null,
+      message: `QC Warning: ${warningParams.join(", ")}`,
+      canFinalize: true,
+      // Warnings allow finalization with alert
+      failedParameters: []
+    };
+  }
+  return {
+    testId,
+    testCode,
+    hasQCConfigured: true,
+    status: "PASS",
+    lastQCDate: (lastEntry == null ? void 0 : lastEntry.date) || null,
+    lastQCValue: (lastEntry == null ? void 0 : lastEntry.value) || null,
+    message: "QC passed",
+    canFinalize: true,
+    failedParameters: []
+  };
+}
+function overrideQCBlock(data) {
+  if (!data.reason || data.reason.trim().length < 10) {
+    return { success: false, error: "Override reason must be at least 10 characters" };
+  }
+  try {
+    logAudit({
+      entity: ENTITIES.QC_ENTRY,
+      entityId: data.sampleId,
+      action: "QC_OVERRIDE",
+      newValue: {
+        testId: data.testId,
+        sampleId: data.sampleId,
+        reason: data.reason,
+        qcStatus: getTestQCStatus(data.testId)
+      },
+      performedBy: data.overriddenBy
+    });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
 const IPC_CHANNELS = {
   // Auth
   AUTH_LOGIN: "auth:login",
@@ -5404,6 +5542,8 @@ const IPC_CHANNELS = {
   QC_LEVEY_JENNINGS: "qc:leveyJennings",
   QC_RULES_LIST: "qc:rulesList",
   QC_WESTGARD_CHECK: "qc:westgardCheck",
+  QC_TEST_STATUS: "qc:testStatus",
+  QC_OVERRIDE: "qc:override",
   // Audit
   AUDIT_LOG: "audit:log",
   AUDIT_GET_LOGS: "audit:getLogs",
@@ -5760,6 +5900,12 @@ function registerIpcHandlers() {
   });
   ipcMain.handle(IPC_CHANNELS.QC_WESTGARD_CHECK, (_, qcParameterId) => {
     return checkWestgardRules(qcParameterId);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_TEST_STATUS, (_, testId) => {
+    return getTestQCStatus(testId);
+  });
+  ipcMain.handle(IPC_CHANNELS.QC_OVERRIDE, (_, data) => {
+    return overrideQCBlock(data);
   });
   ipcMain.handle(IPC_CHANNELS.AUDIT_LOG, (_, input) => {
     return { success: true, id: logAudit(input) };

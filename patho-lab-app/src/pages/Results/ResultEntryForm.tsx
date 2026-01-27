@@ -9,6 +9,15 @@ interface ResultEntryFormProps {
     onSampleUpdate: () => void;
 }
 
+interface QCStatus {
+    testId: number;
+    status: 'PASS' | 'WARNING' | 'FAIL' | 'NOT_RUN' | 'NO_CONFIG';
+    message: string;
+    canFinalize: boolean;
+    hasQCConfigured: boolean;
+    lastQCDate: string | null;
+}
+
 export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: ResultEntryFormProps) {
     const { session } = useAuthStore();
     const [resultData, setResultData] = useState<ResultData | null>(null);
@@ -16,6 +25,9 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const [loading, setLoading] = useState(true);
     const [criticalAlert, setCriticalAlert] = useState<{ param: string; value: string } | null>(null);
     const [showReport, setShowReport] = useState(false);
+    const [qcStatus, setQCStatus] = useState<QCStatus | null>(null);
+    const [showOverrideModal, setShowOverrideModal] = useState(false);
+    const [overrideReason, setOverrideReason] = useState('');
 
     useEffect(() => {
         loadResultData();
@@ -37,6 +49,12 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                     }
                 });
                 setValues(existingValues);
+
+                // Also fetch QC status for this test
+                if (data.test_id && window.electronAPI?.qc?.getTestStatus) {
+                    const qcData = await window.electronAPI.qc.getTestStatus(data.test_id);
+                    setQCStatus(qcData);
+                }
             }
         } catch (e) {
             console.error('Failed to load result data:', e);
@@ -156,6 +174,12 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const handleFinalize = async () => {
         if (!resultData || !window.electronAPI) return;
 
+        // Check QC status before finalizing
+        if (qcStatus && qcStatus.hasQCConfigured && !qcStatus.canFinalize) {
+            setShowOverrideModal(true);
+            return;
+        }
+
         if (!confirm('Finalize results? This cannot be undone.')) return;
 
         try {
@@ -167,6 +191,42 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
             }
         } catch (e) {
             console.error('Finalize error:', e);
+        }
+    };
+
+    const handleOverrideFinalize = async () => {
+        if (!resultData || !window.electronAPI || !session) return;
+        if (overrideReason.trim().length < 10) {
+            alert('Override reason must be at least 10 characters');
+            return;
+        }
+
+        try {
+            // Log the override first
+            if (window.electronAPI?.qc?.override) {
+                const overrideResult = await window.electronAPI.qc.override({
+                    testId: resultData.test_id,
+                    sampleId: resultData.sample_id,
+                    reason: overrideReason,
+                    overriddenBy: session.userId
+                });
+                if (!overrideResult.success) {
+                    alert('Failed to log override: ' + overrideResult.error);
+                    return;
+                }
+            }
+
+            // Then finalize
+            const result = await window.electronAPI.results.finalize(resultData.sample_id);
+            if (result.success) {
+                alert('Results finalized with QC override');
+                setShowOverrideModal(false);
+                setOverrideReason('');
+                onSampleUpdate();
+                onClose();
+            }
+        } catch (e) {
+            console.error('Override finalize error:', e);
         }
     };
 
@@ -376,7 +436,27 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
 
                     <div className="panel-section">
                         <h3>QC Status</h3>
-                        <span className="badge badge-success">QC OK</span>
+                        {qcStatus ? (
+                            <>
+                                <span className={`badge ${qcStatus.status === 'PASS' ? 'badge-success' :
+                                        qcStatus.status === 'WARNING' ? 'badge-warning' :
+                                            qcStatus.status === 'NO_CONFIG' ? 'badge-info' :
+                                                'badge-error'
+                                    }`}>
+                                    {qcStatus.status === 'NO_CONFIG' ? 'No QC' :
+                                        qcStatus.status === 'NOT_RUN' ? 'QC Not Run' :
+                                            qcStatus.status}
+                                </span>
+                                {qcStatus.status !== 'PASS' && qcStatus.status !== 'NO_CONFIG' && (
+                                    <p className="qc-message">{qcStatus.message}</p>
+                                )}
+                                {qcStatus.lastQCDate && (
+                                    <p className="qc-date">Last run: {qcStatus.lastQCDate}</p>
+                                )}
+                            </>
+                        ) : (
+                            <span className="badge badge-info">Loading...</span>
+                        )}
                     </div>
 
                     <div className="panel-section">
@@ -390,6 +470,46 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                     </div>
                 </div>
             </div>
+
+            {/* QC Override Modal */}
+            {showOverrideModal && (
+                <div className="modal-overlay">
+                    <div className="modal override-modal">
+                        <h2>⚠️ QC Override Required</h2>
+                        <p className="override-warning">
+                            QC has failed or was not run. Finalizing requires pathologist override.
+                        </p>
+                        <p><strong>QC Status:</strong> {qcStatus?.message}</p>
+
+                        <div className="form-group">
+                            <label>Override Reason (Mandatory - minimum 10 characters):</label>
+                            <textarea
+                                className="input"
+                                rows={4}
+                                value={overrideReason}
+                                onChange={(e) => setOverrideReason(e.target.value)}
+                                placeholder="Explain why QC is being overridden..."
+                            />
+                        </div>
+
+                        <div className="modal-actions">
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => { setShowOverrideModal(false); setOverrideReason(''); }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-warning"
+                                onClick={handleOverrideFinalize}
+                                disabled={overrideReason.trim().length < 10}
+                            >
+                                Override & Finalize
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Report Preview Modal */}
             {showReport && resultData && (

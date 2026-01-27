@@ -273,6 +273,9 @@ const api = {
     getLeveyJennings: (qcParameterId: number, count?: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_LEVEY_JENNINGS, qcParameterId, count),
     listRules: () => ipcRenderer.invoke(IPC_CHANNELS.QC_RULES_LIST),
     checkWestgard: (qcParameterId: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_WESTGARD_CHECK, qcParameterId),
+    getTestStatus: (testId: number) => ipcRenderer.invoke(IPC_CHANNELS.QC_TEST_STATUS, testId),
+    override: (data: { testId: number; sampleId: number; reason: string; overriddenBy: number }) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QC_OVERRIDE, data),
   },
 
   // Audit Trail

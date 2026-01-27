@@ -268,6 +268,8 @@ export const IPC_CHANNELS = {
     QC_LEVEY_JENNINGS: 'qc:leveyJennings',
     QC_RULES_LIST: 'qc:rulesList',
     QC_WESTGARD_CHECK: 'qc:westgardCheck',
+    QC_TEST_STATUS: 'qc:testStatus',
+    QC_OVERRIDE: 'qc:override',
 
     // Audit
     AUDIT_LOG: 'audit:log',
