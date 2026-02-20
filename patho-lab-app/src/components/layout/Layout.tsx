@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
     { path: '/admin/price-lists', label: 'Price Lists', roles: ['admin'] },
     { path: '/audit', label: 'Audit Log', roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
     { path: '/admin/license', label: 'License', roles: ['admin'] },
+    { path: '/admin/backup', label: 'Backup', roles: ['admin'] },
     { path: '/admin', label: 'Admin', roles: ['admin'] },
 ];
 
@@ -154,6 +155,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             <main className="app-main">
                 {children}
             </main>
+            <footer className="app-footer">
+                Software by — <strong>FMS Software Solutions</strong>
+            </footer>
         </div>
     );
 }

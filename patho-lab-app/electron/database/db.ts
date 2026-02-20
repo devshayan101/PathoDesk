@@ -14,6 +14,7 @@ export function initDatabase(): Database.Database {
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  db.pragma('wal_checkpoint(TRUNCATE)'); // Flush WAL on startup for power failure resilience
 
   // Run migrations
   runMigrations(db);

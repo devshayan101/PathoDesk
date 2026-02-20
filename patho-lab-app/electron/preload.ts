@@ -318,6 +318,16 @@ const api = {
   get billing() {
     return this.priceLists
   },
+
+  // Backup & Restore
+  backup: {
+    create: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_CREATE),
+    restore: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_RESTORE),
+    checkIntegrity: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.BACKUP_INTEGRITY_CHECK),
+  },
 }
 
 // Expose to window

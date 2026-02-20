@@ -13,6 +13,7 @@ interface Sample {
 
 export default function SamplesPage() {
     const [samples, setSamples] = useState<Sample[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -104,9 +105,21 @@ export default function SamplesPage() {
         <div className="samples-page">
             <div className="page-header">
                 <h1 className="page-title">Sample Accession</h1>
-                <button className="btn btn-secondary" onClick={loadSamples}>
-                    ↻ Refresh
-                </button>
+                <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="search-box">
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Search UID, Order or Patient..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ minWidth: '250px' }}
+                        />
+                    </div>
+                    <button className="btn btn-secondary" onClick={loadSamples}>
+                        ↻ Refresh
+                    </button>
+                </div>
             </div>
 
             <div className="samples-table-container" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
@@ -123,10 +136,24 @@ export default function SamplesPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {samples.length === 0 ? (
-                                <tr><td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No samples awaiting accession</td></tr>
-                            ) : (
-                                samples.map(sample => (
+                            {(() => {
+                                const filteredSamples = samples.filter(sample =>
+                                    sample.sample_uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    sample.order_uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    sample.patient_name.toLowerCase().includes(searchTerm.toLowerCase())
+                                );
+
+                                if (filteredSamples.length === 0) {
+                                    return (
+                                        <tr>
+                                            <td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                                {searchTerm ? `No samples found matching "${searchTerm}"` : 'No samples awaiting accession'}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
+                                return filteredSamples.map(sample => (
                                     <tr key={sample.id} style={{ borderLeft: sample.status === 'RECEIVED' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
                                         <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{sample.sample_uid}</code></td>
                                         <td><code style={{ color: 'var(--color-text-secondary)' }}>{sample.order_uid}</code></td>
@@ -158,8 +185,8 @@ export default function SamplesPage() {
                                             )}
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ));
+                            })()}
                         </tbody>
                     </table>
                 )}

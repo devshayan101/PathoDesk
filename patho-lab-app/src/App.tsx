@@ -20,6 +20,8 @@ import QCPage from './pages/QC/QC';
 import AuditLogPage from './pages/Audit/AuditLog';
 import UpgradeRequired from './pages/UpgradeRequired/UpgradeRequired';
 import type { LicenseModule } from './types';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import BackupRestorePage from './pages/Settings/BackupRestore';
 import './index.css';
 
 // Protected route wrapper
@@ -98,7 +100,7 @@ function LicensedRoute({
 
 function App() {
   return (
-    <>
+    <ErrorBoundary>
       <ToastContainer />
       <HashRouter>
         <Routes>
@@ -208,9 +210,17 @@ function App() {
               </LicensedRoute>
             }
           />
+          <Route
+            path="/admin/backup"
+            element={
+              <ProtectedRoute>
+                <BackupRestorePage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </HashRouter>
-    </>
+    </ErrorBoundary>
   );
 }
 

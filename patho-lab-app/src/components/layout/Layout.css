@@ -138,3 +138,20 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
+
+/* Branding footer */
+.app-footer {
+    text-align: center;
+    padding: 6px var(--spacing-lg);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
+    letter-spacing: 0.2px;
+    flex-shrink: 0;
+}
+
+.app-footer strong {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}

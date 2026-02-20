@@ -289,6 +289,11 @@ export const IPC_CHANNELS = {
 
     // Dashboard
     DASHBOARD_STATS: 'dashboard:getStats',
+
+    // Backup & Restore
+    BACKUP_CREATE: 'backup:create',
+    BACKUP_RESTORE: 'backup:restore',
+    BACKUP_INTEGRITY_CHECK: 'backup:integrityCheck',
 } as const;
 
 // Billing Types

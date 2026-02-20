@@ -33,6 +33,7 @@ interface RefRange {
 
 export default function TestMasterPage() {
     const [tests, setTests] = useState<Test[]>([]);
+    const [testSearch, setTestSearch] = useState('');
     const showToast = useToastStore(s => s.showToast);
     const [selectedTest, setSelectedTest] = useState<Test | null>(null);
     const [parameters, setParameters] = useState<Parameter[]>([]);
@@ -214,31 +215,52 @@ export default function TestMasterPage() {
             <div className="test-master-layout">
                 {/* Left - Test List */}
                 <div className="test-list-panel">
-                    <div className="panel-header">
-                        <h2 className="panel-title">Tests</h2>
-                        <button className="btn btn-primary btn-sm" onClick={() => {
-                            setWizardDraftId(undefined);
-                            setIsEditing(false);
-                            setShowWizard(true);
-                        }}>+ New</button>
+                    <div className="panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 className="panel-title">Tests</h2>
+                            <button className="btn btn-primary btn-sm" onClick={() => {
+                                setWizardDraftId(undefined);
+                                setIsEditing(false);
+                                setShowWizard(true);
+                            }}>+ New</button>
+                        </div>
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="🔍 Search tests..."
+                            value={testSearch}
+                            onChange={(e) => setTestSearch(e.target.value)}
+                            style={{ fontSize: '0.85rem', padding: '0.4rem' }}
+                        />
                     </div>
                     <ul className="test-list">
-                        {tests.map(test => (
-                            <li
-                                key={test.id}
-                                className={`test-item ${selectedTest?.id === test.id ? 'selected' : ''}`}
-                                onClick={() => setSelectedTest(test)}
-                            >
-                                <div className="test-info">
-                                    <strong>{test.test_code}</strong>
-                                    <span>{test.test_name}</span>
-                                </div>
-                                <div className="test-actions">
-                                    <button className="btn-icon" title="Edit" onClick={(e) => { e.stopPropagation(); handleEditTest(test.id); }}>✎</button>
-                                    <button className="btn-delete" title="Delete" onClick={(e) => { e.stopPropagation(); handleDeleteTest(test.id); }}>×</button>
-                                </div>
-                            </li>
-                        ))}
+                        {(() => {
+                            const filteredTests = tests.filter(test =>
+                                test.test_name.toLowerCase().includes(testSearch.toLowerCase()) ||
+                                test.test_code.toLowerCase().includes(testSearch.toLowerCase())
+                            );
+
+                            if (filteredTests.length === 0) {
+                                return <li className="empty-row" style={{ padding: '1rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>No tests found</li>;
+                            }
+
+                            return filteredTests.map(test => (
+                                <li
+                                    key={test.id}
+                                    className={`test-item ${selectedTest?.id === test.id ? 'selected' : ''}`}
+                                    onClick={() => setSelectedTest(test)}
+                                >
+                                    <div className="test-info">
+                                        <strong>{test.test_code}</strong>
+                                        <span>{test.test_name}</span>
+                                    </div>
+                                    <div className="test-actions">
+                                        <button className="btn-icon" title="Edit" onClick={(e) => { e.stopPropagation(); handleEditTest(test.id); }}>✎</button>
+                                        <button className="btn-delete" title="Delete" onClick={(e) => { e.stopPropagation(); handleDeleteTest(test.id); }}>×</button>
+                                    </div>
+                                </li>
+                            ));
+                        })()}
                     </ul>
                 </div>
 

@@ -20,6 +20,7 @@ interface Doctor {
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const showToast = useToastStore(s => s.showToast);
     const [priceLists, setPriceLists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -243,13 +244,30 @@ export default function DoctorsPage() {
         loadDoctors();
     };
 
+    const filteredDoctors = doctors.filter(doctor =>
+        doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doctor.doctor_code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="doctors-page">
             <div className="page-header">
                 <h1>Referring Doctors</h1>
-                <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-                    + Add Doctor
-                </button>
+                <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="search-box">
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Search by name or code..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ minWidth: '250px' }}
+                        />
+                    </div>
+                    <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+                        + Add Doctor
+                    </button>
+                </div>
             </div>
 
             <div className="card">
@@ -269,12 +287,14 @@ export default function DoctorsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {doctors.length === 0 ? (
+                            {filteredDoctors.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="empty-row">No doctors found</td>
+                                    <td colSpan={7} className="empty-row text-center" style={{ padding: '2rem' }}>
+                                        {searchTerm ? `No doctors found matching "${searchTerm}"` : 'No doctors found'}
+                                    </td>
                                 </tr>
                             ) : (
-                                doctors.map(doctor => (
+                                filteredDoctors.map(doctor => (
                                     <tr key={doctor.id} className={doctor.is_active ? '' : 'inactive-row'}>
                                         <td><code>{doctor.doctor_code}</code></td>
                                         <td

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import ReportPreview from '../../components/Report/ReportPreview';
@@ -30,7 +30,14 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const [qcStatus, setQCStatus] = useState<QCStatus | null>(null);
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [overrideReason, setOverrideReason] = useState('');
+    const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
+    const isDirtyRef = useRef(false);
+    const valuesRef = useRef(values);
 
+    // Keep valuesRef synced
+    useEffect(() => {
+        valuesRef.current = values;
+    }, [values]);
 
     useEffect(() => {
         loadResultData();
@@ -102,6 +109,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
 
     const handleValueChange = (paramCode: string, value: string) => {
         setValues(prev => ({ ...prev, [paramCode]: value }));
+        isDirtyRef.current = true;
     };
 
     const handleInputBlur = (paramCode: string, value: string) => {
@@ -139,6 +147,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         if (!resultData) return;
 
         const success = await saveData();
+        isDirtyRef.current = false;
 
         if (success) {
             if (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') {
@@ -285,6 +294,25 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         return prev ? prev.value : '—';
     };
 
+    // Auto-save every 10 seconds when dirty
+    useEffect(() => {
+        const canAutoSave = resultData && (resultData.status === 'RECEIVED' || resultData.status === 'DRAFT');
+        if (!canAutoSave) return;
+
+        const interval = setInterval(async () => {
+            if (isDirtyRef.current && window.electronAPI) {
+                const ok = await saveData();
+                if (ok) {
+                    isDirtyRef.current = false;
+                    setAutoSaveStatus('Auto-saved');
+                    setTimeout(() => setAutoSaveStatus(''), 3000);
+                }
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [resultData]);
+
     if (loading) return <div className="result-loading">Loading result data...</div>;
     if (!resultData) return <div className="result-error">Sample not found</div>;
 
@@ -426,6 +454,11 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                                 <button className="btn btn-secondary" onClick={handleSave}>
                                     <span className="kbd">F5</span> Save Draft
                                 </button>
+                                {autoSaveStatus && (
+                                    <span style={{ color: 'var(--color-success, #22c55e)', fontSize: '12px', opacity: 0.8 }}>
+                                        ✓ {autoSaveStatus}
+                                    </span>
+                                )}
                                 <button className="btn btn-primary" onClick={handleSubmit}>
                                     <span className="kbd">F9</span> Submit for Verification
                                 </button>

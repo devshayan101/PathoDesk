@@ -644,6 +644,22 @@ function registerIpcHandlers() {
     const licenseService = getLicenseService()
     return licenseService.isTrial()
   })
+
+  // Backup & Restore
+  ipcMain.handle(IPC_CHANNELS.BACKUP_CREATE, async () => {
+    const backupService = await import('./services/backupService')
+    return backupService.createBackup()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_RESTORE, async () => {
+    const backupService = await import('./services/backupService')
+    return backupService.restoreBackup()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_INTEGRITY_CHECK, async () => {
+    const backupService = await import('./services/backupService')
+    return backupService.checkIntegrity()
+  })
 }
 
 app.on('window-all-closed', () => {

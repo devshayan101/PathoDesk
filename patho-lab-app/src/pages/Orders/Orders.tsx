@@ -81,6 +81,7 @@ export default function OrdersPage() {
     const [doctorSearch, setDoctorSearch] = useState('');
     const [doctorDropdownOpen, setDoctorDropdownOpen] = useState(false);
     const [testSearch, setTestSearch] = useState('');
+    const [listSearch, setListSearch] = useState('');
 
     useEffect(() => {
         loadData();
@@ -276,9 +277,21 @@ export default function OrdersPage() {
         <div className="orders-page" style={{ padding: '1.5rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h1 className="page-title" style={{ margin: 0 }}>Orders</h1>
-                <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-                    + New Order
-                </button>
+                <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="search-box">
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Search by patient or order ID..."
+                            value={listSearch}
+                            onChange={(e) => setListSearch(e.target.value)}
+                            style={{ minWidth: '250px' }}
+                        />
+                    </div>
+                    <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+                        + New Order
+                    </button>
+                </div>
             </div>
 
             {showForm && (
@@ -564,10 +577,24 @@ export default function OrdersPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.length === 0 ? (
-                                    <tr><td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No recent orders</td></tr>
-                                ) : (
-                                    orders.map(order => (
+                                {(() => {
+                                    const filteredOrders = orders.filter(order =>
+                                        order.patient_name.toLowerCase().includes(listSearch.toLowerCase()) ||
+                                        order.patient_uid.toLowerCase().includes(listSearch.toLowerCase()) ||
+                                        order.order_uid.toLowerCase().includes(listSearch.toLowerCase())
+                                    );
+
+                                    if (filteredOrders.length === 0) {
+                                        return (
+                                            <tr>
+                                                <td colSpan={6} className="empty-row" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                                    {listSearch ? `No orders found matching "${listSearch}"` : 'No recent orders'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+
+                                    return filteredOrders.map(order => (
                                         <tr key={order.id} style={{ borderLeft: order.payment_status === 'PAID' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
                                             <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{order.order_uid}</code></td>
                                             <td>
@@ -583,8 +610,8 @@ export default function OrdersPage() {
                                                 </span>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ));
+                                })()}
                             </tbody>
                         </table>
                     </div>

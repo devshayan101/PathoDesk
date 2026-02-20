@@ -170,6 +170,11 @@ export interface ElectronAPI {
         isTrial: () => Promise<boolean>;
     };
     billing: ElectronAPI['priceLists'];
+    backup: {
+        create: () => Promise<{ success: boolean; filePath?: string; error?: string }>;
+        restore: () => Promise<{ success: boolean; error?: string }>;
+        checkIntegrity: () => Promise<{ success: boolean; results: string[]; foreignKeyErrors: any[] }>;
+    };
 }
 
 declare global {
