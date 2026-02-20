@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { useToastStore } from '../../stores/toastStore';
 import './Orders.css';
 
 interface Test {
@@ -54,6 +55,7 @@ interface PriceList {
 export default function OrdersPage() {
     const navigate = useNavigate();
     const { session } = useAuthStore();
+    const showToast = useToastStore(s => s.showToast);
     const [showForm, setShowForm] = useState(false);
     const [orders, setOrders] = useState<Order[]>([]);
     const [tests, setTests] = useState<Test[]>([]);
@@ -180,7 +182,7 @@ export default function OrdersPage() {
             });
 
             if (!orderResult.success) {
-                alert('Failed to create order: ' + orderResult.error);
+                showToast('Failed to create order: ' + orderResult.error, 'error');
                 setSubmitting(false);
                 return;
             }
@@ -215,11 +217,11 @@ export default function OrdersPage() {
                 // Navigate to invoice
                 navigate('/billing/invoices');
             } else {
-                alert('Order created but invoice failed: ' + invoiceResult.error);
+                showToast('Order created but invoice failed: ' + invoiceResult.error, 'error');
             }
         } catch (e) {
             console.error('Create order error:', e);
-            alert('An error occurred');
+            showToast('An error occurred', 'error');
         }
         setSubmitting(false);
     };

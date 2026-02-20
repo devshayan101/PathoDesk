@@ -1,11 +1,115 @@
 .admin-page {
-    padding: var(--spacing-md);
+    padding: 1.5rem;
 }
 
+/* Tabbed Navigation */
+.admin-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: 1.5rem;
+}
+
+.admin-tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.admin-tab:hover {
+    color: var(--color-text-primary);
+}
+
+.admin-tab.active {
+    color: var(--color-accent, #3b82f6);
+    border-bottom-color: var(--color-accent, #3b82f6);
+    font-weight: 600;
+}
+
+/* Users table */
 .users-table-container {
-    margin-top: var(--spacing-lg);
+    margin-top: 1rem;
 }
 
 .user-form-modal {
     min-width: 500px;
+}
+
+/* Error / success banners */
+.error-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error, #ef4444);
+    border: 1px solid var(--color-error, #ef4444);
+    border-radius: var(--radius-md, 6px);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.error-banner button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+/* Lab Settings */
+.lab-settings-section {
+    max-width: 800px;
+}
+
+.lab-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.lab-settings-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.5rem;
+}
+
+.card-section-title {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.settings-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.settings-grid .form-group label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.settings-grid textarea.input {
+    resize: vertical;
+    min-height: 60px;
 }

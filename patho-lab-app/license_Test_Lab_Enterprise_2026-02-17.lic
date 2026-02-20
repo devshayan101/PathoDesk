@@ -1,0 +1,22 @@
+{
+  "data": {
+    "license_id": "LIC-J1XF-DIHT-EPIJ-TMAL",
+    "lab_name": "Test Lab Enterprise",
+    "issued_to": "Test User",
+    "machine_id_hash": null,
+    "edition": "ENTERPRISE",
+    "binding_mode": "SOFT",
+    "enabled_modules": [
+      "BILLING",
+      "QC_AUDIT",
+      "ANALYZER",
+      "INVENTORY",
+      "DOCTOR_COMMISSION"
+    ],
+    "max_users": 10,
+    "issue_date": "2026-02-17",
+    "expiry_date": "2026-12-31",
+    "grace_period_days": 14
+  },
+  "signature": "SJs+FnfQrKaTeb8hl+jXJXgSJ3Ct+Fz1UgJt3k98/Xo2ZTOrpYz0114InAX2JLmvprqkQbJaWy6rg+Hozd6HNxbg6rGmiY9QYY9ggPbgDjSlueI6mxpEDm9PfXoW9XgP0nNQyYzDJnWgcvnsrzvNgID1n7skmbqlGg2YN4t5wtZq0cxSM9TPydRFELVYR8zQM4KSNc7QGmv3xwcC9YBUzoHgLpI7gVcKJ17/E8qtOeMuCPY3sVKhs5Hqc+iLyxrcyc99rjxRyog8g4vOAbIsDWZgueRFWFh7rdC7whax6W+kNN3K7iNAFyWD/7W4HhY9YKSDMhipArvt6HkIdLKaHA=="
+}

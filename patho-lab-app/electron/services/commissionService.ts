@@ -1,4 +1,4 @@
-import { queryAll, queryOne, run, runWithId, getDb } from '../database/db';
+import { queryAll, queryOne, run, runWithId } from '../database/db';
 
 // Types
 interface DoctorCommission {

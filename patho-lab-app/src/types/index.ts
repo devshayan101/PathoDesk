@@ -127,6 +127,7 @@ export const IPC_CHANNELS = {
     PATIENT_GET: 'patient:get',
     PATIENT_SEARCH: 'patient:search',
     PATIENT_LIST: 'patient:list',
+    PATIENT_DELETE: 'patient:delete',
 
     // Orders
     ORDER_CREATE: 'order:create',
@@ -163,6 +164,7 @@ export const IPC_CHANNELS = {
     PARAMETER_LIST: 'parameter:list',
     PARAMETER_CREATE: 'parameter:create',
     PARAMETER_UPDATE: 'parameter:update',
+    PARAMETER_DELETE: 'parameter:delete',
 
     // Reference Ranges
     REF_RANGE_LIST: 'refRange:list',
@@ -180,8 +182,6 @@ export const IPC_CHANNELS = {
     RESULT_GET_PREVIOUS: 'result:getPrevious',
     RESULT_GET_BY_ORDER: 'result:getByOrder',
 
-    // Dashboard
-    DASHBOARD_STATS: 'dashboard:stats',
 
     // Users (Admin)
     USER_LIST: 'user:list',
@@ -277,6 +277,18 @@ export const IPC_CHANNELS = {
     AUDIT_ENTITY_HISTORY: 'audit:entityHistory',
     AUDIT_RECENT_ACTIVITY: 'audit:recentActivity',
     AUDIT_STATS: 'audit:stats',
+
+    // License
+    LICENSE_GET_STATUS: 'license:getStatus',
+    LICENSE_UPLOAD: 'license:upload',
+    LICENSE_GET_MACHINE_ID: 'license:getMachineId',
+    LICENSE_IS_MODULE_ENABLED: 'license:isModuleEnabled',
+    LICENSE_CAN_BILLING: 'license:canBilling',
+    LICENSE_CAN_FINALIZE: 'license:canFinalize',
+    LICENSE_IS_TRIAL: 'license:isTrial',
+
+    // Dashboard
+    DASHBOARD_STATS: 'dashboard:getStats',
 } as const;
 
 // Billing Types
@@ -367,3 +379,32 @@ export interface Payment {
     remarks?: string;
 }
 
+// License Types
+export type LicenseType = 'TRIAL' | 'ANNUAL' | 'PERPETUAL' | 'ENTERPRISE';
+export type BindingMode = 'NONE' | 'SOFT' | 'STRICT';
+export type LicenseState = 'VALID' | 'NEAR_EXPIRY' | 'GRACE_PERIOD' | 'EXPIRED' | 'INVALID' | 'NO_LICENSE';
+export type LicenseModule = 'BILLING' | 'QC_AUDIT' | 'ANALYZER' | 'INVENTORY' | 'DOCTOR_COMMISSION';
+
+export interface LicenseData {
+    license_id: string;
+    lab_name: string;
+    issued_to: string;
+    machine_id_hash: string | null;
+    edition: LicenseType;
+    binding_mode: BindingMode;
+    enabled_modules: LicenseModule[];
+    max_users: number;
+    issue_date: string;
+    expiry_date: string;
+    grace_period_days: number;
+}
+
+export interface LicenseStatus {
+    state: LicenseState;
+    license: LicenseData | null;
+    daysUntilExpiry: number | null;
+    graceDaysRemaining: number | null;
+    machineIdMatch: boolean;
+    machineIdMismatchType: 'NONE' | 'MINOR' | 'MAJOR' | null;
+    message: string;
+}

@@ -1,0 +1,137 @@
+.upgrade-required-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: var(--bg-primary);
+}
+
+.upgrade-content {
+    max-width: 600px;
+    text-align: center;
+}
+
+.upgrade-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.upgrade-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.upgrade-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.upgrade-description code {
+    background: var(--bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--primary);
+}
+
+.upgrade-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.upgrade-card h3 {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.upgrade-card ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.upgrade-card li {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.machine-id-section {
+    margin-bottom: 1.5rem;
+}
+
+.machine-id-section h4 {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.machine-id-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.machine-id-box code {
+    flex: 1;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    word-break: break-all;
+    text-align: left;
+}
+
+.upgrade-benefits {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.upgrade-benefits h4 {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.upgrade-benefits ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.upgrade-benefits li {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.upgrade-benefits li::before {
+    color: #22c55e;
+}
+
+.upgrade-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.upgrade-actions .btn {
+    min-width: 180px;
+}

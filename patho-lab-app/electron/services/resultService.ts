@@ -1,4 +1,5 @@
 import { queryAll, queryOne, run, runWithId } from '../database/db';
+import { getLicenseService } from './licenseService';
 
 interface SampleForResultEntry {
   id: number;
@@ -162,6 +163,7 @@ export function getSampleResults(sampleId: number): ResultData | null {
       JOIN samples s ON tr.order_test_id = s.order_test_id
       WHERE s.id = ? AND tr.parameter_id = ?\n    `, [sampleId, param.parameter_id]);
 
+
     return {
       parameter_id: param.parameter_id,
       parameter_code: param.parameter_code,
@@ -202,37 +204,24 @@ export function getPreviousResults(patientId: number, testId: number, currentSam
       s.received_at as test_date
     FROM test_results tr
     JOIN test_parameters tp ON tr.parameter_id = tp.id
-    JOIN order_tests ot ON tr.order_test_id = ot.id
-    JOIN samples s ON s.order_test_id = ot.id
-    JOIN test_versions tv ON ot.test_version_id = tv.id
-    JOIN tests t ON tv.test_id = t.id
-    JOIN orders o ON ot.order_id = o.id
-    WHERE o.patient_id = ?
-      AND t.id = ?
-      AND s.id != ?
-      AND tr.result_value IS NOT NULL
-    ORDER BY s.received_at DESC
-    LIMIT 1
+    JOIN samples s ON tr.order_test_id = s.order_test_id
+    WHERE s.id = (
+      SELECT s2.id
+      FROM samples s2
+      JOIN order_tests ot2 ON s2.order_test_id = ot2.id
+      JOIN test_versions tv2 ON ot2.test_version_id = tv2.id
+      JOIN tests t2 ON tv2.test_id = t2.id
+      JOIN orders o2 ON ot2.order_id = o2.id
+      WHERE o2.patient_id = ?
+        AND t2.id = ?
+        AND s2.id != ?
+      ORDER BY s2.received_at DESC
+      LIMIT 1
+    )
   `, [patientId, testId, currentSampleId]);
 }
 
-// Calculate abnormal flag based on value and reference range
-function calculateAbnormalFlag(value: string, refRange: RefRange | undefined): string {
-  if (!refRange || !value) return '';
 
-  const numValue = parseFloat(value);
-  if (isNaN(numValue)) return '';
-
-  // Check critical values first
-  if (refRange.critical_low !== null && numValue <= refRange.critical_low) return 'CRITICAL_LOW';
-  if (refRange.critical_high !== null && numValue >= refRange.critical_high) return 'CRITICAL_HIGH';
-
-  // Check normal range
-  if (refRange.min_value !== null && numValue < refRange.min_value) return 'LOW';
-  if (refRange.max_value !== null && numValue > refRange.max_value) return 'HIGH';
-
-  return 'NORMAL';
-}
 
 // Save result values (DRAFT state)
 export function saveResultValues(data: {
@@ -264,8 +253,16 @@ export function saveResultValues(data: {
       `, [sample.order_test_id, val.parameterId, val.value, flag, 1]); // TODO: Use actual user ID
     }
 
-    // Update sample status to DRAFT if not already
-    run(`UPDATE samples SET status = 'DRAFT' WHERE id = ?`, [data.sampleId]);
+    // Update sample status to DRAFT if it's not already in a completed state
+    // If it is VERIFIED or FINALIZED, we preserve that status (Amendment/Correction workflow)
+    run(`
+      UPDATE samples 
+      SET status = CASE 
+        WHEN status IN ('VERIFIED', 'FINALIZED') THEN status 
+        ELSE 'DRAFT' 
+      END 
+      WHERE id = ?
+    `, [data.sampleId]);
 
     return { success: true };
   } catch (error: any) {
@@ -300,6 +297,11 @@ export function verifyResults(sampleId: number, verifiedBy: number): { success: 
 
 // Finalize results (lock)
 export function finalizeResults(sampleId: number): { success: boolean; error?: string } {
+  const licenseService = getLicenseService();
+  if (!licenseService.canFinalizeReport()) {
+    return { success: false, error: 'License Restriction: Report finalization not allowed.' };
+  }
+
   try {
     run(`UPDATE samples SET status = 'FINALIZED' WHERE id = ?`, [sampleId]);
 

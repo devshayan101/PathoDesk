@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { PaymentReceipt } from '../../components/PaymentReceipt';
+import { useToastStore } from '../../stores/toastStore';
 import './Doctors.css';
 
 interface Doctor {
@@ -19,6 +20,7 @@ interface Doctor {
 
 export default function DoctorsPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const showToast = useToastStore(s => s.showToast);
     const [priceLists, setPriceLists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -119,7 +121,7 @@ export default function DoctorsPage() {
         setStatementLoading(false);
     };
 
-    const handleRecordPayment = async (generatePdf: boolean = false) => {
+    const handleRecordPayment = async () => {
         if (!selectedDoctorForStatement || !statementData) return;
 
         setSubmittingPayment(true);
@@ -133,7 +135,7 @@ export default function DoctorsPage() {
 
             if (settlement.success && settlement.settlementId) {
                 // 2. Record payment
-                const result = await window.electronAPI.payments.record({ // Using generic payment record or commission specific?
+                await window.electronAPI.payments.record({ // Using generic payment record or commission specific?
                     // Wait, commissionService has recordSettlementPayment.
                     // Let's check preload. commissions.recordPayment takes (settlementId, amount, ...)
                     // But in preload helper it is:
@@ -167,7 +169,7 @@ export default function DoctorsPage() {
             }
         } catch (e) {
             console.error('Payment error:', e);
-            alert('Failed to record payment');
+            showToast('Failed to record payment', 'error');
         }
         setSubmittingPayment(false);
     };
@@ -572,7 +574,7 @@ export default function DoctorsPage() {
                                                                             <td colSpan={4} className="empty-row">No commissions</td>
                                                                         </tr>
                                                                     ) : (
-                                                                        statementData.items.map((item, index) => (
+                                                                        statementData.items.map((item: any, index: number) => (
                                                                             <tr key={index}>
                                                                                 <td>{new Date(item.invoice_date).toLocaleDateString()}</td>
                                                                                 <td>
@@ -609,7 +611,7 @@ export default function DoctorsPage() {
                                                                             <td colSpan={3} className="empty-row">No payments</td>
                                                                         </tr>
                                                                     ) : (
-                                                                        statementData.payments.map((payment, index) => (
+                                                                        statementData.payments.map((payment: any, index: number) => (
                                                                             <tr key={index}>
                                                                                 <td>{new Date(payment.payment_date).toLocaleDateString()}</td>
                                                                                 <td>{payment.payment_mode}</td>
@@ -665,7 +667,7 @@ export default function DoctorsPage() {
                                                         No payments recorded for this period
                                                     </div>
                                                 ) : (
-                                                    statementData.payments.map((payment, index) => (
+                                                    statementData.payments.map((payment: any, index: number) => (
                                                         <div key={index} className="payment-card-item" style={{ padding: '1rem', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div>
                                                                 <div style={{ fontWeight: 'bold' }}>₹{payment.amount.toFixed(2)}</div>
@@ -713,7 +715,7 @@ export default function DoctorsPage() {
                                                             className="btn btn-primary"
                                                             style={{ textDecoration: 'none' }}
                                                         >
-                                                            {({ blob, url, loading, error }) =>
+                                                            {({ loading }) =>
                                                                 loading ? 'Generating Receipt...' : 'Download Receipt PDF'
                                                             }
                                                         </PDFDownloadLink>

@@ -47,15 +47,25 @@ export function listTests(): (TestRow & TestVersionRow)[] {
   return queryAll<TestRow & TestVersionRow>(`
     SELECT t.*, tv.id as version_id, tv.test_name, tv.department, tv.method, tv.sample_type, tv.version_no
     FROM tests t
-    LEFT JOIN test_versions tv ON t.id = tv.test_id
+    JOIN test_versions tv ON t.id = tv.test_id
     WHERE t.is_active = 1
+    AND tv.id = (
+      SELECT tv2.id FROM test_versions tv2 
+      WHERE tv2.test_id = t.id 
+      ORDER BY 
+        CASE tv2.status WHEN 'DRAFT' THEN 0 ELSE 1 END,
+        tv2.version_no DESC
+      LIMIT 1
+    )
     ORDER BY t.test_code
   `);
 }
 
-export function getTest(testId: number): TestVersionRow | undefined {
-  return queryOne<TestVersionRow>(`
-    SELECT * FROM test_versions WHERE test_id = ? ORDER BY version_no DESC LIMIT 1
+export function getTest(testId: number): (TestVersionRow & { test_code?: string }) | undefined {
+  return queryOne<TestVersionRow & { test_code?: string }>(`
+    SELECT tv.*, t.test_code FROM test_versions tv
+    JOIN tests t ON tv.test_id = t.id
+    WHERE tv.test_id = ? ORDER BY tv.version_no DESC LIMIT 1
   `, [testId]);
 }
 
@@ -133,6 +143,42 @@ export function getApplicableRange(parameterId: number, ageInDays: number, gende
     ORDER BY CASE WHEN gender = ? THEN 0 ELSE 1 END
     LIMIT 1
   `, [parameterId, ageInDays, ageInDays, gender, gender]);
+}
+
+// --- Direct Parameter Management (from TestMaster panel) ---
+
+export function addParameter(testVersionId: number, data: {
+  parameterCode: string;
+  parameterName: string;
+  dataType: string;
+  unit?: string;
+}): number {
+  const maxOrder = queryOne<{ max_o: number }>('SELECT COALESCE(MAX(display_order), 0) as max_o FROM test_parameters WHERE test_version_id = ?', [testVersionId]);
+  return runWithId(`
+    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory)
+    VALUES (?, ?, ?, ?, ?, 2, ?, 1)
+  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1]);
+}
+
+export function updateParameter(parameterId: number, data: {
+  parameterCode: string;
+  parameterName: string;
+  dataType: string;
+  unit?: string;
+}): void {
+  run(`
+    UPDATE test_parameters 
+    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?
+    WHERE id = ?
+  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, parameterId]);
+}
+
+
+export function deleteParameter(parameterId: number): void {
+  // Delete dependent reference ranges first
+  run('DELETE FROM reference_ranges WHERE parameter_id = ?', [parameterId]);
+  // Delete the parameter
+  run('DELETE FROM test_parameters WHERE id = ?', [parameterId]);
 }
 
 // --- Test Creation Wizard Methods ---

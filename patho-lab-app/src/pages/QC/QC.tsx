@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import { useToastStore } from '../../stores/toastStore';
 import './QC.css';
 
 interface QCParameter {
@@ -40,6 +41,7 @@ interface WestgardResult {
 
 export default function QCPage() {
     const { session } = useAuthStore();
+    const showToast = useToastStore(s => s.showToast);
     const [parameters, setParameters] = useState<QCParameter[]>([]);
     const [entries, setEntries] = useState<QCEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -140,7 +142,7 @@ export default function QCPage() {
                 setObservedValue('');
                 setRemarks('');
             } else {
-                alert('Failed to record: ' + result.error);
+                showToast('Failed to record: ' + result.error, 'error');
             }
         } catch (e) {
             console.error('Record error:', e);
@@ -150,7 +152,7 @@ export default function QCPage() {
 
     const handleCreateParameter = async () => {
         if (!setupForm.testId || !setupForm.parameterCode || !setupForm.targetMean || !setupForm.targetSd) {
-            alert('Please fill required fields');
+            showToast('Please fill required fields', 'warning');
             return;
         }
 
@@ -183,7 +185,7 @@ export default function QCPage() {
                 });
                 loadData();
             } else {
-                alert('Failed: ' + result.error);
+                showToast('Failed: ' + result.error, 'error');
             }
         } catch (e) {
             console.error('Create error:', e);

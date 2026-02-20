@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
-import { createRequire } from 'node:module'
+import 'dotenv/config'
+
+
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { initDatabase, closeDatabase } from './database/db'
@@ -18,9 +20,12 @@ import * as paymentService from './services/paymentService'
 import * as commissionService from './services/commissionService'
 import * as auditService from './services/auditService'
 import * as qcService from './services/qcService'
+import * as dashboardService from './services/dashboardService'
+import { getLicenseService } from './services/licenseService'
+import type { LicenseModule } from '../src/types'
 import { IPC_CHANNELS } from '../src/types'
 
-const require = createRequire(import.meta.url)
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -36,6 +41,14 @@ let win: BrowserWindow | null
 function createWindow() {
   // Initialize database (synchronous with better-sqlite3)
   initDatabase()
+
+  // Initialize license service
+  const licenseService = getLicenseService()
+  licenseService.initialize().then(status => {
+    console.log('License initialized:', status.state, status.message)
+  }).catch(err => {
+    console.error('License initialization error:', err)
+  })
 
   win = new BrowserWindow({
     width: 1400,
@@ -92,6 +105,24 @@ function registerIpcHandlers() {
     return patientService.createPatient(data)
   })
 
+  ipcMain.handle(IPC_CHANNELS.PATIENT_UPDATE, (_, id: number, data: any) => {
+    try {
+      patientService.updatePatient(id, data)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PATIENT_DELETE, (_, id: number) => {
+    try {
+      patientService.deletePatient(id)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
   // Tests
   ipcMain.handle(IPC_CHANNELS.TEST_LIST, () => {
     return testService.listTests()
@@ -103,6 +134,33 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.PARAMETER_LIST, (_, testVersionId: number) => {
     return testService.getTestParameters(testVersionId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PARAMETER_CREATE, (_, testVersionId: number, data: any) => {
+    try {
+      const id = testService.addParameter(testVersionId, data)
+      return { success: true, id }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PARAMETER_UPDATE, (_, id: number, data: any) => {
+    try {
+      testService.updateParameter(id, data)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PARAMETER_DELETE, (_, id: number) => {
+    try {
+      testService.deleteParameter(id)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
   })
 
   ipcMain.handle(IPC_CHANNELS.TEST_DELETE, (_, testId: number) => {
@@ -140,15 +198,7 @@ function registerIpcHandlers() {
 
   // We need a way to get draft details (which is essentially getTest + getParameters)
   ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFT, (_, versionId: number) => {
-    const version = testService.getTest(versionId) // This actually gets by test_id? No, getTest gets by test_id.
-    // Wait, getTest(testId) returns the latest version.
-    // We need getTestVersion(versionId).
-    // Let's check testService again.
-    // testService.getTest takes testId.
-    // We need a new service method getTestVersion(versionId).
-    // I missed adding that to testService.ts. 
-    // Actually, I can use a direct query here or better, add it to service.
-    // For now, let's implement the handler by calling a new service method I will add.
+
     return testService.getTestVersion(versionId)
   })
 
@@ -276,6 +326,11 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_UPDATE, (_, key: string, value: string) => {
     reportService.updateLabSetting(key, value)
     return { success: true }
+  })
+
+  // Dashboard
+  ipcMain.handle(IPC_CHANNELS.DASHBOARD_STATS, () => {
+    return dashboardService.getDashboardStats()
   })
 
   // Doctors
@@ -538,6 +593,56 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.AUDIT_STATS, (_, fromDate: string, toDate: string) => {
     return auditService.getActivityStats(fromDate, toDate)
+  })
+
+  // License
+  ipcMain.handle(IPC_CHANNELS.LICENSE_GET_STATUS, async () => {
+    const licenseService = getLicenseService()
+    return licenseService.getStatus()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_UPLOAD, async (_, fileContent: string) => {
+    const licenseService = getLicenseService()
+    const result = await licenseService.uploadLicense(fileContent)
+
+    // Log to audit
+    auditService.logAudit({
+      entity: 'LICENSE',
+      entityId: null,
+      action: result.success ? 'LICENSE_UPLOAD' : 'LICENSE_UPLOAD_FAILED',
+      newValue: JSON.stringify({
+        state: result.status.state,
+        labName: result.status.license?.lab_name
+      }),
+      performedBy: undefined // Should be passed from frontend
+    })
+
+    return result
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_GET_MACHINE_ID, async () => {
+    const licenseService = getLicenseService()
+    return licenseService.getMachineId()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_IS_MODULE_ENABLED, (_, module: LicenseModule) => {
+    const licenseService = getLicenseService()
+    return licenseService.isModuleEnabled(module)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_CAN_BILLING, () => {
+    const licenseService = getLicenseService()
+    return licenseService.canPerformBilling()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_CAN_FINALIZE, () => {
+    const licenseService = getLicenseService()
+    return licenseService.canFinalizeReport()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.LICENSE_IS_TRIAL, () => {
+    const licenseService = getLicenseService()
+    return licenseService.isTrial()
   })
 }
 

@@ -1,0 +1,17 @@
+{
+    "lab_name": "Test Lab Enterprise",
+    "issued_to": "Test User",
+    "machine_id_hash": null,
+    "edition": "ENTERPRISE",
+    "binding_mode": "SOFT",
+    "enabled_modules": [
+        "BILLING",
+        "QC_AUDIT",
+        "ANALYZER",
+        "INVENTORY",
+        "DOCTOR_COMMISSION"
+    ],
+    "max_users": 10,
+    "expiry_date": "2026-12-31",
+    "grace_period_days": 14
+}

@@ -1,6 +1,7 @@
-import { queryAll, queryOne, run, runWithId, getDb } from '../database/db';
+import { queryAll, queryOne, run, runWithId } from '../database/db';
 import { getTestPricesForTests } from './billingService';
 import { calculateAndRecordCommission, reverseCommission } from './commissionService';
+import { getLicenseService } from './licenseService';
 
 // Types
 interface InvoiceRow {
@@ -187,11 +188,16 @@ export function createInvoice(data: {
     discountApprovedBy?: number;
     createdBy?: number;
 }): { success: boolean; invoiceId?: number; invoiceNumber?: string; error?: string } {
+    const licenseService = getLicenseService();
+    if (!licenseService.canPerformBilling()) {
+        return { success: false, error: 'License Restriction: Billing is not allowed with current license status.' };
+    }
+
     const maxRetries = 5;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            const db = getDb();
+
 
             // Check if invoice already exists for this order
             const existing = getInvoiceByOrder(data.orderId);

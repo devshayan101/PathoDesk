@@ -15,8 +15,8 @@ export default function ResultsPage() {
         loadSamples();
     }, []);
 
-    const loadSamples = async () => {
-        setLoading(true);
+    const loadSamples = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             if (window.electronAPI) {
                 const data = await window.electronAPI.results.getPendingSamples();
@@ -25,7 +25,7 @@ export default function ResultsPage() {
         } catch (e) {
             console.error('Failed to load samples:', e);
         }
-        setLoading(false);
+        if (!silent) setLoading(false);
     };
 
     const handleSelectSample = (sampleId: number) => {
@@ -36,11 +36,11 @@ export default function ResultsPage() {
     const handleBackToBoard = () => {
         setViewMode('board');
         setSelectedSampleId(null);
-        loadSamples(); // Refresh list to update statuses
+        loadSamples(); // Full refresh when going back to board
     };
 
     const handleSampleUpdate = () => {
-        loadSamples(); // Refresh data in background or foreground
+        loadSamples(true); // Silent refresh - don't disrupt the entry form
     };
 
     return (

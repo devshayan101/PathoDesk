@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import { useToastStore } from '../../stores/toastStore';
 import ReportPreview from '../../components/Report/ReportPreview';
-import { ResultData, ResultParameter, RefRange } from './types';
+import { ResultData, ResultParameter } from './types';
 
 interface ResultEntryFormProps {
     sampleId: number;
@@ -20,6 +21,7 @@ interface QCStatus {
 
 export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: ResultEntryFormProps) {
     const { session } = useAuthStore();
+    const showToast = useToastStore(s => s.showToast);
     const [resultData, setResultData] = useState<ResultData | null>(null);
     const [values, setValues] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
@@ -29,13 +31,14 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const [showOverrideModal, setShowOverrideModal] = useState(false);
     const [overrideReason, setOverrideReason] = useState('');
 
+
     useEffect(() => {
         loadResultData();
     }, [sampleId]);
 
-    const loadResultData = async () => {
+    const loadResultData = async (silent = false) => {
         if (!sampleId) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         try {
             if (window.electronAPI) {
                 const data = await window.electronAPI.results.get(sampleId);
@@ -59,7 +62,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         } catch (e) {
             console.error('Failed to load result data:', e);
         }
-        setLoading(false);
+        if (!silent) setLoading(false);
     };
 
     const calculateAbnormalFlag = (paramCode: string, value: string): string => {
@@ -110,8 +113,9 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         }
     };
 
-    const handleSave = async () => {
-        if (!resultData || !window.electronAPI) return;
+    // Helper to save data without UI feedback (internal use)
+    const saveData = async (): Promise<boolean> => {
+        if (!resultData || !window.electronAPI) return false;
 
         const valuesToSave = resultData.parameters.map(param => ({
             parameterId: param.parameter_id,
@@ -124,16 +128,28 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                 sampleId: resultData.sample_id,
                 values: valuesToSave
             });
-
-            if (result.success) {
-                alert('Results saved as draft');
-                loadResultData(); // Reload
-                onSampleUpdate();
-            } else {
-                alert('Failed to save: ' + result.error);
-            }
+            return result.success;
         } catch (e) {
             console.error('Save error:', e);
+            return false;
+        }
+    };
+
+    const handleSave = async () => {
+        if (!resultData) return;
+
+        const success = await saveData();
+
+        if (success) {
+            if (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') {
+                showToast('Results updated successfully', 'success');
+            } else {
+                showToast('Results saved as draft', 'success');
+            }
+            await loadResultData(true); // Silent reload
+            onSampleUpdate();
+        } else {
+            showToast('Failed to save results', 'error');
         }
     };
 
@@ -141,15 +157,21 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         if (!resultData || !window.electronAPI) return;
 
         // First save the values
-        await handleSave();
+        const saved = await saveData();
+        if (!saved) {
+            showToast('Failed to save results before submitting', 'error');
+            return;
+        }
 
         // Then submit for verification
         try {
             const result = await window.electronAPI.results.submit(resultData.sample_id);
             if (result.success) {
-                alert('Results submitted for verification');
+                showToast('Results submitted for verification', 'success');
                 onSampleUpdate();
                 onClose(); // Go back to list
+            } else {
+                showToast('Failed to submit: ' + result.error, 'error');
             }
         } catch (e) {
             console.error('Submit error:', e);
@@ -159,12 +181,21 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const handleVerify = async () => {
         if (!resultData || !window.electronAPI || !session) return;
 
+        // Save changes first
+        const saved = await saveData();
+        if (!saved) {
+            showToast('Failed to save results before verification', 'error');
+            return;
+        }
+
         try {
             const result = await window.electronAPI.results.verify(resultData.sample_id, session.userId);
             if (result.success) {
-                alert('Results verified');
-                loadResultData(); // Reload
+                showToast('Results verified', 'success');
+                await loadResultData(true); // Silent reload
                 onSampleUpdate();
+            } else {
+                showToast('Failed to verify: ' + result.error, 'error');
             }
         } catch (e) {
             console.error('Verify error:', e);
@@ -185,7 +216,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         try {
             const result = await window.electronAPI.results.finalize(resultData.sample_id);
             if (result.success) {
-                alert('Results finalized');
+                showToast('Results finalized', 'success');
                 onSampleUpdate();
                 onClose();
             }
@@ -197,7 +228,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const handleOverrideFinalize = async () => {
         if (!resultData || !window.electronAPI || !session) return;
         if (overrideReason.trim().length < 10) {
-            alert('Override reason must be at least 10 characters');
+            showToast('Override reason must be at least 10 characters', 'warning');
             return;
         }
 
@@ -211,7 +242,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                     overriddenBy: session.userId
                 });
                 if (!overrideResult.success) {
-                    alert('Failed to log override: ' + overrideResult.error);
+                    showToast('Failed to log override: ' + overrideResult.error, 'error');
                     return;
                 }
             }
@@ -219,7 +250,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
             // Then finalize
             const result = await window.electronAPI.results.finalize(resultData.sample_id);
             if (result.success) {
-                alert('Results finalized with QC override');
+                showToast('Results finalized with QC override', 'success');
                 setShowOverrideModal(false);
                 setOverrideReason('');
                 onSampleUpdate();
@@ -346,10 +377,12 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         </thead>
                         <tbody>
                             {resultData.parameters.map(param => {
+                                const isAuthorized = session?.role === 'admin' || session?.role === 'pathologist';
+                                const isReadOnly = (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && !isAuthorized;
+
                                 const value = values[param.parameter_code] || '';
                                 const flag = value ? calculateAbnormalFlag(param.parameter_code, value) : '';
                                 const deltaChange = getDeltaChange(param.parameter_code, value);
-                                const isReadOnly = resultData.status === 'FINALIZED';
 
                                 return (
                                     <tr key={param.parameter_id} className={flag ? `row-${flag.toLowerCase()}` : ''}>
@@ -399,6 +432,12 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                             </>
                         ) : null}
 
+                        {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (session?.role === 'pathologist' || session?.role === 'admin') && (
+                            <button className="btn btn-secondary" onClick={handleSave}>
+                                💾 Update Results
+                            </button>
+                        )}
+
                         {resultData.status === 'SUBMITTED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
                             <button className="btn btn-primary" onClick={handleVerify}>
                                 Verify Results
@@ -439,9 +478,9 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         {qcStatus ? (
                             <>
                                 <span className={`badge ${qcStatus.status === 'PASS' ? 'badge-success' :
-                                        qcStatus.status === 'WARNING' ? 'badge-warning' :
-                                            qcStatus.status === 'NO_CONFIG' ? 'badge-info' :
-                                                'badge-error'
+                                    qcStatus.status === 'WARNING' ? 'badge-warning' :
+                                        qcStatus.status === 'NO_CONFIG' ? 'badge-info' :
+                                            'badge-error'
                                     }`}>
                                     {qcStatus.status === 'NO_CONFIG' ? 'No QC' :
                                         qcStatus.status === 'NOT_RUN' ? 'QC Not Run' :

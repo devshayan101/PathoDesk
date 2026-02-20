@@ -1,6 +1,4 @@
-.orders-page {
-    max-width: 1200px;
-}
+/* .orders-page max-width removed */
 
 .orders-table-container {
     background: var(--color-bg-secondary);

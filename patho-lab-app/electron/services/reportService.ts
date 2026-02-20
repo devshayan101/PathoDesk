@@ -1,4 +1,4 @@
-import { queryAll, queryOne } from '../database/db';
+import { queryAll, queryOne, run } from '../database/db';
 
 interface LabSetting {
     setting_key: string;
@@ -61,11 +61,9 @@ export function getLabSettings(): Record<string, string> {
 export function updateLabSetting(key: string, value: string): void {
     const existing = queryOne('SELECT 1 FROM lab_settings WHERE setting_key = ?', [key]);
     if (existing) {
-        const db = require('../database/db');
-        db.run('UPDATE lab_settings SET setting_value = ? WHERE setting_key = ?', [value, key]);
+        run('UPDATE lab_settings SET setting_value = ? WHERE setting_key = ?', [value, key]);
     } else {
-        const db = require('../database/db');
-        db.run('INSERT INTO lab_settings (setting_key, setting_value) VALUES (?, ?)', [key, value]);
+        run('INSERT INTO lab_settings (setting_key, setting_value) VALUES (?, ?)', [key, value]);
     }
 }
 

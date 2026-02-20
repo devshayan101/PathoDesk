@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useToastStore } from '../../stores/toastStore';
+
 import './Invoices.css';
 
 interface Invoice {
@@ -21,13 +22,15 @@ interface Invoice {
 }
 
 export default function Invoices() {
-    const navigate = useNavigate();
+
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('');
     const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const showToast = useToastStore(s => s.showToast);
     const [paymentData, setPaymentData] = useState({
         amount: 0,
         paymentMode: 'CASH' as 'CASH' | 'CARD' | 'UPI' | 'CREDIT',
@@ -55,6 +58,7 @@ export default function Invoices() {
         try {
             const data = await window.electronAPI.invoices.get(invoice.id);
             setSelectedInvoice(data);
+            setShowInvoiceModal(true);
         } catch (error) {
             console.error('Error loading invoice:', error);
         }
@@ -67,10 +71,22 @@ export default function Invoices() {
             await window.electronAPI.invoices.finalize(invoiceId);
             loadInvoices();
             if (selectedInvoice?.id === invoiceId) {
-                handleViewInvoice({ id: invoiceId } as Invoice);
+                const data = await window.electronAPI.invoices.get(invoiceId);
+                setSelectedInvoice(data);
             }
         } catch (error) {
             console.error('Error finalizing invoice:', error);
+        }
+    };
+
+    const handleOpenPayment = async (invoice: Invoice) => {
+        try {
+            const data = await window.electronAPI.invoices.get(invoice.id);
+            setSelectedInvoice(data);
+            setPaymentData({ ...paymentData, amount: data.balance_due });
+            setShowPaymentModal(true);
+        } catch (error) {
+            console.error('Error loading invoice for payment:', error);
         }
     };
 
@@ -86,13 +102,29 @@ export default function Invoices() {
             if (result.success) {
                 setShowPaymentModal(false);
                 setPaymentData({ amount: 0, paymentMode: 'CASH', referenceNumber: '', remarks: '' });
-                handleViewInvoice({ id: selectedInvoice.id } as Invoice);
+                // Refresh the modal data if it's open
+                if (showInvoiceModal) {
+                    const data = await window.electronAPI.invoices.get(selectedInvoice.id);
+                    setSelectedInvoice(data);
+                }
                 loadInvoices();
             } else {
-                alert(result.error || 'Failed to record payment');
+                showToast(result.error || 'Failed to record payment', 'error');
             }
         } catch (error) {
             console.error('Error recording payment:', error);
+        }
+    };
+
+    const handlePrintInvoice = async (invoice: Invoice) => {
+        try {
+            const data = await window.electronAPI.invoices.get(invoice.id);
+            setSelectedInvoice(data);
+            setShowInvoiceModal(true);
+            // Delay to allow modal to render, then trigger print
+            setTimeout(() => window.print(), 300);
+        } catch (error) {
+            console.error('Error loading invoice for print:', error);
         }
     };
 
@@ -155,102 +187,114 @@ export default function Invoices() {
                 </div>
             </div>
 
-            <div className="invoices-layout">
-                {/* Invoice List */}
-                <div className="invoices-list-panel" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    {loading ? (
-                        <div className="loading">Loading...</div>
-                    ) : filteredInvoices.length === 0 ? (
-                        <div className="empty-state">No invoices found</div>
-                    ) : (
-                        <div className="table-container" style={{ overflowY: 'auto', flex: 1 }}>
-                            <table className="table">
-                                <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--color-bg-tertiary)' }}>
-                                    <tr>
-                                        <th>Invoice #</th>
-                                        <th>Patient</th>
-                                        <th>Date</th>
-                                        <th style={{ textAlign: 'right' }}>Amount</th>
-                                        <th>Status</th>
-                                        <th style={{ textAlign: 'right' }}>Balance</th>
+            {/* Full-width Invoice List */}
+            <div className="invoices-list-full" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                {loading ? (
+                    <div className="loading">Loading...</div>
+                ) : filteredInvoices.length === 0 ? (
+                    <div className="empty-state">No invoices found</div>
+                ) : (
+                    <div className="table-container-invoice" style={{ overflowY: 'auto', flex: 1 }}>
+                        <table className="table">
+                            <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--color-bg-tertiary)' }}>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Patient</th>
+                                    <th>Date</th>
+                                    <th style={{ textAlign: 'right' }}>Amount</th>
+                                    <th>Status</th>
+                                    <th style={{ textAlign: 'right' }}>Balance</th>
+                                    <th style={{ textAlign: 'center' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredInvoices.map(invoice => (
+                                    <tr key={invoice.id}>
+                                        <td style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{invoice.invoice_number}</td>
+                                        <td style={{ cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>
+                                            <div style={{ fontWeight: 500 }}>{invoice.patient_name}</div>
+                                            <small className="text-muted">{invoice.patient_uid}</small>
+                                        </td>
+                                        <td style={{ cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{formatDate(invoice.created_at)}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 600, cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{formatCurrency(invoice.total_amount)}</td>
+                                        <td style={{ cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{getStatusBadge(invoice.status)}</td>
+                                        <td style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>
+                                            {invoice.status === 'FINALIZED'
+                                                ? (invoice.balance_due > 0 ? (
+                                                    <span style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{formatCurrency(invoice.balance_due)}</span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--color-success)' }}>Paid</span>
+                                                ))
+                                                : '-'
+                                            }
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className="modal-actions-bar" style={{ justifyContent: 'center' }}>
+                                                <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleViewInvoice(invoice)} title="View Invoice">
+                                                    👁️
+                                                </button>
+                                                <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handlePrintInvoice(invoice)} title="Print Invoice">
+                                                    🖨️
+                                                </button>
+                                                {invoice.status === 'FINALIZED' && invoice.balance_due > 0 && (
+                                                    <button className="btn btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleOpenPayment(invoice)} title="Receive Payment">
+                                                        💳
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredInvoices.map(invoice => (
-                                        <tr
-                                            key={invoice.id}
-                                            className={selectedInvoice?.id === invoice.id ? 'selected' : ''}
-                                            onClick={() => handleViewInvoice(invoice)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                background: selectedInvoice?.id === invoice.id ? 'var(--color-bg-tertiary)' : 'transparent',
-                                                borderLeft: selectedInvoice?.id === invoice.id ? '3px solid var(--color-accent)' : '3px solid transparent'
-                                            }}
-                                        >
-                                            <td style={{ fontWeight: 600 }}>{invoice.invoice_number}</td>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>{invoice.patient_name}</div>
-                                                <small className="text-muted">{invoice.patient_uid}</small>
-                                            </td>
-                                            <td>{formatDate(invoice.created_at)}</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(invoice.total_amount)}</td>
-                                            <td>{getStatusBadge(invoice.status)}</td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                {invoice.status === 'FINALIZED'
-                                                    ? (invoice.balance_due > 0 ? (
-                                                        <span style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{formatCurrency(invoice.balance_due)}</span>
-                                                    ) : (
-                                                        <span style={{ color: 'var(--color-success)' }}>Paid</span>
-                                                    ))
-                                                    : '-'
-                                                }
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
 
-                {/* Invoice Detail */}
-                <div className="invoice-detail-panel" style={{ overflowY: 'auto', padding: '1rem' }}>
-                    {selectedInvoice ? (
-                        <div className="invoice-paper" style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-lg)', color: 'black' }}>
-                            <div className="detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
-                                <div>
-                                    <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#333' }}>INVOICE</h2>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '0.5rem 0' }}>{selectedInvoice.invoice_number}</div>
-                                    {getStatusBadge(selectedInvoice.status)}
-                                </div>
-                                <div className="detail-actions print-hidden" style={{ display: 'flex', gap: '0.5rem' }}>
-                                    {selectedInvoice.status === 'DRAFT' && (
-                                        <button
-                                            className="btn btn-success"
-                                            onClick={() => handleFinalizeInvoice(selectedInvoice.id)}
-                                        >
-                                            ✓ Finalize
-                                        </button>
-                                    )}
-                                    {selectedInvoice.status === 'FINALIZED' && selectedInvoice.balance_due > 0 && (
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={() => {
-                                                setPaymentData({ ...paymentData, amount: selectedInvoice.balance_due });
-                                                setShowPaymentModal(true);
-                                            }}
-                                        >
-                                            💳 Record Payment
-                                        </button>
-                                    )}
-                                    <button className="btn btn-secondary" onClick={() => window.print()}>
-                                        🖨️ Print
-                                    </button>
-                                </div>
+            {/* Invoice Detail Modal (Fullscreen, Resizable) */}
+            {showInvoiceModal && selectedInvoice && (
+                <div className="modal-overlay" onClick={() => setShowInvoiceModal(false)}>
+                    <div className="modal modal-fullscreen" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <h2>INVOICE — {selectedInvoice.invoice_number}</h2>
+                                {getStatusBadge(selectedInvoice.status)}
                             </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {selectedInvoice.status === 'DRAFT' && (
+                                    <button className="btn btn-success" onClick={() => handleFinalizeInvoice(selectedInvoice.id)}>
+                                        ✓ Finalize
+                                    </button>
+                                )}
+                                {selectedInvoice.status === 'FINALIZED' && selectedInvoice.balance_due > 0 && (
+                                    <button className="btn btn-primary" onClick={() => {
+                                        setPaymentData({ ...paymentData, amount: selectedInvoice.balance_due });
+                                        setShowPaymentModal(true);
+                                    }}>
+                                        💳 Receive Payment
+                                    </button>
+                                )}
+                                <button className="btn btn-secondary" onClick={() => window.print()}>
+                                    🖨️ Print Invoice
+                                </button>
+                                <button className="modal-close-btn" onClick={() => setShowInvoiceModal(false)}>×</button>
+                            </div>
+                        </div>
 
-                            <div className="detail-body">
-                                <div className="info-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+                        <div className="modal-body">
+                            <div className="invoice-paper" style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-lg)', color: 'black', maxWidth: '800px', margin: '0 auto' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#333' }}>INVOICE</h2>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '0.5rem 0' }}>{selectedInvoice.invoice_number}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div><label style={{ color: '#666', marginRight: '0.5rem' }}>Date:</label><span style={{ fontWeight: 600 }}>{formatDate(selectedInvoice.created_at)}</span></div>
+                                        <div><label style={{ color: '#666', marginRight: '0.5rem' }}>Price List:</label><span>{selectedInvoice.price_list_name || 'Standard'}</span></div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: '#666', marginBottom: '0.25rem' }}>Bill To:</label>
                                         <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{selectedInvoice.patient_name}</div>
@@ -259,20 +303,10 @@ export default function Invoices() {
                                             <div style={{ marginTop: '0.5rem', color: '#555' }}>Ref: {selectedInvoice.doctor_name}</div>
                                         )}
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div className="info-row">
-                                            <label style={{ color: '#666', marginRight: '1rem' }}>Date:</label>
-                                            <span style={{ fontWeight: 600 }}>{formatDate(selectedInvoice.created_at)}</span>
-                                        </div>
-                                        <div className="info-row">
-                                            <label style={{ color: '#666', marginRight: '1rem' }}>Price List:</label>
-                                            <span>{selectedInvoice.price_list_name || 'Standard'}</span>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <h4 style={{ borderBottom: '1px solid #000', paddingBottom: '0.5rem', marginBottom: '0.5rem', textTransform: 'uppercase', fontSize: '0.85rem' }}>Test Details</h4>
-                                <table className="items-table" style={{ width: '100%', marginBottom: '2rem', borderCollapse: 'collapse' }}>
+                                <table style={{ width: '100%', marginBottom: '2rem', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ background: '#f9f9f9' }}>
                                             <th style={{ textAlign: 'left', padding: '0.5rem' }}>Description</th>
@@ -293,7 +327,7 @@ export default function Invoices() {
                                     </tbody>
                                 </table>
 
-                                <div className="totals-section" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                     <div style={{ width: '250px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
                                             <span>Subtotal</span>
@@ -319,60 +353,55 @@ export default function Invoices() {
                                 </div>
 
                                 {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
-                                    <div className="payments-section">
-                                        <h4>Payments</h4>
-                                        <table className="payments-table">
+                                    <div style={{ marginTop: '2rem' }}>
+                                        <h4 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem' }}>Payments</h4>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
                                             <thead>
-                                                <tr>
-                                                    <th>Date</th>
-                                                    <th>Mode</th>
-                                                    <th>Reference</th>
-                                                    <th>Amount</th>
+                                                <tr style={{ background: '#f9f9f9' }}>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Date</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Mode</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem' }}>Reference</th>
+                                                    <th style={{ textAlign: 'right', padding: '0.5rem' }}>Amount</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {selectedInvoice.payments.map((payment: any) => (
-                                                    <tr key={payment.id}>
-                                                        <td>{formatDate(payment.payment_date)}</td>
-                                                        <td>{payment.payment_mode}</td>
-                                                        <td>{payment.reference_number || '-'}</td>
-                                                        <td className="amount">{formatCurrency(payment.amount)}</td>
+                                                    <tr key={payment.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                        <td style={{ padding: '0.5rem' }}>{formatDate(payment.payment_date)}</td>
+                                                        <td style={{ padding: '0.5rem' }}>{payment.payment_mode}</td>
+                                                        <td style={{ padding: '0.5rem' }}>{payment.reference_number || '-'}</td>
+                                                        <td style={{ textAlign: 'right', padding: '0.5rem', fontWeight: 600 }}>{formatCurrency(payment.amount)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
-
-                                        <div className="balance-summary">
-                                            <div className="balance-row">
-                                                <span>Total Paid</span>
-                                                <span className="paid">{formatCurrency(selectedInvoice.amount_paid)}</span>
-                                            </div>
-                                            <div className="balance-row">
-                                                <span>Balance Due</span>
-                                                <span className={selectedInvoice.balance_due > 0 ? 'due' : 'paid'}>
-                                                    {formatCurrency(selectedInvoice.balance_due)}
-                                                </span>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <div style={{ width: '250px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
+                                                    <span>Total Paid</span>
+                                                    <span style={{ color: 'green', fontWeight: 600 }}>{formatCurrency(selectedInvoice.amount_paid)}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontWeight: 600 }}>
+                                                    <span>Balance Due</span>
+                                                    <span style={{ color: selectedInvoice.balance_due > 0 ? 'red' : 'green' }}>{formatCurrency(selectedInvoice.balance_due)}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    ) : (
-                        <div className="no-selection">
-                            Select an invoice to view details
-                        </div>
-                    )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Payment Modal */}
             {showPaymentModal && selectedInvoice && (
                 <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>Record Payment</h3>
-                            <button className="close-btn" onClick={() => setShowPaymentModal(false)}>×</button>
+                            <button className="modal-close-btn" onClick={() => setShowPaymentModal(false)}>×</button>
                         </div>
                         <div className="modal-body">
                             <div className="payment-info">

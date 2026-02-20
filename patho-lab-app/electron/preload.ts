@@ -23,6 +23,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.PATIENT_SEARCH, query),
     create: (data: any) =>
       ipcRenderer.invoke(IPC_CHANNELS.PATIENT_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PATIENT_UPDATE, id, data),
+    delete: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PATIENT_DELETE, id),
   },
 
   // Tests
@@ -33,6 +37,12 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_GET, testId),
     getParameters: (testVersionId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_LIST, testVersionId),
+    addParameter: (testVersionId: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_CREATE, testVersionId, data),
+    updateParameter: (parameterId: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_UPDATE, parameterId, data),
+    deleteParameter: (parameterId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_DELETE, parameterId),
     delete: (testId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.TEST_DELETE, testId),
   },
@@ -131,6 +141,12 @@ const api = {
   reports: {
     getData: (sampleId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_DATA, sampleId),
+  },
+
+  // Dashboard
+  dashboard: {
+    getStats: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS),
   },
 
   // Lab Settings
@@ -287,6 +303,17 @@ const api = {
     getStats: (fromDate: string, toDate: string) => ipcRenderer.invoke(IPC_CHANNELS.AUDIT_STATS, fromDate, toDate),
   },
 
+  // License
+  license: {
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_GET_STATUS),
+    upload: (fileContent: string) => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_UPLOAD, fileContent),
+    getMachineId: () => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_GET_MACHINE_ID),
+    isModuleEnabled: (module: string) => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_IS_MODULE_ENABLED, module),
+    canBilling: () => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_CAN_BILLING),
+    canFinalize: () => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_CAN_FINALIZE),
+    isTrial: () => ipcRenderer.invoke(IPC_CHANNELS.LICENSE_IS_TRIAL),
+  },
+
   // Alias for billing (for backward compatibility and clearer naming)
   get billing() {
     return this.priceLists
@@ -297,9 +324,5 @@ const api = {
 contextBridge.exposeInMainWorld('electronAPI', api)
 
 // Type declaration for renderer
-declare global {
-  interface Window {
-    electronAPI: typeof api
-  }
-}
+
 

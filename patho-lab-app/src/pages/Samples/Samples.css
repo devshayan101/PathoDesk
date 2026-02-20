@@ -1,6 +1,4 @@
-.samples-page {
-    max-width: 1200px;
-}
+/* .samples-page max-width removed */
 
 .samples-table-container {
     background: var(--color-bg-secondary);

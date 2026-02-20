@@ -66,3 +66,12 @@ export function updatePatient(id: number, data: {
         run(`UPDATE patients SET ${sets.join(', ')} WHERE id = ?`, params);
     }
 }
+
+export function deletePatient(id: number): void {
+    // Check if patient has orders
+    const hasOrders = queryOne<{ cnt: number }>('SELECT COUNT(*) as cnt FROM orders WHERE patient_id = ?', [id]);
+    if (hasOrders && hasOrders.cnt > 0) {
+        throw new Error('Cannot delete patient with existing orders. Consider updating their details instead.');
+    }
+    run('DELETE FROM patients WHERE id = ?', [id]);
+}

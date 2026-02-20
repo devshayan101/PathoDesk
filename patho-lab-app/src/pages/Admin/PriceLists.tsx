@@ -140,13 +140,7 @@ export default function PriceLists() {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 0
-        }).format(amount);
-    };
+
 
     if (loading) {
         return <div className="price-lists-page"><div className="loading">Loading...</div></div>;

@@ -1,5 +1,6 @@
 .patients-page {
-    max-width: 1200px;
+    /* max-width removed for full width */
+    height: 100%;
 }
 
 .page-header {
