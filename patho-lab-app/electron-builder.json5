@@ -12,10 +12,15 @@
     "dist",
     "dist-electron"
   ],
+  "directories": {
+    "output": "release/${version}",
+    "buildResources": "build"
+  },
   "mac": {
     "target": [
       "dmg"
     ],
+    "icon": "build/icons/icon.icns",
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
@@ -27,6 +32,7 @@
         ]
       }
     ],
+    "icon": "build/icons/icon.ico",
     "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
   },
   "nsis": {
@@ -39,6 +45,7 @@
     "target": [
       "AppImage"
     ],
+    "icon": "build/icons/png",
     "artifactName": "${productName}-Linux-${version}.${ext}"
   }
 }

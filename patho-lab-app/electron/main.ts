@@ -40,7 +40,11 @@ let win: BrowserWindow | null
 
 function createWindow() {
   // Initialize database (synchronous with better-sqlite3)
-  initDatabase()
+  try {
+    initDatabase()
+  } catch (err) {
+    console.error('Database initialization failed:', err)
+  }
 
   // Initialize license service
   const licenseService = getLicenseService()
@@ -55,13 +59,14 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
-    icon: path.join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC || '', 'icon.png'),
     backgroundColor: '#0a0f1a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
+    title: 'PathoDesk',
   })
 
   if (VITE_DEV_SERVER_URL) {
