@@ -6,8 +6,11 @@ interface DashboardStats {
     pendingResults: number;
     criticalAlerts: number;
     todayRevenue: number;
+    todayPending: number;
     monthlyRevenue: number;
+    monthlyPending: number;
     yearlyRevenue: number;
+    yearlyPending: number;
     monthlyOrders: number;
     monthlyPatients: number;
     pendingSamples: any[];
@@ -56,20 +59,56 @@ export function getDashboardStats(): DashboardStats {
         // test_results table may not have any rows yet
     }
 
-    // Monthly revenue
+    // Monthly revenue (total_amount - commission)
     const monthlyRevenueData = queryOne<{ total: number | null }>(
-        `SELECT COALESCE(SUM(total_amount), 0) as total 
-         FROM invoices 
-         WHERE date(created_at) >= date(?) 
-         AND status != 'CANCELLED'`, [monthStart]
+        `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+            SELECT SUM(dc.commission_amount) FROM doctor_commissions dc
+            WHERE dc.invoice_id IN (
+                SELECT id FROM invoices WHERE date(created_at) >= date(?) AND status != 'CANCELLED'
+            ) AND dc.is_cancelled = 0
+        ), 0) as total
+         FROM invoices i
+         WHERE date(i.created_at) >= date(?)
+         AND i.status != 'CANCELLED'`, [monthStart, monthStart]
     );
 
-    // Yearly revenue
+    // Monthly pending (total_amount - paid_amount)
+    const monthlyPendingData = queryOne<{ total: number | null }>(
+        `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+            SELECT SUM(pay.amount) FROM payments pay
+            WHERE pay.invoice_id IN (
+                SELECT id FROM invoices WHERE date(created_at) >= date(?) AND status != 'CANCELLED'
+            )
+        ), 0) as total
+         FROM invoices i
+         WHERE date(i.created_at) >= date(?)
+         AND i.status != 'CANCELLED'`, [monthStart, monthStart]
+    );
+
+    // Yearly revenue (total_amount - commission)
     const yearlyRevenueData = queryOne<{ total: number | null }>(
-        `SELECT COALESCE(SUM(total_amount), 0) as total 
-         FROM invoices 
-         WHERE date(created_at) >= date(?) 
-         AND status != 'CANCELLED'`, [yearStart]
+        `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+            SELECT SUM(dc.commission_amount) FROM doctor_commissions dc
+            WHERE dc.invoice_id IN (
+                SELECT id FROM invoices WHERE date(created_at) >= date(?) AND status != 'CANCELLED'
+            ) AND dc.is_cancelled = 0
+        ), 0) as total
+         FROM invoices i
+         WHERE date(i.created_at) >= date(?)
+         AND i.status != 'CANCELLED'`, [yearStart, yearStart]
+    );
+
+    // Yearly pending (total_amount - paid_amount)
+    const yearlyPendingData = queryOne<{ total: number | null }>(
+        `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+            SELECT SUM(pay.amount) FROM payments pay
+            WHERE pay.invoice_id IN (
+                SELECT id FROM invoices WHERE date(created_at) >= date(?) AND status != 'CANCELLED'
+            )
+        ), 0) as total
+         FROM invoices i
+         WHERE date(i.created_at) >= date(?)
+         AND i.status != 'CANCELLED'`, [yearStart, yearStart]
     );
 
     // Monthly orders
@@ -137,16 +176,36 @@ export function getDashboardStats(): DashboardStats {
          LIMIT 10`
     );
 
-    // Safe revenue query (today) - fixed from net_amount to total_amount
+    // Safe revenue query (today) - revenue = total_amount - commission
     let todayRevenue = 0;
+    let todayPending = 0;
     try {
         const todayRevenueData = queryOne<{ total: number | null }>(
-            `SELECT COALESCE(SUM(total_amount), 0) as total 
-             FROM invoices 
-             WHERE date(created_at) = date(?) 
-             AND status != 'CANCELLED'`, [today]
+            `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+                SELECT SUM(dc.commission_amount) FROM doctor_commissions dc
+                WHERE dc.invoice_id IN (
+                    SELECT id FROM invoices WHERE date(created_at) = date(?) AND status != 'CANCELLED'
+                ) AND dc.is_cancelled = 0
+            ), 0) as total
+             FROM invoices i
+             WHERE date(i.created_at) = date(?)
+             AND i.status != 'CANCELLED'`, [today, today]
         );
         todayRevenue = todayRevenueData?.total || 0;
+
+        // Today pending (total_amount - paid_amount)
+        const todayPendingData = queryOne<{ total: number | null }>(
+            `SELECT COALESCE(SUM(i.total_amount), 0) - COALESCE((
+                SELECT SUM(pay.amount) FROM payments pay
+                WHERE pay.invoice_id IN (
+                    SELECT id FROM invoices WHERE date(created_at) = date(?) AND status != 'CANCELLED'
+                )
+            ), 0) as total
+             FROM invoices i
+             WHERE date(i.created_at) = date(?)
+             AND i.status != 'CANCELLED'`, [today, today]
+        );
+        todayPending = todayPendingData?.total || 0;
     } catch {
         // invoices table might not exist yet
     }
@@ -157,8 +216,11 @@ export function getDashboardStats(): DashboardStats {
         pendingResults: pendingCount?.count || 0,
         criticalAlerts,
         todayRevenue,
+        todayPending,
         monthlyRevenue: monthlyRevenueData?.total || 0,
+        monthlyPending: monthlyPendingData?.total || 0,
         yearlyRevenue: yearlyRevenueData?.total || 0,
+        yearlyPending: yearlyPendingData?.total || 0,
         monthlyOrders: monthlyOrderCount?.count || 0,
         monthlyPatients: monthlyPatientCount?.count || 0,
         pendingSamples,

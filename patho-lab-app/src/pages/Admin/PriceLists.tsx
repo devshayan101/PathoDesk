@@ -209,15 +209,24 @@ export default function PriceLists() {
                                     <h3 style={{ margin: 0 }}>{selectedList.name}</h3>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{selectedList.code}</span>
                                 </div>
-                                {editingPrices.size > 0 && (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    {editingPrices.size > 0 && (
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleSavePrices}
+                                            disabled={saving}
+                                        >
+                                            {saving ? 'Saving...' : `Save ${editingPrices.size} Changes`}
+                                        </button>
+                                    )}
                                     <button
-                                        className="btn btn-primary"
-                                        onClick={handleSavePrices}
-                                        disabled={saving}
+                                        className="btn btn-secondary"
+                                        onClick={() => window.print()}
+                                        title="Print price list"
                                     >
-                                        {saving ? 'Saving...' : `Save ${editingPrices.size} Changes`}
+                                        🖨️ Print
                                     </button>
-                                )}
+                                </div>
                             </div>
 
                             {pricesLoading ? (
@@ -252,6 +261,7 @@ export default function PriceLists() {
                                                                 background: editingPrices.has(price.test_id) ? 'var(--color-bg-tertiary)' : 'transparent'
                                                             }}
                                                         />
+                                                        <span className="print-price">₹{(editingPrices.get(price.test_id) ?? price.base_price).toLocaleString('en-IN')}</span>
                                                     </td>
                                                     <td style={{ padding: '0.75rem 1rem' }}>
                                                         {price.gst_applicable === 1 ? <span className="badge badge-info">{price.gst_rate}%</span> : <span className="text-muted">Exempt</span>}

@@ -315,7 +315,8 @@ export function createInvoice(data: {
                 const commissionResult = calculateAndRecordCommission(
                     invoiceId,
                     order.referring_doctor_id,
-                    data.patientId
+                    data.patientId,
+                    discountAmount
                 );
                 if (!commissionResult.success) {
                     console.warn('Commission calculation failed:', commissionResult.error);

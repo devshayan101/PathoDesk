@@ -351,3 +351,123 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Print Styles */
+@media print {
+
+    /* Hide everything except the price list content */
+    body * {
+        visibility: hidden;
+    }
+
+    .price-lists-page,
+    .price-lists-page .prices-panel,
+    .price-lists-page .prices-panel *,
+    .price-lists-page .print-header,
+    .price-lists-page .print-header * {
+        visibility: visible;
+    }
+
+    .price-lists-page {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        height: auto;
+    }
+
+    /* Hide sidebar, nav, buttons, form inputs */
+    .price-lists-page .page-header,
+    .price-lists-page .lists-panel,
+    .price-lists-page .prices-header .btn,
+    .price-lists-page .price-input,
+    nav,
+    aside,
+    header,
+    .sidebar,
+    .layout-sidebar,
+    .modal-overlay {
+        display: none !important;
+    }
+
+    .price-lists-page .price-lists-layout {
+        display: block !important;
+        height: auto !important;
+    }
+
+    .price-lists-page .prices-panel {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none !important;
+        background: white !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .price-lists-page .prices-header {
+        border-bottom: 2px solid #333 !important;
+        padding-bottom: 0.5rem !important;
+        background: white !important;
+    }
+
+    .price-lists-page .prices-header h3 {
+        color: #000 !important;
+        font-size: 1.3rem !important;
+    }
+
+    .price-lists-page .prices-header span {
+        color: #666 !important;
+    }
+
+    .price-lists-page .print-header {
+        display: block !important;
+    }
+
+    .price-lists-page .prices-table-container {
+        overflow: visible !important;
+    }
+
+    .price-lists-page .prices-table {
+        width: 100% !important;
+    }
+
+    .price-lists-page .prices-table th {
+        background: #eee !important;
+        color: #000 !important;
+        position: static !important;
+    }
+
+    .price-lists-page .prices-table td {
+        color: #000 !important;
+    }
+
+    .price-lists-page .prices-table td.code {
+        color: #333 !important;
+    }
+
+    .price-lists-page .prices-table tr {
+        border-bottom: 1px solid #ccc !important;
+    }
+
+    /* Show the base price as text instead of input */
+    .price-lists-page .prices-table td .price-input {
+        display: none !important;
+    }
+
+    .price-lists-page .prices-table td .print-price {
+        display: inline !important;
+    }
+}
+
+/* Hide print-only elements on screen */
+.print-header {
+    display: none;
+}
+
+.print-price {
+    display: none;
+}

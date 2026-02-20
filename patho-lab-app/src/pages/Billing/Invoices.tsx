@@ -3,6 +3,15 @@ import { useToastStore } from '../../stores/toastStore';
 
 import './Invoices.css';
 
+interface LabSettings {
+    lab_name?: string;
+    address_line1?: string;
+    address_line2?: string;
+    phone?: string;
+    email?: string;
+    nabl_accreditation?: string;
+}
+
 interface Invoice {
     id: number;
     invoice_number: string;
@@ -30,6 +39,7 @@ export default function Invoices() {
     const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [labSettings, setLabSettings] = useState<LabSettings>({});
     const showToast = useToastStore(s => s.showToast);
     const [paymentData, setPaymentData] = useState({
         amount: 0,
@@ -40,7 +50,27 @@ export default function Invoices() {
 
     useEffect(() => {
         loadInvoices();
+        loadLabSettings();
     }, [statusFilter]);
+
+    const loadLabSettings = async () => {
+        try {
+            if (window.electronAPI) {
+                const settings = await window.electronAPI.labSettings.get();
+                if (settings) {
+                    const map: LabSettings = {};
+                    if (Array.isArray(settings)) {
+                        settings.forEach((s: any) => { (map as any)[s.key] = s.value; });
+                    } else {
+                        Object.assign(map, settings);
+                    }
+                    setLabSettings(map);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load lab settings:', e);
+        }
+    };
 
     const loadInvoices = async () => {
         setLoading(true);
@@ -283,6 +313,29 @@ export default function Invoices() {
 
                         <div className="modal-body">
                             <div className="invoice-paper" style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-lg)', color: 'black', maxWidth: '800px', margin: '0 auto' }}>
+                                {/* Lab Header */}
+                                <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #0066cc', paddingBottom: '0.75rem' }}>
+                                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#0066cc', marginBottom: '0.25rem' }}>
+                                        {labSettings.lab_name || 'Pathology Laboratory'}
+                                    </div>
+                                    {labSettings.address_line1 && (
+                                        <div style={{ fontSize: '0.85rem', color: '#666' }}>{labSettings.address_line1}</div>
+                                    )}
+                                    {labSettings.address_line2 && (
+                                        <div style={{ fontSize: '0.85rem', color: '#666' }}>{labSettings.address_line2}</div>
+                                    )}
+                                    {(labSettings.phone || labSettings.email) && (
+                                        <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                            {labSettings.phone && `Phone: ${labSettings.phone}`}
+                                            {labSettings.phone && labSettings.email && '  |  '}
+                                            {labSettings.email && `Email: ${labSettings.email}`}
+                                        </div>
+                                    )}
+                                    {labSettings.nabl_accreditation && (
+                                        <div style={{ fontSize: '0.8rem', color: '#666' }}>NABL: {labSettings.nabl_accreditation}</div>
+                                    )}
+                                </div>
+
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid #eee', paddingBottom: '1rem' }}>
                                     <div>
                                         <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#333' }}>INVOICE</h2>
@@ -290,7 +343,6 @@ export default function Invoices() {
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <div><label style={{ color: '#666', marginRight: '0.5rem' }}>Date:</label><span style={{ fontWeight: 600 }}>{formatDate(selectedInvoice.created_at)}</span></div>
-                                        <div><label style={{ color: '#666', marginRight: '0.5rem' }}>Price List:</label><span>{selectedInvoice.price_list_name || 'Standard'}</span></div>
                                     </div>
                                 </div>
 

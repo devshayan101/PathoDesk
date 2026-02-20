@@ -75,6 +75,13 @@ export default function OrdersPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    // Search state for dropdowns
+    const [patientSearch, setPatientSearch] = useState('');
+    const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+    const [doctorSearch, setDoctorSearch] = useState('');
+    const [doctorDropdownOpen, setDoctorDropdownOpen] = useState(false);
+    const [testSearch, setTestSearch] = useState('');
+
     useEffect(() => {
         loadData();
     }, []);
@@ -233,6 +240,11 @@ export default function OrdersPage() {
         setDiscountPercent('');
         setDiscountReason('');
         setTestPrices(new Map());
+        setPatientSearch('');
+        setDoctorSearch('');
+        setTestSearch('');
+        setPatientDropdownOpen(false);
+        setDoctorDropdownOpen(false);
     };
 
     // Calculate totals
@@ -245,6 +257,20 @@ export default function OrdersPage() {
     const discountPct = parseFloat(discountPercent) || 0;
     const discountAmount = (subtotal * discountPct) / 100;
     const finalTotal = subtotal - discountAmount;
+
+    // Filtered lists for searchable dropdowns
+    const filteredPatients = patients.filter(p =>
+        p.full_name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+        p.patient_uid.toLowerCase().includes(patientSearch.toLowerCase())
+    );
+    const filteredDoctors = doctors.filter(d =>
+        d.name.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+        d.doctor_code.toLowerCase().includes(doctorSearch.toLowerCase())
+    );
+    const filteredTests = tests.filter(t =>
+        t.test_name.toLowerCase().includes(testSearch.toLowerCase()) ||
+        t.test_code.toLowerCase().includes(testSearch.toLowerCase())
+    );
 
     return (
         <div className="orders-page" style={{ padding: '1.5rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -268,37 +294,111 @@ export default function OrdersPage() {
                             <div className="form-column">
                                 <div className="section-title" style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Patient Details</div>
                                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                                    <div className="form-group">
+                                    <div className="form-group" style={{ position: 'relative' }}>
                                         <label>Select Patient *</label>
-                                        <select
+                                        <input
                                             className="input"
-                                            value={selectedPatientId}
-                                            onChange={(e) => setSelectedPatientId(Number(e.target.value))}
+                                            type="text"
+                                            value={patientSearch}
+                                            onChange={(e) => {
+                                                setPatientSearch(e.target.value);
+                                                setPatientDropdownOpen(true);
+                                                if (!e.target.value) setSelectedPatientId('');
+                                            }}
+                                            onFocus={() => setPatientDropdownOpen(true)}
+                                            placeholder="Search patient name or ID..."
                                             style={{ width: '100%' }}
-                                        >
-                                            <option value="">-- Select Patient --</option>
-                                            {patients.map(p => (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.full_name} ({p.patient_uid})
-                                                </option>
-                                            ))}
-                                        </select>
+                                            autoComplete="off"
+                                        />
+                                        {patientDropdownOpen && filteredPatients.length > 0 && (
+                                            <div style={{
+                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                                                background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+                                                borderRadius: '0 0 var(--radius-md) var(--radius-md)',
+                                                maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                            }}>
+                                                {filteredPatients.map(p => (
+                                                    <div key={p.id}
+                                                        onClick={() => {
+                                                            setSelectedPatientId(p.id);
+                                                            setPatientSearch(`${p.full_name} (${p.patient_uid})`);
+                                                            setPatientDropdownOpen(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '0.5rem 0.75rem', cursor: 'pointer',
+                                                            background: selectedPatientId === p.id ? 'var(--color-accent)' : 'transparent',
+                                                            color: selectedPatientId === p.id ? 'white' : 'var(--color-text-primary)'
+                                                        }}
+                                                        onMouseEnter={(e) => { if (selectedPatientId !== p.id) (e.target as HTMLElement).style.background = 'var(--color-bg-tertiary)'; }}
+                                                        onMouseLeave={(e) => { if (selectedPatientId !== p.id) (e.target as HTMLElement).style.background = 'transparent'; }}
+                                                    >
+                                                        <div style={{ fontWeight: 500 }}>{p.full_name}</div>
+                                                        <small style={{ opacity: 0.7 }}>{p.patient_uid}</small>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="form-group">
+                                    <div className="form-group" style={{ position: 'relative' }}>
                                         <label>Referring Doctor</label>
-                                        <select
+                                        <input
                                             className="input"
-                                            value={selectedDoctorId}
-                                            onChange={(e) => handleDoctorChange(e.target.value ? Number(e.target.value) : '')}
+                                            type="text"
+                                            value={doctorSearch}
+                                            onChange={(e) => {
+                                                setDoctorSearch(e.target.value);
+                                                setDoctorDropdownOpen(true);
+                                                if (!e.target.value) {
+                                                    handleDoctorChange('');
+                                                }
+                                            }}
+                                            onFocus={() => setDoctorDropdownOpen(true)}
+                                            placeholder="Search doctor name or code..."
                                             style={{ width: '100%' }}
-                                        >
-                                            <option value="">-- Walk-in / Self --</option>
-                                            {doctors.map(d => (
-                                                <option key={d.id} value={d.id}>
-                                                    {d.name} ({d.doctor_code}){d.price_list_id ? ' ★' : ''}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            autoComplete="off"
+                                        />
+                                        {doctorDropdownOpen && (
+                                            <div style={{
+                                                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                                                background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+                                                borderRadius: '0 0 var(--radius-md) var(--radius-md)',
+                                                maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                            }}>
+                                                <div
+                                                    onClick={() => {
+                                                        handleDoctorChange('');
+                                                        setDoctorSearch('');
+                                                        setDoctorDropdownOpen(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.5rem 0.75rem', cursor: 'pointer', fontStyle: 'italic',
+                                                        color: 'var(--color-text-muted)'
+                                                    }}
+                                                    onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'var(--color-bg-tertiary)'}
+                                                    onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'transparent'}
+                                                >
+                                                    -- Walk-in / Self --
+                                                </div>
+                                                {filteredDoctors.map(d => (
+                                                    <div key={d.id}
+                                                        onClick={() => {
+                                                            handleDoctorChange(d.id);
+                                                            setDoctorSearch(`${d.name} (${d.doctor_code})`);
+                                                            setDoctorDropdownOpen(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '0.5rem 0.75rem', cursor: 'pointer',
+                                                            background: selectedDoctorId === d.id ? 'var(--color-accent)' : 'transparent',
+                                                            color: selectedDoctorId === d.id ? 'white' : 'var(--color-text-primary)'
+                                                        }}
+                                                        onMouseEnter={(e) => { if (selectedDoctorId !== d.id) (e.target as HTMLElement).style.background = 'var(--color-bg-tertiary)'; }}
+                                                        onMouseLeave={(e) => { if (selectedDoctorId !== d.id) (e.target as HTMLElement).style.background = 'transparent'; }}
+                                                    >
+                                                        <div style={{ fontWeight: 500 }}>{d.name} ({d.doctor_code}){d.price_list_id ? ' ★' : ''}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -320,9 +420,20 @@ export default function OrdersPage() {
 
                                 {selectedPatientId && (
                                     <>
-                                        <div className="section-title" style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Select Tests</div>
+                                        <div className="section-title" style={{ marginBottom: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Select Tests</div>
+                                        <div style={{ marginBottom: '0.75rem' }}>
+                                            <input
+                                                className="input"
+                                                type="text"
+                                                value={testSearch}
+                                                onChange={(e) => setTestSearch(e.target.value)}
+                                                placeholder="🔍 Search tests by name or code..."
+                                                style={{ width: '100%', fontSize: '0.85rem' }}
+                                                autoComplete="off"
+                                            />
+                                        </div>
                                         <div className="test-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                                            {tests.map(test => (
+                                            {filteredTests.map(test => (
                                                 <button
                                                     key={test.id}
                                                     type="button"

@@ -52,7 +52,8 @@ interface CommissionStatementItem {
 export function calculateAndRecordCommission(
     invoiceId: number,
     doctorId: number,
-    patientId: number
+    patientId: number,
+    discountAmount: number = 0
 ): { success: boolean; totalCommission?: number; error?: string } {
     try {
         // Get doctor commission configuration
@@ -87,9 +88,10 @@ export function calculateAndRecordCommission(
             return { success: false, error: 'No invoice items found' };
         }
 
-        let totalCommission = 0;
+        // First pass: calculate raw commission per item
+        let rawTotalCommission = 0;
+        const commissionPerItem: Array<{ item: typeof invoiceItems[0]; rawCommission: number }> = [];
 
-        // Calculate commission for each test
         for (const item of invoiceItems) {
             let commissionAmount = 0;
 
@@ -97,6 +99,21 @@ export function calculateAndRecordCommission(
                 commissionAmount = (item.unit_price * doctor.commission_rate) / 100;
             } else if (doctor.commission_model === 'FLAT') {
                 commissionAmount = doctor.commission_rate;
+            }
+
+            rawTotalCommission += commissionAmount;
+            commissionPerItem.push({ item, rawCommission: commissionAmount });
+        }
+
+        // Second pass: deduct discount from commission proportionally
+        const effectiveDiscount = Math.min(discountAmount, rawTotalCommission);
+        let totalCommission = 0;
+
+        for (const { item, rawCommission } of commissionPerItem) {
+            let finalCommission = rawCommission;
+            if (effectiveDiscount > 0 && rawTotalCommission > 0) {
+                const proportion = rawCommission / rawTotalCommission;
+                finalCommission = Math.max(0, rawCommission - (effectiveDiscount * proportion));
             }
 
             // Record commission for this test
@@ -116,17 +133,17 @@ export function calculateAndRecordCommission(
                 doctor.commission_model,
                 doctor.commission_rate,
                 item.unit_price,
-                commissionAmount
+                finalCommission
             ]);
 
-            totalCommission += commissionAmount;
+            totalCommission += finalCommission;
         }
 
         // Log audit
         run(`
       INSERT INTO audit_log (entity, entity_id, action, new_value, performed_at)
       VALUES ('commission', ?, 'CALCULATE', ?, datetime('now'))
-    `, [invoiceId, JSON.stringify({ doctorId, totalCommission })]);
+    `, [invoiceId, JSON.stringify({ doctorId, totalCommission, discountDeducted: effectiveDiscount })]);
 
         return { success: true, totalCommission };
     } catch (error: any) {

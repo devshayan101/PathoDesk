@@ -27,9 +27,11 @@ interface OrderTestRow {
 // List orders with pagination
 export function listOrders(limit = 50, offset = 0): OrderRow[] {
   return queryAll<OrderRow>(`
-    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    SELECT o.*, p.full_name as patient_name, p.patient_uid,
+           d.name as doctor_name
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     ORDER BY o.order_date DESC
     LIMIT ? OFFSET ?
   `, [limit, offset]);
@@ -38,9 +40,11 @@ export function listOrders(limit = 50, offset = 0): OrderRow[] {
 // Get single order with tests
 export function getOrder(orderId: number) {
   const order = queryOne<OrderRow>(`
-    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    SELECT o.*, p.full_name as patient_name, p.patient_uid,
+           d.name as doctor_name
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE o.id = ?
   `, [orderId]);
 
@@ -105,9 +109,11 @@ export function createOrder(data: {
 // Get orders for a patient
 export function getPatientOrders(patientId: number): OrderRow[] {
   return queryAll<OrderRow>(`
-    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    SELECT o.*, p.full_name as patient_name, p.patient_uid,
+           d.name as doctor_name
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE o.patient_id = ?
     ORDER BY o.order_date DESC
   `, [patientId]);
@@ -126,9 +132,11 @@ export function updateOrderTestStatus(orderTestId: number, status: string): bool
 // Get pending orders (for dashboard)
 export function getPendingOrders(): OrderRow[] {
   return queryAll<OrderRow>(`
-    SELECT o.*, p.full_name as patient_name, p.patient_uid
+    SELECT o.*, p.full_name as patient_name, p.patient_uid,
+           d.name as doctor_name
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
+    LEFT JOIN doctors d ON o.referring_doctor_id = d.id
     WHERE EXISTS (
       SELECT 1 FROM order_tests ot WHERE ot.order_id = o.id AND ot.status != 'FINALIZED'
     )

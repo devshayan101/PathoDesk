@@ -8,8 +8,11 @@ interface DashboardStats {
     pendingResults: number;
     criticalAlerts: number;
     todayRevenue: number;
+    todayPending: number;
     monthlyRevenue: number;
+    monthlyPending: number;
     yearlyRevenue: number;
+    yearlyPending: number;
     monthlyOrders: number;
     monthlyPatients: number;
     pendingSamples: any[];
@@ -21,6 +24,10 @@ export default function DashboardPage() {
     const navigate = useNavigate();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showFinancials, setShowFinancials] = useState(() => {
+        const saved = localStorage.getItem('dashboard_show_financials');
+        return saved !== null ? saved === 'true' : true;
+    });
 
     useEffect(() => {
         loadStats();
@@ -64,7 +71,16 @@ export default function DashboardPage() {
     };
 
     const formatCurrency = (amount: number) => {
+        if (!showFinancials) return '••••••';
         return '₹' + amount.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    };
+
+    const toggleFinancials = () => {
+        setShowFinancials(prev => {
+            const next = !prev;
+            localStorage.setItem('dashboard_show_financials', String(next));
+            return next;
+        });
     };
 
     if (loading) {
@@ -79,7 +95,16 @@ export default function DashboardPage() {
     return (
         <div className="dashboard-page">
             <div className="dashboard-header">
-                <h1 className="page-title">Dashboard</h1>
+                <h1 className="page-title" onDoubleClick={toggleFinancials} style={{ cursor: 'default', userSelect: 'none' }}>
+                    Dashboard
+                    <span
+                        onClick={(e) => { e.stopPropagation(); toggleFinancials(); }}
+                        style={{ marginLeft: '0.5rem', fontSize: '0.7em', opacity: 0.3, cursor: 'pointer', verticalAlign: 'middle' }}
+                        title="Toggle financial visibility"
+                    >
+                        {showFinancials ? '👁' : '👁‍🗨'}
+                    </span>
+                </h1>
                 <button className="btn btn-secondary btn-sm" onClick={loadStats}>↻ Refresh</button>
             </div>
 
@@ -110,6 +135,11 @@ export default function DashboardPage() {
                     <span className="stat-value">{formatCurrency(stats?.todayRevenue || 0)}</span>
                     <span className="stat-label">Today's Revenue</span>
                 </div>
+                <div className="stat-item stat-warning" onClick={() => navigate('/billing/invoices')} style={{ cursor: 'pointer' }}>
+                    <span className="stat-icon">💳</span>
+                    <span className="stat-value">{formatCurrency(stats?.todayPending || 0)}</span>
+                    <span className="stat-label">Today's Pending</span>
+                </div>
             </div>
 
             {/* Monthly & Yearly Summary */}
@@ -129,6 +159,10 @@ export default function DashboardPage() {
                             <span className="period-value revenue">{formatCurrency(stats?.monthlyRevenue || 0)}</span>
                             <span className="period-label">Revenue</span>
                         </div>
+                        <div className="period-stat">
+                            <span className="period-value" style={{ color: 'var(--color-warning)' }}>{formatCurrency(stats?.monthlyPending || 0)}</span>
+                            <span className="period-label">Pending</span>
+                        </div>
                     </div>
                 </div>
                 <div className="period-card">
@@ -137,6 +171,10 @@ export default function DashboardPage() {
                         <div className="period-stat">
                             <span className="period-value revenue">{formatCurrency(stats?.yearlyRevenue || 0)}</span>
                             <span className="period-label">Total Revenue</span>
+                        </div>
+                        <div className="period-stat">
+                            <span className="period-value" style={{ color: 'var(--color-warning)' }}>{formatCurrency(stats?.yearlyPending || 0)}</span>
+                            <span className="period-label">Pending</span>
                         </div>
                     </div>
                 </div>
