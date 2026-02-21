@@ -45,6 +45,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_DELETE, parameterId),
     delete: (testId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.TEST_DELETE, testId),
+    bulkImport: (rows: any[]) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TESTS_BULK_IMPORT, rows),
   },
 
   // Test Wizard

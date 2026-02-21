@@ -1,6 +1,6 @@
 
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-
+import microscope from '../../assets/microscope.svg';
 // Register a standard font for better rendering
 Font.register({
     family: 'Roboto',
@@ -117,6 +117,27 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 10,
     },
+    watermarkContainer: {
+        position: 'absolute',
+        top: 250,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: 0.05,
+    },
+    brandingContainer: {
+        position: 'absolute',
+        bottom: 10,
+        left: 30,
+        right: 30,
+        alignItems: 'center',
+    },
+    brandingText: {
+        fontSize: 6,
+        color: '#bbb',
+        textAlign: 'center',
+    },
 });
 
 interface ReportData {
@@ -221,12 +242,23 @@ function formatFlag(flag: string | null): string {
     }
 }
 
+// Microscope watermark SVG component
+function MicroscopeWatermark() {
+    return (
+        <View style={styles.watermarkContainer}>
+            <img src={microscope} alt="Microscope" width="200" />
+        </View>
+    );
+}
+
 export default function LabReport({ data, labSettings }: Props) {
     const { sample, patient, test, results, referringDoctor } = data;
 
     return (
         <Document>
             <Page size="A4" style={styles.page}>
+                {/* Microscope Watermark */}
+                <MicroscopeWatermark />
                 {/* Header - Lab Info */}
                 <View style={styles.header}>
                     <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
@@ -340,6 +372,12 @@ export default function LabReport({ data, labSettings }: Props) {
                         </View>
                     </View>
                     <Text style={styles.disclaimer}>{labSettings.disclaimer}</Text>
+                </View>
+
+                {/* Software Branding */}
+                <View style={styles.brandingContainer}>
+                    <Text style={styles.brandingText}>Software by FMS Softwares</Text>
+                    <Text style={styles.brandingText}>Email: fmsenterprises001@gmail.com | WhatsApp: +91-7765009936</Text>
                 </View>
             </Page>
         </Document>

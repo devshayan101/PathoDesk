@@ -294,6 +294,9 @@ export const IPC_CHANNELS = {
     BACKUP_CREATE: 'backup:create',
     BACKUP_RESTORE: 'backup:restore',
     BACKUP_INTEGRITY_CHECK: 'backup:integrityCheck',
+
+    // Bulk Import
+    TESTS_BULK_IMPORT: 'tests:bulkImport',
 } as const;
 
 // Billing Types

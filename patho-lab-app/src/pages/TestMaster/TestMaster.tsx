@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToastStore } from '../../stores/toastStore';
+import * as XLSX from 'xlsx';
 import './TestMaster.css';
 import TestWizard from './TestWizard';
 
@@ -46,6 +47,12 @@ export default function TestMasterPage() {
     const [showWizard, setShowWizard] = useState(false);
     const [wizardDraftId, setWizardDraftId] = useState<number | undefined>(undefined);
     const [isEditing, setIsEditing] = useState(false);
+
+    // Bulk Import state
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importPreview, setImportPreview] = useState<any[]>([]);
+    const [importing, setImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Add/Edit Parameter form
     const [showAddParam, setShowAddParam] = useState(false);
@@ -208,6 +215,80 @@ export default function TestMasterPage() {
         return `${days}d`;
     };
 
+    // Handle Excel file import
+    const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
+
+                if (rows.length === 0) {
+                    showToast('No data found in Excel file', 'warning');
+                    return;
+                }
+
+                // Map columns (flexible matching)
+                const mapped = rows.map((row: any) => {
+                    const keys = Object.keys(row);
+                    const find = (patterns: string[]) => {
+                        const key = keys.find(k => patterns.some(p => k.toLowerCase().includes(p)));
+                        return key ? row[key] : '';
+                    };
+                    return {
+                        category: find(['category', 'department', 'dept']),
+                        testName: find(['test name', 'test_name', 'testname', 'test']),
+                        parameter: find(['parameter', 'param', 'analyte']),
+                        referenceRange: String(find(['reference', 'ref range', 'range', 'normal'])),
+                        unit: find(['unit']),
+                        price: parseFloat(find(['price', 'cost', 'rate', 'mrp'])) || 0,
+                        sampleType: find(['sample', 'specimen', 'sample type', 'sample_type']),
+                    };
+                }).filter((r: any) => r.testName && r.parameter);
+
+                if (mapped.length === 0) {
+                    showToast('Could not find required columns (Test Name, Parameter)', 'error');
+                    return;
+                }
+
+                setImportPreview(mapped);
+                setShowImportModal(true);
+            } catch (err: any) {
+                showToast('Failed to parse Excel: ' + err.message, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        // Reset file input so same file can be re-selected
+        e.target.value = '';
+    };
+
+    const handleConfirmImport = async () => {
+        if (!window.electronAPI || importPreview.length === 0) return;
+        setImporting(true);
+        try {
+            const result = await window.electronAPI.tests.bulkImport(importPreview);
+            const msgs = [];
+            if (result.created > 0) msgs.push(`${result.created} tests created`);
+            if (result.skipped > 0) msgs.push(`${result.skipped} skipped (already exist)`);
+            if (result.errors.length > 0) msgs.push(`${result.errors.length} errors`);
+            showToast(msgs.join(', '), result.errors.length > 0 ? 'warning' : 'success');
+            if (result.errors.length > 0) {
+                console.warn('Import errors:', result.errors);
+            }
+            setShowImportModal(false);
+            setImportPreview([]);
+            loadTests();
+        } catch (e: any) {
+            showToast('Import failed: ' + e.message, 'error');
+        }
+        setImporting(false);
+    };
+
     return (
         <div className="test-master-page">
             <h1 className="page-title">Test Master - Reference Range Editor</h1>
@@ -218,11 +299,15 @@ export default function TestMasterPage() {
                     <div className="panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 className="panel-title">Tests</h2>
-                            <button className="btn btn-primary btn-sm" onClick={() => {
-                                setWizardDraftId(undefined);
-                                setIsEditing(false);
-                                setShowWizard(true);
-                            }}>+ New</button>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>📤 Import Excel</button>
+                                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileImport} style={{ display: 'none' }} />
+                                <button className="btn btn-primary btn-sm" onClick={() => {
+                                    setWizardDraftId(undefined);
+                                    setIsEditing(false);
+                                    setShowWizard(true);
+                                }}>+ New</button>
+                            </div>
                         </div>
                         <input
                             type="text"
@@ -475,6 +560,58 @@ export default function TestMasterPage() {
                         setIsEditing(false);
                     }}
                 />
+            )}
+
+            {/* Bulk Import Preview Modal */}
+            {showImportModal && (
+                <div className="modal-overlay">
+                    <div className="modal" style={{ maxWidth: '900px', width: '90%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{ margin: 0 }}>📤 Import Preview</h2>
+                            <button className="btn btn-secondary btn-sm" onClick={() => { setShowImportModal(false); setImportPreview([]); }}>✕ Close</button>
+                        </div>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
+                            Found <strong>{importPreview.length}</strong> rows across <strong>{new Set(importPreview.map(r => r.testName)).size}</strong> unique tests
+                        </p>
+                        <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                            <table className="table" style={{ fontSize: '0.8rem' }}>
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Test Name</th>
+                                        <th>Parameter</th>
+                                        <th>Ref Range</th>
+                                        <th>Unit</th>
+                                        <th>Price</th>
+                                        <th>Sample Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {importPreview.slice(0, 100).map((row, idx) => (
+                                        <tr key={idx}>
+                                            <td>{row.category}</td>
+                                            <td><strong>{row.testName}</strong></td>
+                                            <td>{row.parameter}</td>
+                                            <td>{row.referenceRange}</td>
+                                            <td>{row.unit}</td>
+                                            <td>{row.price || '-'}</td>
+                                            <td>{row.sampleType}</td>
+                                        </tr>
+                                    ))}
+                                    {importPreview.length > 100 && (
+                                        <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>...and {importPreview.length - 100} more rows</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                            <button className="btn btn-secondary" onClick={() => { setShowImportModal(false); setImportPreview([]); }}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleConfirmImport} disabled={importing}>
+                                {importing ? 'Importing...' : `✓ Import ${new Set(importPreview.map(r => r.testName)).size} Tests`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

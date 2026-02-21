@@ -371,3 +371,146 @@ export function createDraftFromExisting(testId: number): number {
 }
 
 
+// --- Bulk Import from Excel ---
+
+export interface BulkImportRow {
+  category: string;
+  testName: string;
+  parameter: string;
+  referenceRange: string;
+  unit: string;
+  price: number;
+  sampleType: string;
+}
+
+export interface BulkImportResult {
+  created: number;
+  skipped: number;
+  errors: string[];
+}
+
+export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
+  const result: BulkImportResult = { created: 0, skipped: 0, errors: [] };
+
+  // Group rows by testName
+  const testMap = new Map<string, BulkImportRow[]>();
+  for (const row of rows) {
+    if (!row.testName || !row.parameter) continue;
+    const key = row.testName.trim();
+    if (!testMap.has(key)) testMap.set(key, []);
+    testMap.get(key)!.push(row);
+  }
+
+  // Get Standard price list ID
+  const stdPriceList = queryOne<{ id: number }>(
+    "SELECT id FROM price_lists WHERE code = 'STANDARD' LIMIT 1"
+  );
+
+  for (const [testName, testRows] of testMap) {
+    try {
+      const firstRow = testRows[0];
+
+      // Generate a test_code from test name (uppercase, no spaces, max 20 chars)
+      const testCode = testName
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .substring(0, 20);
+
+      // Check if test already exists
+      const existingTest = queryOne<{ id: number }>('SELECT id FROM tests WHERE test_code = ?', [testCode]);
+      if (existingTest) {
+        result.skipped++;
+        continue;
+      }
+
+      // 1. Create test
+      const testId = runWithId('INSERT INTO tests (test_code, is_active) VALUES (?, 1)', [testCode]);
+
+      // 2. Create version (directly as PUBLISHED)
+      const versionId = runWithId(`
+        INSERT INTO test_versions(
+          test_id, test_name, department, method, sample_type, report_group,
+          version_no, effective_from, status, wizard_step, created_at
+        ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'))
+      `, [
+        testId,
+        testName.trim(),
+        firstRow.category?.trim() || 'General',
+        firstRow.sampleType?.trim() || 'Blood',
+        firstRow.category?.trim() || null
+      ]);
+
+      // 3. Create parameters and reference ranges
+      for (let i = 0; i < testRows.length; i++) {
+        const row = testRows[i];
+        const paramName = row.parameter.trim();
+        const paramCode = paramName
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '_')
+          .replace(/_+/g, '_')
+          .substring(0, 20);
+
+        // Determine data type from reference range
+        const refRange = (row.referenceRange || '').trim();
+        const isNumeric = /^\d/.test(refRange) || /\d+-\d+/.test(refRange) || /\d*\.\d+/.test(refRange);
+
+        const paramId = runWithId(`
+          INSERT INTO test_parameters (
+            test_version_id, parameter_code, parameter_name, data_type,
+            unit, decimal_precision, display_order, is_mandatory
+          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1)
+        `, [
+          versionId,
+          paramCode,
+          paramName,
+          isNumeric ? 'NUMERIC' : 'TEXT',
+          row.unit?.trim() || null,
+          i + 1
+        ]);
+
+        // 4. Create reference range (parse "min-max" format)
+        if (refRange) {
+          let lowerLimit: number | null = null;
+          let upperLimit: number | null = null;
+          let displayText: string | null = refRange;
+
+          // Parse numeric ranges like "12.0-16.0", "4000-11000", "< 5.0", "> 10"
+          const rangeMatch = refRange.match(/^(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)$/);
+          if (rangeMatch) {
+            lowerLimit = parseFloat(rangeMatch[1]);
+            upperLimit = parseFloat(rangeMatch[2]);
+          } else {
+            const lessThanMatch = refRange.match(/^[<≤]\s*(\d+\.?\d*)$/);
+            if (lessThanMatch) {
+              upperLimit = parseFloat(lessThanMatch[1]);
+            }
+            const greaterThanMatch = refRange.match(/^[>≥]\s*(\d+\.?\d*)$/);
+            if (greaterThanMatch) {
+              lowerLimit = parseFloat(greaterThanMatch[1]);
+            }
+          }
+
+          run(`
+            INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, display_text, effective_from)
+            VALUES (?, 'A', 0, 36500, ?, ?, ?, datetime('now'))
+          `, [paramId, lowerLimit, upperLimit, displayText]);
+        }
+      }
+
+      // 5. Set price in Standard price list
+      if (stdPriceList && firstRow.price > 0) {
+        run(`
+          INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+          VALUES (?, ?, ?, 0, 0, datetime('now'))
+        `, [stdPriceList.id, testId, firstRow.price]);
+      }
+
+      result.created++;
+    } catch (err: any) {
+      result.errors.push(`${testName}: ${err.message}`);
+    }
+  }
+
+  return result;
+}

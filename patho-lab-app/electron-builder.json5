@@ -6,16 +6,18 @@
   "productName": "PathoDesk",
   "copyright": "Copyright © 2026 FMS Software Solutions",
   "directories": {
-    "output": "release/${version}"
+    "output": "release/${version}",
+    "buildResources": "build"
   },
   "files": [
     "dist",
     "dist-electron"
   ],
-  "directories": {
-    "output": "release/${version}",
-    "buildResources": "build"
-  },
+  "publish": [{
+    "provider": "github",
+    "owner": "devshayan101",
+    "repo": "PathoDesk"
+  }],
   "mac": {
     "target": [
       "dmg"

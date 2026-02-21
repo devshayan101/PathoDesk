@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import 'dotenv/config'
 
 
@@ -650,6 +651,11 @@ function registerIpcHandlers() {
     return licenseService.isTrial()
   })
 
+  // Bulk Import
+  ipcMain.handle(IPC_CHANNELS.TESTS_BULK_IMPORT, async (_, rows: any[]) => {
+    return testService.bulkImportTests(rows)
+  })
+
   // Backup & Restore
   ipcMain.handle(IPC_CHANNELS.BACKUP_CREATE, async () => {
     const backupService = await import('./services/backupService')
@@ -684,4 +690,35 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
+
+  // Auto-updater: check for updates in production
+  if (!VITE_DEV_SERVER_URL) {
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+
+    autoUpdater.on('update-available', (info) => {
+      console.log('Update available:', info.version)
+    })
+
+    autoUpdater.on('update-downloaded', (info) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: `Version ${info.version} has been downloaded. Restart the app to apply the update.`,
+        buttons: ['Restart Now', 'Later']
+      }).then(result => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall()
+        }
+      })
+    })
+
+    autoUpdater.on('error', (err) => {
+      console.error('Auto-updater error:', err.message)
+    })
+
+    autoUpdater.checkForUpdatesAndNotify().catch(err => {
+      console.error('Update check failed:', err.message)
+    })
+  }
 })
