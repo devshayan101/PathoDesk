@@ -63,6 +63,7 @@ export default function OrdersPage() {
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [priceLists, setPriceLists] = useState<PriceList[]>([]);
     const [testPrices, setTestPrices] = useState<Map<number, TestPrice>>(new Map());
+    const [priceListTests, setPriceListTests] = useState<number[]>([]);
     const [defaultPriceListId, setDefaultPriceListId] = useState<number | ''>('');
 
     // Form state
@@ -92,6 +93,16 @@ export default function OrdersPage() {
             loadTestPrices();
         }
     }, [selectedPriceListId, selectedTestIds]);
+
+    useEffect(() => {
+        if (selectedPriceListId) {
+            window.electronAPI.testPrices.list(selectedPriceListId).then((prices: any[]) => {
+                setPriceListTests(prices.map(p => p.test_id));
+            }).catch(console.error);
+        } else {
+            setPriceListTests([]);
+        }
+    }, [selectedPriceListId]);
 
     const loadData = async () => {
         setLoading(true);
@@ -269,8 +280,9 @@ export default function OrdersPage() {
         d.doctor_code.toLowerCase().includes(doctorSearch.toLowerCase())
     );
     const filteredTests = tests.filter(t =>
-        t.test_name.toLowerCase().includes(testSearch.toLowerCase()) ||
-        t.test_code.toLowerCase().includes(testSearch.toLowerCase())
+        priceListTests.includes(t.id) &&
+        (t.test_name.toLowerCase().includes(testSearch.toLowerCase()) ||
+            t.test_code.toLowerCase().includes(testSearch.toLowerCase()))
     );
 
     return (
@@ -445,7 +457,7 @@ export default function OrdersPage() {
                                                 autoComplete="off"
                                             />
                                         </div>
-                                        <div className="test-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                                        <div className="test-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                                             {filteredTests.map(test => (
                                                 <button
                                                     key={test.id}

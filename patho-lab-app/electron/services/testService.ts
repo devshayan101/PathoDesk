@@ -401,9 +401,9 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
     testMap.get(key)!.push(row);
   }
 
-  // Get Standard price list ID
-  const stdPriceList = queryOne<{ id: number }>(
-    "SELECT id FROM price_lists WHERE code = 'STANDARD' LIMIT 1"
+  // Get all price lists
+  const allPriceLists = queryAll<{ id: number; code: string }>(
+    "SELECT id, code FROM price_lists"
   );
 
   for (const [testName, testRows] of testMap) {
@@ -498,12 +498,14 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         }
       }
 
-      // 5. Set price in Standard price list
-      if (stdPriceList && firstRow.price > 0) {
-        run(`
-          INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
-          VALUES (?, ?, ?, 0, 0, datetime('now'))
-        `, [stdPriceList.id, testId, firstRow.price]);
+      // 5. Set price in all price lists
+      for (const pl of allPriceLists) {
+        if (firstRow.price >= 0) { // Allow 0 price
+          run(`
+            INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+            VALUES (?, ?, ?, 0, 0, datetime('now'))
+          `, [pl.id, testId, firstRow.price]);
+        }
       }
 
       result.created++;

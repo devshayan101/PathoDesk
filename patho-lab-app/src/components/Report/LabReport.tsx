@@ -1,6 +1,5 @@
 
 import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
-import logoUrl from '../../assets/pathoDesk_logo.png';
 // Register a standard font for better rendering
 Font.register({
     family: 'Roboto',
@@ -243,10 +242,20 @@ function formatFlag(flag: string | null): string {
 }
 
 // Microscope watermark SVG component
-function MicroscopeWatermark() {
+function MicroscopeWatermark({ labName }: { labName?: string }) {
+    // Determine the path to the public background image. In a Vite/Electron environment, 
+    // referencing it relative to the base URL is usually safe for rendering, but depending on the setup 
+    // we can use standard relative paths or rely on the build to resolve it.
+    // For react-pdf specifically, using a base64 encoded string or a direct import is best. 
+    // Using import for public assets usually resolves to a relative URL.
     return (
         <View style={styles.watermarkContainer}>
-            <Image src={logoUrl} style={{ width: 400, opacity: 0.1, }} />
+            <Image src="/results_bg_image.png" style={{ width: 400, opacity: 0.1 }} />
+            {labName && (
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 10 }}>
+                    {labName}
+                </Text>
+            )}
         </View>
     );
 }
@@ -258,7 +267,7 @@ export default function LabReport({ data, labSettings }: Props) {
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Microscope Watermark */}
-                <MicroscopeWatermark />
+                <MicroscopeWatermark labName={labSettings.lab_name} />
                 {/* Header - Lab Info */}
                 <View style={styles.header}>
                     <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>

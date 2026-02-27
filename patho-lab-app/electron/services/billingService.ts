@@ -82,6 +82,14 @@ export function createPriceList(data: {
       VALUES (?, ?, ?, ?)
     `, [data.code, data.name, data.description || null, data.isDefault ? 1 : 0]);
 
+        // Insert default price of 0 for all active tests in the new price list
+        run(`
+          INSERT INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+          SELECT ?, id, 0, 0, 0, datetime('now')
+          FROM tests
+          WHERE is_active = 1
+        `, [id]);
+
         return { success: true, id };
     } catch (error: any) {
         return { success: false, error: error.message };
