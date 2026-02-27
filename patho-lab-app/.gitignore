@@ -12,12 +12,10 @@ dist-electron/
 dist
 dist-ssr
 *.local
-<<<<<<< HEAD
 release
-=======
 .license-keys
 release/
->>>>>>> phase9
+pathoDesk_assets/
 
 # Editor directories and files
 .vscode/*

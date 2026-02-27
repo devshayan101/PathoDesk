@@ -1,6 +1,6 @@
 
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import microscope from '../../assets/microscope.svg';
+import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
+import logoUrl from '../../assets/pathoDesk_logo.png';
 // Register a standard font for better rendering
 Font.register({
     family: 'Roboto',
@@ -246,7 +246,7 @@ function formatFlag(flag: string | null): string {
 function MicroscopeWatermark() {
     return (
         <View style={styles.watermarkContainer}>
-            <img src={microscope} alt="Microscope" width="200" />
+            <Image src={logoUrl} style={{ width: 400, opacity: 0.1, }} />
         </View>
     );
 }

@@ -22,6 +22,7 @@ import UpgradeRequired from './pages/UpgradeRequired/UpgradeRequired';
 import type { LicenseModule } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import BackupRestorePage from './pages/Settings/BackupRestore';
+import ContactUsPage from './pages/Settings/ContactUs';
 import './index.css';
 
 // Protected route wrapper
@@ -215,6 +216,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <BackupRestorePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <ProtectedRoute>
+                <ContactUsPage />
               </ProtectedRoute>
             }
           />

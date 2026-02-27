@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
     { path: '/admin/license', label: 'License', roles: ['admin'] },
     { path: '/admin/backup', label: 'Backup', roles: ['admin'] },
     { path: '/admin', label: 'Admin', roles: ['admin'] },
+    { path: '/contact', label: 'Contact Us', roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
 ];
 
 function LicenseStatusBadge() {

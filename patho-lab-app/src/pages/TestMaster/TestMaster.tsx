@@ -134,6 +134,8 @@ export default function TestMasterPage() {
                 await window.electronAPI.tests.delete(testId);
                 await loadTests();
                 setSelectedTest(null);
+                showToast('Test deleted successfully', 'success');
+                setTimeout(() => window.focus(), 100);
             }
         } catch (e: any) {
             showToast('Failed to delete test: ' + e.message, 'error');
