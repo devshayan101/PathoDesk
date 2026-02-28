@@ -140,6 +140,26 @@ export default function PriceLists() {
         }
     };
 
+    const handleDeleteList = async (list: PriceList) => {
+        if (!window.confirm(`Are you sure you want to delete the price list "${list.name}"?`)) {
+            return;
+        }
+        try {
+            const result = await window.electronAPI.priceLists.delete(list.id);
+            if (result && !result.success) {
+                alert(result.error || 'Failed to delete price list');
+            } else {
+                if (selectedList?.id === list.id) {
+                    setSelectedList(null);
+                }
+                loadPriceLists();
+            }
+        } catch (error) {
+            console.error('Error deleting price list:', error);
+            alert('Failed to delete price list');
+        }
+    };
+
 
 
     if (loading) {
@@ -190,9 +210,14 @@ export default function PriceLists() {
                                         Edit
                                     </button>
                                     {list.is_default === 0 && list.is_active === 1 && (
-                                        <button className="btn btn-sm btn-secondary" onClick={(e) => { e.stopPropagation(); handleSetDefault(list); }} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}>
-                                            Set Default
-                                        </button>
+                                        <>
+                                            <button className="btn btn-sm btn-secondary" onClick={(e) => { e.stopPropagation(); handleSetDefault(list); }} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}>
+                                                Set Default
+                                            </button>
+                                            <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleDeleteList(list); }} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem', background: '#e74c3c', color: 'white', border: 'none' }}>
+                                                Delete
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>

@@ -2,6 +2,7 @@
   "name": "pathodesk",
   "private": true,
   "version": "1.0.0",
+  "license": "Proprietary",
   "description": "Offline Pathology Lab Data Management System",
   "author": "FMS Software Solutions",
   "type": "module",
