@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useLicenseStore } from '../../stores/licenseStore';
 import { ThemeToggle } from './ThemeToggle';
 import type { LicenseModule } from '../../types';
+import logoUrl from '/results_bg_image.png';
 import './Layout.css';
 
 interface NavItem {
@@ -25,7 +26,7 @@ const navItems: NavItem[] = [
     { path: '/doctors', label: 'Doctors', roles: ['admin', 'receptionist'] },
     { path: '/admin/price-lists', label: 'Price Lists', roles: ['admin'] },
     { path: '/audit', label: 'Audit Log', roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
-    { path: '/admin/license', label: 'License', roles: ['admin'] },
+    // { path: '/admin/license', label: 'License', roles: ['admin'] },
     { path: '/admin/backup', label: 'Backup', roles: ['admin'] },
     { path: '/admin', label: 'Admin', roles: ['admin'] },
     { path: '/contact', label: 'Contact Us', roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
@@ -115,9 +116,12 @@ export function Header() {
     return (
         <header className="app-header">
             <div className="header-brand">
-                PathoDesk <span className="lab-name">
-                    ({status?.license?.lab_name || 'ABC Diagnostics'})
-                </span>
+                <img src={logoUrl} alt="PathoDesk Logo" className="header-logo" />
+                <div className="brand-text">
+                    PathoDesk <span className="lab-name">
+                        ({status?.license?.lab_name || 'ABC Diagnostics'})
+                    </span>
+                </div>
             </div>
 
             <nav className="header-nav">

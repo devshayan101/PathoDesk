@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import logoUrl from '../../assets/pathoDesk_logo.png';
 import './Login.css';
 
 export default function LoginPage() {
@@ -19,10 +20,11 @@ export default function LoginPage() {
 
     return (
         <div className="login-page">
+            <div className="login-overlay"></div>
             <div className="login-card">
                 <div className="login-header">
-                    <h1>PathoDesk</h1>
-                    <p>Pathology Lab Management System</p>
+                    <img src={logoUrl} alt="PathoDesk Logo" className="login-logo" />
+                    <h2>Pathology Lab Management System</h2>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>

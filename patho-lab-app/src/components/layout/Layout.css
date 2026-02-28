@@ -10,23 +10,41 @@
 .app-header {
     display: flex;
     align-items: center;
-    height: var(--header-height);
-    padding: 0 var(--spacing-lg);
-    background: var(--color-bg-secondary);
-    border-bottom: 1px solid var(--color-border);
+    height: 64px;
+    padding: 0 var(--spacing-xl);
+    background: linear-gradient(to right, var(--color-bg-secondary), var(--color-bg-tertiary));
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(var(--color-border-rgb), 0.5);
     gap: var(--spacing-xl);
+    z-index: 10;
 }
 
 .header-brand {
-    font-weight: 600;
-    font-size: var(--font-size-lg);
-    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
-.header-brand .lab-name {
-    font-weight: 400;
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
+.header-logo {
+    height: 45px;
+    width: auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.brand-text {
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    color: var(--color-accent);
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.brand-text .lab-name {
+    font-weight: 500;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.5px;
 }
 
 /* Horizontal navigation */
@@ -39,20 +57,25 @@
 .nav-link {
     padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-sm);
+    font-weight: 500;
     color: var(--color-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-md);
-    transition: all 0.15s;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
 }
 
 .nav-link:hover {
-    color: var(--color-text-primary);
-    background: var(--color-bg-tertiary);
+    color: var(--color-accent);
+    background: rgba(var(--color-accent-rgb), 0.05);
+    border-color: rgba(var(--color-accent-rgb), 0.1);
 }
 
 .nav-link.active {
-    color: var(--color-accent);
-    background: rgba(59, 130, 246, 0.1);
+    color: white;
+    /* Active text color */
+    background: var(--color-accent);
+    box-shadow: 0 2px 4px rgba(var(--color-accent-rgb), 0.3);
 }
 
 /* User dropdown */
