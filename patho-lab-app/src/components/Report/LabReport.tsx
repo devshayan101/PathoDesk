@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     },
     watermarkContainer: {
         position: 'absolute',
-        top: 250,
+        top: 350,
         left: 0,
         right: 0,
         alignItems: 'center',
@@ -250,7 +250,7 @@ function MicroscopeWatermark({ labName }: { labName?: string }) {
     // Using import for public assets usually resolves to a relative URL.
     return (
         <View style={styles.watermarkContainer}>
-            <Image src="/results_bg_image.png" style={{ width: 400, opacity: 0.1 }} />
+            <Image src="/results_bg_image.png" style={{ width: 220, opacity: 0.1 }} />
             {labName && (
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 10 }}>
                     {labName}
