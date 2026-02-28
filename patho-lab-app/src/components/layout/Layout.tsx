@@ -5,31 +5,37 @@ import { useLicenseStore } from '../../stores/licenseStore';
 import { ThemeToggle } from './ThemeToggle';
 import type { LicenseModule } from '../../types';
 import logoUrl from '/results_bg_image.png';
+import {
+    LayoutDashboard, Users, FileText, FlaskConical, Stethoscope,
+    Receipt, Database, Settings, Phone, CheckCircle, Search, Save,
+    LogOut, UserCircle, Shield
+} from 'lucide-react';
 import './Layout.css';
 
 interface NavItem {
     path: string;
     label: string;
+    icon: React.ReactNode;
     roles: string[];
     requiredModule?: LicenseModule;
 }
 
 const navItems: NavItem[] = [
-    { path: '/', label: 'Dashboard', roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
-    { path: '/patients', label: 'Patients', roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
-    { path: '/orders', label: 'Orders', roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
-    { path: '/samples', label: 'Samples', roles: ['admin', 'technician', 'pathologist'] },
-    { path: '/results', label: 'Results', roles: ['admin', 'technician', 'pathologist'] },
-    { path: '/qc', label: 'QC', roles: ['admin', 'technician'], requiredModule: 'QC_AUDIT' },
-    { path: '/billing/invoices', label: 'Billing', roles: ['admin', 'receptionist'] },
-    { path: '/test-master', label: 'Test Master', roles: ['admin'] },
-    { path: '/doctors', label: 'Doctors', roles: ['admin', 'receptionist'] },
-    { path: '/admin/price-lists', label: 'Price Lists', roles: ['admin'] },
-    { path: '/audit', label: 'Audit Log', roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
-    // { path: '/admin/license', label: 'License', roles: ['admin'] },
-    { path: '/admin/backup', label: 'Backup', roles: ['admin'] },
-    { path: '/admin', label: 'Admin', roles: ['admin'] },
-    { path: '/contact', label: 'Contact Us', roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
+    { path: '/', label: 'Overview', icon: <LayoutDashboard size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
+    { path: '/patients', label: 'Patients', icon: <Users size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
+    { path: '/orders', label: 'Orders', icon: <FileText size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
+    { path: '/samples', label: 'Samples', icon: <FlaskConical size={20} />, roles: ['admin', 'technician', 'pathologist'] },
+    { path: '/results', label: 'Results', icon: <CheckCircle size={20} />, roles: ['admin', 'technician', 'pathologist'] },
+    { path: '/qc', label: 'QC', icon: <Search size={20} />, roles: ['admin', 'technician'], requiredModule: 'QC_AUDIT' },
+    { path: '/billing/invoices', label: 'Billing', icon: <Receipt size={20} />, roles: ['admin', 'receptionist'] },
+    { path: '/test-master', label: 'Tests', icon: <Database size={20} />, roles: ['admin'] },
+    { path: '/doctors', label: 'Doctors', icon: <Stethoscope size={20} />, roles: ['admin', 'technician', 'pathologist'] },
+    { path: '/admin/price-lists', label: 'Pricing', icon: <FileText size={20} />, roles: ['admin'] },
+    { path: '/audit', label: 'Audit', icon: <Search size={20} />, roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
+    { path: '/admin/license', label: 'License', icon: <Shield size={20} />, roles: ['admin'] },
+    { path: '/admin/backup', label: 'Backup', icon: <Save size={20} />, roles: ['admin'] },
+    { path: '/admin', label: 'Settings', icon: <Settings size={20} />, roles: ['admin'] },
+    { path: '/contact', label: 'Contact', icon: <Phone size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
 ];
 
 function LicenseStatusBadge() {
@@ -130,8 +136,10 @@ export function Header() {
                         key={item.path}
                         to={item.path}
                         className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                        title={item.label}
                     >
-                        {item.label}
+                        <span className="nav-icon">{item.icon}</span>
+                        <span className="nav-label">{item.label}</span>
                     </NavLink>
                 ))}
             </nav>
@@ -140,9 +148,16 @@ export function Header() {
                 <LicenseStatusBadge />
                 <ThemeToggle />
                 <div className="user-dropdown">
-                    <span className="user-name">{session?.fullName}</span>
-                    <span className="user-role">({session?.role})</span>
-                    <button className="btn-logout" onClick={logout}>Logout</button>
+                    <div className="user-info">
+                        <UserCircle size={24} className="user-avatar" />
+                        <div className="user-text">
+                            <span className="user-name">{session?.fullName}</span>
+                            <span className="user-role">{session?.role}</span>
+                        </div>
+                    </div>
+                    <button className="btn-logout" onClick={logout} title="Logout">
+                        <LogOut size={18} />
+                    </button>
                 </div>
             </div>
         </header>

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './Results.css';
 import ResultEntryForm from './ResultEntryForm';
 import ResultKanbanBoard from './ResultKanbanBoard';
 import { Sample } from './types';
 
 export default function ResultsPage() {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'board' | 'entry'>('board');
     const [samples, setSamples] = useState<Sample[]>([]);
     const [selectedSampleId, setSelectedSampleId] = useState<number | null>(null);
@@ -27,6 +30,24 @@ export default function ResultsPage() {
         }
         if (!silent) setLoading(false);
     };
+
+    // Auto-select sample if provided in navigation state
+    useEffect(() => {
+        if (!loading && samples.length > 0 && location.state?.filterSampleUid) {
+            const sampleUid = location.state.filterSampleUid;
+            const sampleToOpen = samples.find(s => s.sample_uid === sampleUid);
+
+            if (sampleToOpen) {
+                handleSelectSample(sampleToOpen.id);
+            } else {
+                // If not found, just pre-fill the search bar
+                setSearchQuery(sampleUid);
+            }
+
+            // Clear state to prevent reopening on refresh
+            navigate('.', { replace: true, state: {} });
+        }
+    }, [loading, samples, location.state, navigate]);
 
     const handleSelectSample = (sampleId: number) => {
         setSelectedSampleId(sampleId);
