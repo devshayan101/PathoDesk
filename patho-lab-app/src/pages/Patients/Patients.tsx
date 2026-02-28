@@ -273,8 +273,8 @@ export default function PatientsPage() {
                                                         title="Edit Patient">✎</button>
                                                     <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(patient)}
                                                         title="Delete Patient" style={{ color: 'var(--color-error)' }}>✕</button>
-                                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/orders')}
-                                                        title="Create Order">📋</button>
+                                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/orders', { state: { newOrderForPatientId: patient.id } })}
+                                                        title="Create New Order for Patient">📋 New Order</button>
                                                 </div>
                                             </td>
                                         </tr>

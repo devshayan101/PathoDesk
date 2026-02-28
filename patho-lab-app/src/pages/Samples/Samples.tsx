@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Samples.css';
 
 interface Sample {
@@ -12,6 +13,7 @@ interface Sample {
 }
 
 export default function SamplesPage() {
+    const navigate = useNavigate();
     const [samples, setSamples] = useState<Sample[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -175,6 +177,16 @@ export default function SamplesPage() {
                                             >
                                                 🖨️ <span className="text-hidden-sm">Barcode</span>
                                             </button>
+                                            {(sample.status === 'VERIFIED' || sample.status === 'RECEIVED' || sample.status === 'SUBMITTED') && (
+                                                <button
+                                                    className="btn btn-secondary btn-sm"
+                                                    onClick={() => navigate('/results', { state: { filterSampleUid: sample.sample_uid } })}
+                                                    title="Enter Results"
+                                                // style={{ marginRight: sample.status === 'COLLECTED' ? '0.5rem' : '0' }}
+                                                >
+                                                    🔬 Results
+                                                </button>
+                                            )}
                                             {sample.status === 'COLLECTED' && (
                                                 <button
                                                     className="btn btn-primary btn-sm"

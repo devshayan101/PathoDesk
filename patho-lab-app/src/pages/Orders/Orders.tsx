@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import './Orders.css';
@@ -54,6 +54,7 @@ interface PriceList {
 
 export default function OrdersPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { session } = useAuthStore();
     const showToast = useToastStore(s => s.showToast);
     const [showForm, setShowForm] = useState(false);
@@ -134,6 +135,21 @@ export default function OrdersPage() {
         }
         setLoading(false);
     };
+
+    // Pre-fill patient if coming from another page
+    useEffect(() => {
+        if (!loading && patients.length > 0 && location.state?.newOrderForPatientId) {
+            const pid = location.state.newOrderForPatientId;
+            const patient = patients.find(p => p.id === pid);
+            if (patient) {
+                setShowForm(true);
+                setSelectedPatientId(pid);
+                setPatientSearch(`${patient.full_name} (${patient.patient_uid})`);
+            }
+            // Clear state so it doesn't re-trigger on refresh
+            navigate('.', { replace: true, state: {} });
+        }
+    }, [loading, patients, location.state, navigate]);
 
     const loadTestPrices = async () => {
         if (!selectedPriceListId) return;
