@@ -42,7 +42,9 @@
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": false,
-    "license": "LICENSE"
+    "license": "LICENSE",
+    "installerIcon": "build/icons/icon.ico",
+    "uninstallerIcon": "build/icons/icon.ico"
   },
   "linux": {
     "target": [

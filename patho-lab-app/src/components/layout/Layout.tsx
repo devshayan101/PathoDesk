@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useLicenseStore } from '../../stores/licenseStore';
 import { ThemeToggle } from './ThemeToggle';
 import type { LicenseModule } from '../../types';
-import logoUrl from '/results_bg_image.png';
+import logoUrl from '/icon.png';
 import {
     LayoutDashboard, Users, FileText, FlaskConical, Stethoscope,
     Receipt, Database, Settings, Phone, CheckCircle, Search, Save,
