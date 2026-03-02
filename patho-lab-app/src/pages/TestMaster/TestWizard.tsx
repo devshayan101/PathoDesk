@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../stores/toastStore';
 import './TestWizard.css';
+import AgeInput from '../../components/AgeInput/AgeInput';
 
 interface WizardProps {
     initialDraftId?: number;
@@ -39,6 +40,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
     const [selectedParamIdx, setSelectedParamIdx] = useState(0);
     const [paramRanges, setParamRanges] = useState<Record<number, any[]>>({});
     const [showAddRange, setShowAddRange] = useState(false);
+    const [editingRangeId, setEditingRangeId] = useState<number | null>(null);
     const [newRange, setNewRange] = useState({ gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: '' });
 
     // Step 4: Critical Values
@@ -241,6 +243,41 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
         }
     };
 
+    const handleEditRefRange = (range: any) => {
+        setEditingRangeId(range.id);
+        setNewRange({
+            gender: range.gender,
+            ageMinDays: range.age_min_days,
+            ageMaxDays: range.age_max_days,
+            lowerLimit: range.lower_limit?.toString() ?? '',
+            upperLimit: range.upper_limit?.toString() ?? '',
+        });
+        setShowAddRange(true);
+    };
+
+    const handleUpdateRefRange = async () => {
+        const param = parameters[selectedParamIdx];
+        if (!param?.id || !editingRangeId) return;
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.refRanges.update(editingRangeId, {
+                    lowerLimit: parseFloat(newRange.lowerLimit) || undefined,
+                    upperLimit: parseFloat(newRange.upperLimit) || undefined,
+                });
+                if (!result.success) { showToast('Failed to update range', 'error'); return; }
+                const r = await window.electronAPI.refRanges.list(param.id);
+                setParamRanges(prev => ({ ...prev, [param.id]: r }));
+                resetWizardRangeForm();
+            }
+        } catch (e: any) { showToast(e.message, 'error'); }
+    };
+
+    const resetWizardRangeForm = () => {
+        setShowAddRange(false);
+        setEditingRangeId(null);
+        setNewRange({ gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: '' });
+    };
+
     // --- RENDER STEPS ---
     const renderBasics = () => (
         <div className="wizard-step">
@@ -294,7 +331,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                 <table className="table">
                     <thead>
                         <tr>
-                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th></th>
+                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th>Formula</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -309,6 +346,13 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                     </select>
                                 </td>
                                 <td><input className="input-sm" type="number" style={{ width: 50 }} value={p.decimal_precision ?? 2} onChange={e => updateParam(idx, 'decimal_precision', parseInt(e.target.value) || 0)} /></td>
+                                <td>
+                                    {p.data_type === 'CALCULATED' ? (
+                                        <input className="input-sm" value={p.formula || ''} onChange={e => updateParam(idx, 'formula', e.target.value)} placeholder="e.g. {A}/{B}" />
+                                    ) : (
+                                        <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                                    )}
+                                </td>
                                 <td><button className="btn-delete" onClick={() => removeParam(idx)}>×</button></td>
                             </tr>
                         ))}
@@ -334,7 +378,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                             {parameters.map((p, idx) => (
                                 <button key={idx}
                                     className={`param-tab ${idx === selectedParamIdx ? 'active' : ''}`}
-                                    onClick={() => { setSelectedParamIdx(idx); setShowAddRange(false); }}>
+                                    onClick={() => { setSelectedParamIdx(idx); resetWizardRangeForm(); }}>
                                     {p.parameter_code || `Param ${idx + 1}`}
                                 </button>
                             ))}
@@ -343,7 +387,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                         <div className="range-section">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                                 <strong>{param?.parameter_name} {param?.unit ? `(${param.unit})` : ''}</strong>
-                                <button className="btn btn-primary btn-sm" onClick={() => setShowAddRange(true)}>+ Add Range</button>
+                                <button className="btn btn-primary btn-sm" onClick={() => { resetWizardRangeForm(); setShowAddRange(true); }}>+ Add Range</button>
                             </div>
 
                             {ranges.length === 0 ? (
@@ -358,7 +402,10 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                                 <td>{formatAge(r.age_min_days)} – {formatAge(r.age_max_days)}</td>
                                                 <td>{r.lower_limit ?? '—'}</td>
                                                 <td>{r.upper_limit ?? '—'}</td>
-                                                <td><button className="btn-delete" onClick={() => handleDeleteRefRange(r.id)}>×</button></td>
+                                                <td>
+                                                    <button className="btn-icon-sm" onClick={() => handleEditRefRange(r)} title="Edit">✎</button>
+                                                    <button className="btn-delete" onClick={() => handleDeleteRefRange(r.id)}>×</button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -367,22 +414,24 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
 
                             {showAddRange && (
                                 <div className="add-range-inline">
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Gender</label>
-                                            <select className="input" value={newRange.gender} onChange={e => setNewRange({ ...newRange, gender: e.target.value })}>
-                                                <option value="A">All</option><option value="M">Male</option><option value="F">Female</option>
-                                            </select>
+                                    {!editingRangeId && (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Gender</label>
+                                                <select className="input" value={newRange.gender} onChange={e => setNewRange({ ...newRange, gender: e.target.value })}>
+                                                    <option value="A">All</option><option value="M">Male</option><option value="F">Female</option>
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Age Min</label>
+                                                <AgeInput value={newRange.ageMinDays} onChange={d => setNewRange({ ...newRange, ageMinDays: d })} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Age Max</label>
+                                                <AgeInput value={newRange.ageMaxDays} onChange={d => setNewRange({ ...newRange, ageMaxDays: d })} />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label>Age Min (days)</label>
-                                            <input className="input" type="number" value={newRange.ageMinDays} onChange={e => setNewRange({ ...newRange, ageMinDays: parseInt(e.target.value) || 0 })} />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Age Max (days)</label>
-                                            <input className="input" type="number" value={newRange.ageMaxDays} onChange={e => setNewRange({ ...newRange, ageMaxDays: parseInt(e.target.value) || 36500 })} />
-                                        </div>
-                                    </div>
+                                    )}
                                     <div className="form-row">
                                         <div className="form-group">
                                             <label>Lower Limit</label>
@@ -393,8 +442,10 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                             <input className="input" type="number" step="0.1" value={newRange.upperLimit} onChange={e => setNewRange({ ...newRange, upperLimit: e.target.value })} />
                                         </div>
                                         <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                            <button className="btn btn-primary btn-sm" onClick={handleAddRefRange}>Add</button>
-                                            <button className="btn btn-secondary btn-sm" onClick={() => setShowAddRange(false)}>Cancel</button>
+                                            <button className="btn btn-primary btn-sm" onClick={editingRangeId ? handleUpdateRefRange : handleAddRefRange}>
+                                                {editingRangeId ? 'Update' : 'Add'}
+                                            </button>
+                                            <button className="btn btn-secondary btn-sm" onClick={resetWizardRangeForm}>Cancel</button>
                                         </div>
                                     </div>
                                 </div>

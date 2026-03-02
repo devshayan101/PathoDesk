@@ -3,6 +3,8 @@ import { useToastStore } from '../../stores/toastStore';
 import * as XLSX from 'xlsx';
 import './TestMaster.css';
 import TestWizard from './TestWizard';
+import AgeInput from '../../components/AgeInput/AgeInput';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 
 interface Test {
     id: number;
@@ -41,8 +43,9 @@ export default function TestMasterPage() {
     const [selectedParam, setSelectedParam] = useState<Parameter | null>(null);
     const [refRanges, setRefRanges] = useState<RefRange[]>([]);
     const [showAddRange, setShowAddRange] = useState(false);
+    const [editingRangeId, setEditingRangeId] = useState<number | null>(null);
     const [newRange, setNewRange] = useState({
-        gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: ''
+        gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: '', displayText: ''
     });
     const [showWizard, setShowWizard] = useState(false);
     const [wizardDraftId, setWizardDraftId] = useState<number | undefined>(undefined);
@@ -59,8 +62,14 @@ export default function TestMasterPage() {
     const [isEditingParam, setIsEditingParam] = useState(false);
     const [editingParamId, setEditingParamId] = useState<number | null>(null);
     const [newParam, setNewParam] = useState({
-        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: ''
+        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: ''
     });
+
+    // Confirm dialog state
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string; message: string; confirmLabel: string;
+        variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
+    } | null>(null);
 
     useEffect(() => { loadTests(); }, []);
     useEffect(() => {
@@ -94,29 +103,63 @@ export default function TestMasterPage() {
         }
     };
 
-    const handleAddRange = async () => {
+    const resetRangeForm = () => {
+        setShowAddRange(false);
+        setEditingRangeId(null);
+        setNewRange({ gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: '', displayText: '' });
+    };
+
+    const handleAddOrUpdateRange = async () => {
         if (!selectedParam) return;
         try {
             if (window.electronAPI) {
-                const result = await window.electronAPI.refRanges.create({
-                    parameterId: selectedParam.id,
-                    gender: newRange.gender,
-                    ageMinDays: newRange.ageMinDays,
-                    ageMaxDays: newRange.ageMaxDays,
-                    lowerLimit: parseFloat(newRange.lowerLimit) || undefined,
-                    upperLimit: parseFloat(newRange.upperLimit) || undefined,
-                });
-                if (!result.success) {
-                    showToast(result.error || 'Failed to add range', 'error');
-                    return;
+                const isText = selectedParam.data_type === 'TEXT';
+                if (editingRangeId) {
+                    // Update existing
+                    const result = await window.electronAPI.refRanges.update(editingRangeId, {
+                        lowerLimit: isText ? undefined : (parseFloat(newRange.lowerLimit) || undefined),
+                        upperLimit: isText ? undefined : (parseFloat(newRange.upperLimit) || undefined),
+                        displayText: isText ? newRange.displayText : undefined,
+                    });
+                    if (!result.success) {
+                        showToast('Failed to update range', 'error');
+                        return;
+                    }
+                } else {
+                    // Create new
+                    const result = await window.electronAPI.refRanges.create({
+                        parameterId: selectedParam.id,
+                        gender: newRange.gender,
+                        ageMinDays: newRange.ageMinDays,
+                        ageMaxDays: newRange.ageMaxDays,
+                        lowerLimit: isText ? undefined : (parseFloat(newRange.lowerLimit) || undefined),
+                        upperLimit: isText ? undefined : (parseFloat(newRange.upperLimit) || undefined),
+                        displayText: isText ? newRange.displayText : undefined,
+                    });
+                    if (!result.success) {
+                        showToast(result.error || 'Failed to add range', 'error');
+                        return;
+                    }
                 }
                 await loadRefRanges(selectedParam.id);
-                setShowAddRange(false);
-                setNewRange({ gender: 'A', ageMinDays: 0, ageMaxDays: 36500, lowerLimit: '', upperLimit: '' });
+                resetRangeForm();
             }
         } catch (e: any) {
             showToast(e.message, 'error');
         }
+    };
+
+    const handleEditRange = (range: RefRange) => {
+        setEditingRangeId(range.id);
+        setNewRange({
+            gender: range.gender,
+            ageMinDays: range.age_min_days,
+            ageMaxDays: range.age_max_days,
+            lowerLimit: range.lower_limit?.toString() ?? '',
+            upperLimit: range.upper_limit?.toString() ?? '',
+            displayText: range.display_text ?? '',
+        });
+        setShowAddRange(true);
     };
 
     const handleDeleteRange = async (id: number) => {
@@ -127,19 +170,27 @@ export default function TestMasterPage() {
         }
     };
 
-    const handleDeleteTest = async (testId: number) => {
-        if (!confirm('Are you sure you want to delete this test? This action cannot be undone.')) return;
-        try {
-            if (window.electronAPI) {
-                await window.electronAPI.tests.delete(testId);
-                await loadTests();
-                setSelectedTest(null);
-                showToast('Test deleted successfully', 'success');
-                setTimeout(() => window.focus(), 100);
+    const handleDeleteTest = (testId: number) => {
+        setConfirmDialog({
+            title: 'Delete Test',
+            message: 'Are you sure you want to delete this test? This action cannot be undone.',
+            confirmLabel: 'Delete',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    if (window.electronAPI) {
+                        await window.electronAPI.tests.delete(testId);
+                        await loadTests();
+                        setSelectedTest(null);
+                        showToast('Test deleted successfully', 'success');
+                        setTimeout(() => window.focus(), 100);
+                    }
+                } catch (e: any) {
+                    showToast('Failed to delete test: ' + e.message, 'error');
+                }
             }
-        } catch (e: any) {
-            showToast('Failed to delete test: ' + e.message, 'error');
-        }
+        });
     };
 
     const handleEditTest = async (testId: number) => {
@@ -164,15 +215,6 @@ export default function TestMasterPage() {
             if (window.electronAPI) {
                 let result;
                 if (isEditingParam && editingParamId) {
-                    // Update existing parameter
-                    // We need a backend API for this. Assuming parameter_update exists or we need to add it.
-                    // Actually checking task list, we need to add Edit/Delete buttons.
-                    // Let's assume we need to implement updateParameter in backend too?
-                    // For now, I'll use addParameter logic but check if I need a new API.
-                    // Wait, IPC for update parameter might not exist.
-                    // param-update was not in previous list.
-                    // I will need to check electron/main.ts and testService.ts
-                    // For now I will assume it exists or I will add it.
                     result = await window.electronAPI.tests.updateParameter(editingParamId, newParam);
                 } else {
                     result = await window.electronAPI.tests.addParameter(selectedTest.version_id, newParam);
@@ -186,7 +228,7 @@ export default function TestMasterPage() {
                 setShowAddParam(false);
                 setIsEditingParam(false);
                 setEditingParamId(null);
-                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '' });
+                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '' });
                 showToast(isEditingParam ? 'Parameter updated' : 'Parameter added', 'success');
             }
         } catch (e: any) {
@@ -194,21 +236,29 @@ export default function TestMasterPage() {
         }
     };
 
-    const handleDeleteParameter = async (paramId: number) => {
-        if (!confirm('Delete this parameter? Reference ranges will also be deleted.')) return;
-        try {
-            if (window.electronAPI) {
-                const result = await window.electronAPI.tests.deleteParameter(paramId);
-                if (!result.success) {
-                    showToast(result.error || 'Failed to delete parameter', 'error');
-                    return;
+    const handleDeleteParameter = (paramId: number) => {
+        setConfirmDialog({
+            title: 'Delete Parameter',
+            message: 'Delete this parameter? Reference ranges will also be deleted.',
+            confirmLabel: 'Delete',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    if (window.electronAPI) {
+                        const result = await window.electronAPI.tests.deleteParameter(paramId);
+                        if (!result.success) {
+                            showToast(result.error || 'Failed to delete parameter', 'error');
+                            return;
+                        }
+                        if (selectedTest) await loadParameters(selectedTest.version_id);
+                        showToast('Parameter deleted', 'success');
+                    }
+                } catch (e: any) {
+                    showToast(e.message, 'error');
                 }
-                if (selectedTest) await loadParameters(selectedTest.version_id);
-                showToast('Parameter deleted', 'success');
             }
-        } catch (e: any) {
-            showToast(e.message, 'error');
-        }
+        });
     };
 
     const formatAge = (days: number): string => {
@@ -357,7 +407,7 @@ export default function TestMasterPage() {
                         <h2 className="panel-title">Parameters</h2>
                         {selectedTest && (
                             <button className="btn btn-primary btn-sm" onClick={() => {
-                                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '' });
+                                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '' });
                                 setShowAddParam(true);
                                 setIsEditingParam(false);
                             }}>+ Add</button>
@@ -385,7 +435,8 @@ export default function TestMasterPage() {
                                                         parameterCode: param.parameter_code,
                                                         parameterName: param.parameter_name,
                                                         dataType: param.data_type,
-                                                        unit: param.unit || ''
+                                                        unit: param.unit || '',
+                                                        formula: (param as any).formula || ''
                                                     });
                                                     setEditingParamId(param.id);
                                                     setIsEditingParam(true);
@@ -436,6 +487,16 @@ export default function TestMasterPage() {
                                             </select>
                                         </div>
                                     </div>
+                                    {newParam.dataType === 'CALCULATED' && (
+                                        <div className="form-row">
+                                            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                                <label>Formula</label>
+                                                <input className="input" value={newParam.formula}
+                                                    onChange={e => setNewParam({ ...newParam, formula: e.target.value })}
+                                                    placeholder="e.g. {ALBUMIN} / {GLOBULIN}" />
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="form-actions">
                                         <button className="btn btn-primary" onClick={handleAddOrUpdateParameter}>
                                             {isEditingParam ? 'Update' : 'Add'}
@@ -457,7 +518,10 @@ export default function TestMasterPage() {
                     <div className="panel-header">
                         <h2 className="panel-title">Reference Ranges</h2>
                         {selectedParam && (
-                            <button className="btn btn-primary btn-sm" onClick={() => setShowAddRange(true)}>+ Add Range</button>
+                            <button className="btn btn-primary btn-sm" onClick={() => {
+                                resetRangeForm();
+                                setShowAddRange(true);
+                            }}>+ Add Range</button>
                         )}
                     </div>
 
@@ -473,14 +537,17 @@ export default function TestMasterPage() {
                                     <tr>
                                         <th>Gender</th>
                                         <th>Age Range</th>
-                                        <th>Min</th>
-                                        <th>Max</th>
+                                        {selectedParam.data_type === 'TEXT' ? (
+                                            <th>Display Text</th>
+                                        ) : (
+                                            <><th>Min</th><th>Max</th></>
+                                        )}
                                         <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {refRanges.length === 0 ? (
-                                        <tr><td colSpan={5} className="empty">No reference ranges defined</td></tr>
+                                        <tr><td colSpan={selectedParam.data_type === 'TEXT' ? 4 : 5} className="empty">No reference ranges defined</td></tr>
                                     ) : (
                                         refRanges.map(range => (
                                             <tr key={range.id}>
@@ -490,9 +557,13 @@ export default function TestMasterPage() {
                                                     </span>
                                                 </td>
                                                 <td>{formatAge(range.age_min_days)} - {formatAge(range.age_max_days)}</td>
-                                                <td>{range.lower_limit ?? '—'}</td>
-                                                <td>{range.upper_limit ?? '—'}</td>
+                                                {selectedParam.data_type === 'TEXT' ? (
+                                                    <td>{range.display_text ?? '—'}</td>
+                                                ) : (
+                                                    <><td>{range.lower_limit ?? '—'}</td><td>{range.upper_limit ?? '—'}</td></>
+                                                )}
                                                 <td>
+                                                    <button className="btn-icon-sm" onClick={() => handleEditRange(range)} title="Edit">✎</button>
                                                     <button className="btn-delete" onClick={() => handleDeleteRange(range.id)} title="Delete">×</button>
                                                 </td>
                                             </tr>
@@ -503,45 +574,62 @@ export default function TestMasterPage() {
 
                             {showAddRange && (
                                 <div className="add-range-form">
-                                    <h3>Add Reference Range</h3>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Gender</label>
-                                            <select className="input" value={newRange.gender}
-                                                onChange={(e) => setNewRange({ ...newRange, gender: e.target.value })}>
-                                                <option value="A">All (Fallback)</option>
-                                                <option value="M">Male</option>
-                                                <option value="F">Female</option>
-                                            </select>
+                                    <h3>{editingRangeId ? 'Edit Reference Range' : 'Add Reference Range'}</h3>
+                                    {!editingRangeId && (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Gender</label>
+                                                <select className="input" value={newRange.gender}
+                                                    onChange={(e) => setNewRange({ ...newRange, gender: e.target.value })}>
+                                                    <option value="A">All (Fallback)</option>
+                                                    <option value="M">Male</option>
+                                                    <option value="F">Female</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Age Min (days)</label>
-                                            <input className="input" type="number" value={newRange.ageMinDays}
-                                                onChange={(e) => setNewRange({ ...newRange, ageMinDays: parseInt(e.target.value) || 0 })} />
+                                    )}
+                                    {!editingRangeId && (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Age Min</label>
+                                                <AgeInput value={newRange.ageMinDays}
+                                                    onChange={(d) => setNewRange({ ...newRange, ageMinDays: d })} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Age Max</label>
+                                                <AgeInput value={newRange.ageMaxDays}
+                                                    onChange={(d) => setNewRange({ ...newRange, ageMaxDays: d })} />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label>Age Max (days)</label>
-                                            <input className="input" type="number" value={newRange.ageMaxDays}
-                                                onChange={(e) => setNewRange({ ...newRange, ageMaxDays: parseInt(e.target.value) || 36500 })} />
+                                    )}
+                                    {selectedParam?.data_type === 'TEXT' ? (
+                                        <div className="form-row">
+                                            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                                <label>Display Text</label>
+                                                <input className="input" value={newRange.displayText}
+                                                    onChange={(e) => setNewRange({ ...newRange, displayText: e.target.value })}
+                                                    placeholder="e.g. Non-Reactive, Negative" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Lower Limit</label>
-                                            <input className="input" type="number" step="0.1" value={newRange.lowerLimit}
-                                                onChange={(e) => setNewRange({ ...newRange, lowerLimit: e.target.value })} />
+                                    ) : (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Lower Limit</label>
+                                                <input className="input" type="number" step="0.1" value={newRange.lowerLimit}
+                                                    onChange={(e) => setNewRange({ ...newRange, lowerLimit: e.target.value })} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Upper Limit</label>
+                                                <input className="input" type="number" step="0.1" value={newRange.upperLimit}
+                                                    onChange={(e) => setNewRange({ ...newRange, upperLimit: e.target.value })} />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label>Upper Limit</label>
-                                            <input className="input" type="number" step="0.1" value={newRange.upperLimit}
-                                                onChange={(e) => setNewRange({ ...newRange, upperLimit: e.target.value })} />
-                                        </div>
-                                    </div>
+                                    )}
                                     <div className="form-actions">
-                                        <button className="btn btn-primary" onClick={handleAddRange}>Save Range</button>
-                                        <button className="btn btn-secondary" onClick={() => setShowAddRange(false)}>Cancel</button>
+                                        <button className="btn btn-primary" onClick={handleAddOrUpdateRange}>
+                                            {editingRangeId ? 'Update Range' : 'Save Range'}
+                                        </button>
+                                        <button className="btn btn-secondary" onClick={resetRangeForm}>Cancel</button>
                                     </div>
                                 </div>
                             )}
@@ -614,6 +702,17 @@ export default function TestMasterPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    variant={confirmDialog.variant}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
+                />
             )}
         </div>
     );

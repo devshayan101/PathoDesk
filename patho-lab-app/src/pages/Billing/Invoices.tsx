@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../stores/toastStore';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 
 import './Invoices.css';
 
@@ -47,6 +48,10 @@ export default function Invoices() {
         referenceNumber: '',
         remarks: ''
     });
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string; message: string; confirmLabel: string;
+        variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
+    } | null>(null);
 
     useEffect(() => {
         loadInvoices();
@@ -94,19 +99,26 @@ export default function Invoices() {
         }
     };
 
-    const handleFinalizeInvoice = async (invoiceId: number) => {
-        if (!confirm('Finalize this invoice? This action cannot be undone.')) return;
-
-        try {
-            await window.electronAPI.invoices.finalize(invoiceId);
-            loadInvoices();
-            if (selectedInvoice?.id === invoiceId) {
-                const data = await window.electronAPI.invoices.get(invoiceId);
-                setSelectedInvoice(data);
+    const handleFinalizeInvoice = (invoiceId: number) => {
+        setConfirmDialog({
+            title: 'Finalize Invoice',
+            message: 'Finalize this invoice? This action cannot be undone.',
+            confirmLabel: 'Finalize',
+            variant: 'warning',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    await window.electronAPI.invoices.finalize(invoiceId);
+                    loadInvoices();
+                    if (selectedInvoice?.id === invoiceId) {
+                        const data = await window.electronAPI.invoices.get(invoiceId);
+                        setSelectedInvoice(data);
+                    }
+                } catch (error) {
+                    console.error('Error finalizing invoice:', error);
+                }
             }
-        } catch (error) {
-            console.error('Error finalizing invoice:', error);
-        }
+        });
     };
 
     const handleOpenPayment = async (invoice: Invoice) => {
@@ -516,6 +528,17 @@ export default function Invoices() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    variant={confirmDialog.variant}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
+                />
             )}
         </div>
     );

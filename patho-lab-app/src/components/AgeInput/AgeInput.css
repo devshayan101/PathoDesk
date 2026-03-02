@@ -1,0 +1,25 @@
+.age-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.age-input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.age-input-field label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.age-input-field input {
+    width: 100%;
+    padding: 0.3rem 0.4rem;
+    font-size: var(--font-size-sm);
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToastStore } from '../../stores/toastStore';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import './Patients.css';
 
 interface Patient {
@@ -24,6 +25,10 @@ export default function PatientsPage() {
     });
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string; message: string; confirmLabel: string;
+        variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
+    } | null>(null);
 
     useEffect(() => { loadPatients(); }, []);
 
@@ -135,21 +140,29 @@ export default function PatientsPage() {
         }
     };
 
-    const handleDelete = async (patient: Patient) => {
-        if (!confirm(`Delete patient "${patient.full_name}" (${patient.patient_uid})? This cannot be undone.`)) return;
-        try {
-            if (window.electronAPI) {
-                const result = await window.electronAPI.patients.delete(patient.id);
-                if (!result.success) {
-                    showToast(result.error || 'Failed to delete patient', 'error');
-                    return;
+    const handleDelete = (patient: Patient) => {
+        setConfirmDialog({
+            title: 'Delete Patient',
+            message: `Delete patient "${patient.full_name}" (${patient.patient_uid})? This cannot be undone.`,
+            confirmLabel: 'Delete',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    if (window.electronAPI) {
+                        const result = await window.electronAPI.patients.delete(patient.id);
+                        if (!result.success) {
+                            showToast(result.error || 'Failed to delete patient', 'error');
+                            return;
+                        }
+                        showToast('Patient deleted', 'success');
+                        await loadPatients();
+                    }
+                } catch (e: any) {
+                    showToast('Error: ' + e.message, 'error');
                 }
-                showToast('Patient deleted', 'success');
-                await loadPatients();
             }
-        } catch (e: any) {
-            showToast('Error: ' + e.message, 'error');
-        }
+        });
     };
 
     return (
@@ -285,6 +298,17 @@ export default function PatientsPage() {
                     </table>
                 )}
             </div>
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    variant={confirmDialog.variant}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
+                />
+            )}
         </div>
     );
 }

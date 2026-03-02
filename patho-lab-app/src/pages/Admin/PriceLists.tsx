@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useToastStore } from '../../stores/toastStore';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import './PriceLists.css';
 
 interface PriceList {
@@ -30,6 +32,11 @@ export default function PriceLists() {
     const [pricesLoading, setPricesLoading] = useState(false);
     const [editingPrices, setEditingPrices] = useState<Map<number, number>>(new Map());
     const [saving, setSaving] = useState(false);
+    const showToast = useToastStore(s => s.showToast);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string; message: string; confirmLabel: string;
+        variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
+    } | null>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -140,24 +147,30 @@ export default function PriceLists() {
         }
     };
 
-    const handleDeleteList = async (list: PriceList) => {
-        if (!window.confirm(`Are you sure you want to delete the price list "${list.name}"?`)) {
-            return;
-        }
-        try {
-            const result = await window.electronAPI.priceLists.delete(list.id);
-            if (result && !result.success) {
-                alert(result.error || 'Failed to delete price list');
-            } else {
-                if (selectedList?.id === list.id) {
-                    setSelectedList(null);
+    const handleDeleteList = (list: PriceList) => {
+        setConfirmDialog({
+            title: 'Delete Price List',
+            message: `Are you sure you want to delete the price list "${list.name}"?`,
+            confirmLabel: 'Delete',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    const result = await window.electronAPI.priceLists.delete(list.id);
+                    if (result && !result.success) {
+                        showToast(result.error || 'Failed to delete price list', 'error');
+                    } else {
+                        if (selectedList?.id === list.id) {
+                            setSelectedList(null);
+                        }
+                        loadPriceLists();
+                    }
+                } catch (error) {
+                    console.error('Error deleting price list:', error);
+                    showToast('Failed to delete price list', 'error');
                 }
-                loadPriceLists();
             }
-        } catch (error) {
-            console.error('Error deleting price list:', error);
-            alert('Failed to delete price list');
-        }
+        });
     };
 
 
@@ -365,6 +378,17 @@ export default function PriceLists() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    variant={confirmDialog.variant}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
+                />
             )}
         </div>
     );

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import ReportPreview from '../../components/Report/ReportPreview';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import { ResultData, ResultParameter } from './types';
 
 interface ResultEntryFormProps {
@@ -33,6 +34,10 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
     const isDirtyRef = useRef(false);
     const valuesRef = useRef(values);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string; message: string; confirmLabel: string;
+        variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
+    } | null>(null);
 
     // Keep valuesRef synced
     useEffect(() => {
@@ -211,7 +216,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         }
     };
 
-    const handleFinalize = async () => {
+    const handleFinalize = () => {
         if (!resultData || !window.electronAPI) return;
 
         // Check QC status before finalizing
@@ -220,18 +225,25 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
             return;
         }
 
-        if (!confirm('Finalize results? This cannot be undone.')) return;
-
-        try {
-            const result = await window.electronAPI.results.finalize(resultData.sample_id);
-            if (result.success) {
-                showToast('Results finalized', 'success');
-                onSampleUpdate();
-                onClose();
+        setConfirmDialog({
+            title: 'Finalize Results',
+            message: 'Finalize results? This cannot be undone.',
+            confirmLabel: 'Finalize',
+            variant: 'warning',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    const result = await window.electronAPI.results.finalize(resultData.sample_id);
+                    if (result.success) {
+                        showToast('Results finalized', 'success');
+                        onSampleUpdate();
+                        onClose();
+                    }
+                } catch (e) {
+                    console.error('Finalize error:', e);
+                }
             }
-        } catch (e) {
-            console.error('Finalize error:', e);
-        }
+        });
     };
 
     const handleOverrideFinalize = async () => {
@@ -588,6 +600,17 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                 <ReportPreview
                     sampleId={resultData.sample_id}
                     onClose={() => setShowReport(false)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmDialog
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    variant={confirmDialog.variant}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
                 />
             )}
         </div>

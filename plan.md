@@ -173,7 +173,7 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 #### 8.3 Navigation & Integration ✅
 - [x] Routes added to App.tsx
 - [x] Nav links in sidebar (QC for technicians, Audit Log for admin/auditor)
-- [ ] Hide QC & Audit nav items when module not licensed
+- [x] Hide QC & Audit nav items when module not licensed
 
 #### 8.4 QC-Result Integration (From PRD) ✅
 - [x] QC status visible during result entry (show last QC date/status)
@@ -186,43 +186,49 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Added REPORT_PREVIEW, REPORT_PRINT, REPORT_REPRINT, QC_OVERRIDE actions
 - [x] Reason field mandatory for QC overrides
 
-#### 8.6 License Gating (NEW)
-- [ ] QC & Audit module gated by `QC_AUDIT` license flag
-- [ ] Show "Upgrade Required" message when accessing unlicensed QC/Audit pages
-- [ ] Hide QC/Audit menu items for unlicensed installations
+#### 8.6 License Gating ✅
+- [x] QC & Audit module gated by `QC_AUDIT` license flag
+- [x] Show "Upgrade Required" message when accessing unlicensed QC/Audit pages
+- [x] Hide QC/Audit menu items for unlicensed installations
 
 ---
 
-### Phase 9: Licensing System
+### Phase 9: Licensing System ✅ COMPLETED
 **Duration: ~5-6 hours**
 *Reference: licensing_system_prd.md*
 
-#### 9.1 License File Format
-- [ ] Signed JSON structure (lab_name, issued_to, machine_id_hash, edition, modules, expiry)
-- [ ] RSA-PSS digital signature verification
-- [ ] Trial/Annual/Perpetual license types
+#### 9.1 License File Format ✅
+- [x] Signed JSON structure (lab_name, issued_to, machine_id_hash, edition, modules, expiry)
+- [x] RSA-PSS digital signature verification
+- [x] Trial/Annual/Perpetual license types
 
-#### 9.2 Machine Binding (Three Modes)
-- [ ] **None**: Trial licenses (no binding, clock rollback detection)
-- [ ] **Soft**: Annual licenses (tolerant mismatch, warning + grace)
-- [ ] **Strict**: Perpetual licenses (exact match required)
-- [ ] Hardware fingerprint: Windows GUID + Disk Serial + CPU ID (SHA-256)
+#### 9.2 Machine Binding (Three Modes) ✅
+- [x] **None**: Trial licenses (no binding, clock rollback detection)
+- [x] **Soft**: Annual licenses (tolerant mismatch, warning + grace)
+- [x] **Strict**: Perpetual licenses (exact match required)
+- [x] Hardware fingerprint: Windows GUID + Disk Serial + CPU ID (SHA-256)
 
-#### 9.3 License States & UI
-- [ ] States: Valid, Near Expiry, Grace Period, Expired, Invalid/Tampered
-- [ ] License status badge in header
-- [ ] Settings page: view license, upload new, show machine ID
-- [ ] Grace period: 7-14 days configurable
+#### 9.3 License States & UI ✅
+- [x] States: Valid, Near Expiry, Grace Period, Expired, Invalid/Tampered
+- [x] License status badge in header
+- [x] Settings page: view license, upload new, show machine ID
+- [x] Grace period: 7-14 days configurable
 
-#### 9.4 Feature Gating
-- [ ] Billing & report finalization blocked when expired (read-only access)
-- [ ] Trial: watermark on reports, analyzer/commission disabled
-- [ ] **QC & Audit: ADDON module** (gated by `QC_AUDIT` license flag)
-- [ ] Clock rollback detection (last-run timestamp)
+#### 9.4 Feature Gating ✅
+- [x] QC & Audit module gated by `QC_AUDIT` license flag
+- [x] Clock rollback detection (last-run timestamp)
+- [x] Billing & report finalization blocked when expired (backend integration completed)
+- [ ] Trial: watermark on reports, analyzer/commission disabled (deferred)
 
-#### 9.5 Audit & Security
-- [ ] License events logged (load, validation, expiry, block)
+#### 9.5 Audit & Security ✅
+- [x] License events logged (load, validation, expiry, block)
 - [ ] Code obfuscation (optional, deployment phase)
+
+#### 9.6 License Generator CLI ✅
+- [x] `scripts/generate-license.ts` CLI tool for vendors
+- [x] RSA key pair generation (`keygen` command)
+- [x] Interactive license creation (`create` command)
+- [x] Config file-based license creation (`create --config`)
 
 ---
 
@@ -230,22 +236,49 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 **Duration: ~4-5 hours**
 
 #### 10.1 Reliability
-- [ ] Error boundaries for React components
-- [ ] Draft result recovery (auto-save)
-- [ ] Power failure resilience
+- [x] Error boundaries for React components
+- [x] Draft result recovery (auto-save)
+- [x] Power failure resilience
 
 #### 10.2 Data Protection
-- [ ] Manual backup to file
-- [ ] Restore from backup (with audit continuity)
-- [ ] Database integrity checks
+- [x] Manual backup to file
+- [x] Restore from backup (with audit continuity)
+- [x] Database integrity checks
 
 #### 10.3 Deployment
-- [ ] Windows installer (NSIS/Electron Builder)
-- [ ] Auto-updater (optional)
+- [x] Windows installer (NSIS/Electron Builder)
+- [x] Auto-updater (optional)
 - [ ] Documentation (user manual, admin guide)
 
----
 
+---
+## Bugs
+- [x] Order tabs: Orders are not showing referring doctor name.
+- [x] In order creation: Patients name, Referring doctor's name, and tests should be searchable.
+- [x] In dashboard: Revenue should be calculated as (order value - doctor commission).
+- [x] In dashboard: Pending amount should be calculated as (order value - paid amount).
+- [x] In order creation: When discount is applied for patient with Doctor's referral, the discount amount should be deducted from the doctor's commission.
+- [x] Dashboard: Add secret button to hide/show revenue and pending amount.
+- [x] Dashboard: Pending amount in yearly report.
+- [x] Price List: Add feature to print price list.
+- [x] Billing: Invoice PDF should have patho lab details, invoice PDF should not show price list name.
+- [x] Apply search in patient list, doctor list, order list, sample list and test list in test master.
+- [x] Microscope watermark on center of report pdf.
+- [x] software branding [FMS Softwares] with contact details [Email: fmsenterprises001@gmail.com, Whatsapp: +91-7765009936] on report pdf.
+- [x] Auto-updater - I push for update and it should update the software.
+- [x] Bulk tests - parameters data upload from excel, with columns: Category , Test Name , Parameter , Reference Range, Unit, Price, Sample Type
+- [x] test data uploaded from test master: test data should be added to all current price list and new price list created.
+- [x] Order creation: a. Tests shown in order creation should be only from price list selected. b. Tests Selection: It should have its own scroll bar.
+- [x] Results: Results pdf should have /public/results_bg_image.png as background and below that patahology lab name entered admin/details tab. [These details should be in background with opactity 0.1]
+- [x] app icon: Replace old icon with new icons, use icon fiiles /public/icon.svg and /public/icon.png .
+- [x] price list: Add option to edit and delete price list.  
+- [x] license: Add copyright and EULA license to the software.  
+- [x] Installation: During installation user should accept EULA license agreement.
+- [x] Redesign login page with logo, redesign nav bar.
+- [x] patient page: add new order button in patient page in patient details section with every patient. 
+- [x] sample page: after sample collection, Results should be enabled. [Results button should be appear after sample collection.] 
+- [x] sample page: Results button: Results button should open results entry page for that sample.
+- [x] Redesign nav bar with modern minimalist design.
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 
