@@ -115,8 +115,12 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.USER_CREATE, data),
     update: (id: number, data: any) =>
       ipcRenderer.invoke(IPC_CHANNELS.USER_UPDATE, id, data),
+    delete: (id: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_DELETE, id),
     toggleActive: (id: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.USER_TOGGLE_ACTIVE, id),
+    getByRole: (roleName: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.USER_GET_BY_ROLE, roleName),
     listRoles: () =>
       ipcRenderer.invoke(IPC_CHANNELS.ROLE_LIST),
   },

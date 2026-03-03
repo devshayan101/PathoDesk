@@ -353,17 +353,6 @@ export default function DoctorsPage() {
                         <form onSubmit={handleSubmit}>
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label>Doctor Code *</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.doctorCode}
-                                        onChange={e => setFormData({ ...formData, doctorCode: e.target.value })}
-                                        placeholder="DR001"
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
                                     <label>Name *</label>
                                     <input
                                         type="text"
@@ -374,6 +363,18 @@ export default function DoctorsPage() {
                                         required
                                     />
                                 </div>
+                                {editingDoctor && (
+                                    <div className="form-group">
+                                        <label>Doctor Code</label>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            value={formData.doctorCode}
+                                            readOnly
+                                            style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                                        />
+                                    </div>
+                                )}
                                 <div className="form-group">
                                     <label>Specialty</label>
                                     <input

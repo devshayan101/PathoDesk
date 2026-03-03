@@ -58,7 +58,9 @@ export interface ElectronAPI {
         list: () => Promise<any[]>;
         create: (data: any) => Promise<{ success: boolean; userId?: number; error?: string }>;
         update: (id: number, data: any) => Promise<{ success: boolean; error?: string }>;
+        delete: (id: number) => Promise<{ success: boolean; error?: string }>;
         toggleActive: (id: number) => Promise<{ success: boolean; error?: string }>;
+        getByRole: (roleName: string) => Promise<any[]>;
         listRoles: () => Promise<{ id: number; name: string }[]>;
     };
     results: {

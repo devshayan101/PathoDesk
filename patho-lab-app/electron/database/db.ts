@@ -1243,6 +1243,22 @@ function getMigrations() {
           ('4_1s', '4:1s Rule', 'Four consecutive controls exceed same mean ± 1SD limit', 0, 1),
           ('10x', '10x Rule', 'Ten consecutive controls on same side of mean', 0, 1);
       `
+    },
+    {
+      name: '017_user_qualification_signature',
+      sql: `
+        -- Add qualification and signature columns to users table
+        ALTER TABLE users ADD COLUMN qualification TEXT;
+        ALTER TABLE users ADD COLUMN signature TEXT;
+
+        -- Seed default Lab Technician user (role_id=3 = technician)
+        INSERT OR IGNORE INTO users (username, password_hash, full_name, role_id, is_active, created_at, qualification)
+        VALUES ('labtechnician', '$2a$10$rOzJqQZQxLhQJaVKD9GEF.fPwvgbRI4Px4xvVhGGzZxo4hfXk.kfS', 'Lab Technician', 3, 1, datetime('now'), 'DMLT');
+
+        -- Seed default Pathologist user (role_id=4 = pathologist)
+        INSERT OR IGNORE INTO users (username, password_hash, full_name, role_id, is_active, created_at, qualification)
+        VALUES ('pathologist', '$2a$10$rOzJqQZQxLhQJaVKD9GEF.fPwvgbRI4Px4xvVhGGzZxo4hfXk.kfS', 'Dr. Pathologist', 4, 1, datetime('now'), 'MD Pathology');
+      `
     }
   ];
 }

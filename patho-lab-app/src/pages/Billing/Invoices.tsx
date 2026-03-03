@@ -44,7 +44,7 @@ export default function Invoices() {
     const showToast = useToastStore(s => s.showToast);
     const [paymentData, setPaymentData] = useState({
         amount: 0,
-        paymentMode: 'CASH' as 'CASH' | 'CARD' | 'UPI' | 'CREDIT',
+        paymentMode: 'CASH' as 'CASH' | 'CARD' | 'UPI',
         referenceNumber: '',
         remarks: ''
     });
@@ -492,7 +492,6 @@ export default function Invoices() {
                                     <option value="CASH">Cash</option>
                                     <option value="CARD">Card</option>
                                     <option value="UPI">UPI</option>
-                                    <option value="CREDIT">Credit/Due</option>
                                 </select>
                             </div>
                             {paymentData.paymentMode !== 'CASH' && (

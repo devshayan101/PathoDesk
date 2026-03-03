@@ -16,7 +16,7 @@ interface Doctor {
 }
 
 interface DoctorInput {
-    doctorCode: string;
+    doctorCode?: string;
     name: string;
     specialty?: string;
     phone?: string;
@@ -61,6 +61,14 @@ export function getDoctor(id: number): Doctor | null {
 // Create new doctor
 export function createDoctor(data: DoctorInput): { success: boolean; id?: number; error?: string } {
     try {
+        // Auto-generate doctor code if not provided
+        let code = data.doctorCode;
+        if (!code) {
+            const maxRow = queryOne<{ max_id: number }>('SELECT COALESCE(MAX(id), 0) as max_id FROM doctors');
+            const nextNum = (maxRow?.max_id || 0) + 1;
+            code = `DR${String(nextNum).padStart(3, '0')}`;
+        }
+
         const id = runWithId(`
       INSERT INTO doctors (
         doctor_code, name, specialty, phone, clinic_address, 
@@ -68,7 +76,7 @@ export function createDoctor(data: DoctorInput): { success: boolean; id?: number
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, [
-            data.doctorCode,
+            code,
             data.name,
             data.specialty || null,
             data.phone || null,

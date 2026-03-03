@@ -35,6 +35,16 @@ interface ReportData {
         name: string;
         specialty?: string;
     } | null;
+    labTechnician?: {
+        name: string;
+        qualification?: string;
+        signature?: string;
+    } | null;
+    pathologist?: {
+        name: string;
+        qualification?: string;
+        signature?: string;
+    } | null;
     results: ResultItem[];
 }
 
@@ -130,6 +140,25 @@ export function getReportData(sampleId: number): ReportData | null {
                     : null
     }));
 
+    // Get Lab Technician info (from entered_by in test_results)
+    const technicianData = queryOne<any>(`
+    SELECT DISTINCT u.full_name, u.qualification, u.signature
+    FROM test_results tr
+    JOIN users u ON tr.entered_by = u.id
+    JOIN order_tests ot ON tr.order_test_id = ot.id
+    JOIN samples s ON s.order_test_id = ot.id
+    WHERE s.id = ?
+    LIMIT 1
+  `, [sampleId]);
+
+    // Get Pathologist info (from verified_by in samples)
+    const pathologistData = queryOne<any>(`
+    SELECT u.full_name, u.qualification, u.signature
+    FROM samples s
+    JOIN users u ON s.verified_by = u.id
+    WHERE s.id = ?
+  `, [sampleId]);
+
     return {
         sample: {
             id: sample.id,
@@ -159,6 +188,16 @@ export function getReportData(sampleId: number): ReportData | null {
         referringDoctor: orderData.doctor_name ? {
             name: orderData.doctor_name,
             specialty: orderData.doctor_specialty
+        } : null,
+        labTechnician: technicianData ? {
+            name: technicianData.full_name,
+            qualification: technicianData.qualification || undefined,
+            signature: technicianData.signature || undefined,
+        } : null,
+        pathologist: pathologistData ? {
+            name: pathologistData.full_name,
+            qualification: pathologistData.qualification || undefined,
+            signature: pathologistData.signature || undefined,
         } : null,
         results: formattedResults
     };

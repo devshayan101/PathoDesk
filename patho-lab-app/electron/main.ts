@@ -286,6 +286,14 @@ function registerIpcHandlers() {
     return userService.toggleUserActive(id)
   })
 
+  ipcMain.handle(IPC_CHANNELS.USER_DELETE, (_, id: number) => {
+    return userService.deleteUser(id)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.USER_GET_BY_ROLE, (_, roleName: string) => {
+    return userService.getUsersByRole(roleName)
+  })
+
   ipcMain.handle(IPC_CHANNELS.ROLE_LIST, () => {
     return userService.listRoles()
   })

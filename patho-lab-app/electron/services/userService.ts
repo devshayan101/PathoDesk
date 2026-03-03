@@ -9,12 +9,14 @@ interface UserRow {
     role_name: string;
     is_active: number;
     created_at: string;
+    qualification: string | null;
+    signature: string | null;
 }
 
 // List all users with their roles
 export function listUsers(): UserRow[] {
     return queryAll<UserRow>(`
-    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active, u.created_at
+    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active, u.created_at, u.qualification, u.signature
     FROM users u
     JOIN roles r ON u.role_id = r.id
     ORDER BY u.created_at DESC
@@ -24,7 +26,7 @@ export function listUsers(): UserRow[] {
 // Get single user
 export function getUser(id: number): UserRow | undefined {
     return queryOne<UserRow>(`
-    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active
+    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active, u.qualification, u.signature
     FROM users u
     JOIN roles r ON u.role_id = r.id
     WHERE u.id = ?
@@ -37,6 +39,8 @@ export function createUser(data: {
     password: string;
     fullName: string;
     roleId: number;
+    qualification?: string;
+    signature?: string;
 }): { success: boolean; userId?: number; error?: string } {
     try {
         // Check if username exists
@@ -49,9 +53,9 @@ export function createUser(data: {
         const passwordHash = bcrypt.hashSync(data.password, 10);
 
         const userId = runWithId(`
-      INSERT INTO users (username, password_hash, full_name, role_id, is_active, created_at)
-      VALUES (?, ?, ?, ?, 1, datetime('now'))
-    `, [data.username, passwordHash, data.fullName, data.roleId]);
+      INSERT INTO users (username, password_hash, full_name, role_id, is_active, created_at, qualification, signature)
+      VALUES (?, ?, ?, ?, 1, datetime('now'), ?, ?)
+    `, [data.username, passwordHash, data.fullName, data.roleId, data.qualification || null, data.signature || null]);
 
         return { success: true, userId };
     } catch (error: any) {
@@ -65,6 +69,8 @@ export function updateUser(id: number, data: {
     fullName?: string;
     roleId?: number;
     password?: string;
+    qualification?: string;
+    signature?: string;
 }): { success: boolean; error?: string } {
     try {
         const sets: string[] = [];
@@ -76,6 +82,8 @@ export function updateUser(id: number, data: {
             sets.push('password_hash = ?');
             params.push(bcrypt.hashSync(data.password, 10));
         }
+        if (data.qualification !== undefined) { sets.push('qualification = ?'); params.push(data.qualification || null); }
+        if (data.signature !== undefined) { sets.push('signature = ?'); params.push(data.signature || null); }
 
         if (sets.length > 0) {
             params.push(id);
@@ -96,6 +104,31 @@ export function toggleUserActive(id: number): { success: boolean; error?: string
     } catch (error: any) {
         return { success: false, error: error.message };
     }
+}
+
+// Delete user (prevent deleting admin)
+export function deleteUser(id: number): { success: boolean; error?: string } {
+    try {
+        const user = queryOne<{ username: string }>('SELECT username FROM users WHERE id = ?', [id]);
+        if (!user) return { success: false, error: 'User not found' };
+        if (user.username === 'admin') return { success: false, error: 'Cannot delete admin user' };
+
+        run('DELETE FROM users WHERE id = ?', [id]);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+// Get users by role name (e.g., 'technician', 'pathologist')
+export function getUsersByRole(roleName: string): UserRow[] {
+    return queryAll<UserRow>(`
+    SELECT u.id, u.username, u.full_name, u.role_id, r.name as role_name, u.is_active, u.qualification, u.signature
+    FROM users u
+    JOIN roles r ON u.role_id = r.id
+    WHERE r.name = ? AND u.is_active = 1
+    ORDER BY u.full_name
+  `, [roleName]);
 }
 
 // List roles

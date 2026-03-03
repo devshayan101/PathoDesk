@@ -187,7 +187,9 @@ export const IPC_CHANNELS = {
     USER_LIST: 'user:list',
     USER_CREATE: 'user:create',
     USER_UPDATE: 'user:update',
+    USER_DELETE: 'user:delete',
     USER_TOGGLE_ACTIVE: 'user:toggleActive',
+    USER_GET_BY_ROLE: 'user:getByRole',
     ROLE_LIST: 'role:list',
 
     // Reports
@@ -379,7 +381,7 @@ export interface Payment {
     id: number;
     invoiceId: number;
     amount: number;
-    paymentMode: 'CASH' | 'CARD' | 'UPI' | 'CREDIT';
+    paymentMode: 'CASH' | 'CARD' | 'UPI';
     referenceNumber?: string;
     paymentDate: string;
     receivedBy?: number;

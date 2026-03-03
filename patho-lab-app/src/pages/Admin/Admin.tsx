@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToastStore } from '../../stores/toastStore';
 import './Admin.css';
 
@@ -6,9 +6,12 @@ interface User {
     id: number;
     username: string;
     full_name: string;
+    role_id: number;
     role_name: string;
     is_active: number;
     created_at: string;
+    qualification: string | null;
+    signature: string | null;
 }
 
 interface Role {
@@ -23,15 +26,19 @@ export default function AdminPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
     const [showForm, setShowForm] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
         fullName: '',
         roleId: 2,
+        qualification: '',
+        signature: '' as string,
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const showToast = useToastStore(s => s.showToast);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Lab Settings State
     const [labSettings, setLabSettings] = useState<Record<string, string>>({});
@@ -99,24 +106,91 @@ export default function AdminPage() {
         setLabSettings(prev => ({ ...prev, [key]: value }));
     };
 
+    const resetForm = () => {
+        setFormData({ username: '', password: '', fullName: '', roleId: 2, qualification: '', signature: '' });
+        setEditingUser(null);
+        setError(null);
+    };
+
+    const openCreateForm = () => {
+        resetForm();
+        setShowForm(true);
+    };
+
+    const openEditForm = (user: User) => {
+        setEditingUser(user);
+        setFormData({
+            username: user.username,
+            password: '',
+            fullName: user.full_name,
+            roleId: user.role_id,
+            qualification: user.qualification || '',
+            signature: user.signature || '',
+        });
+        setError(null);
+        setShowForm(true);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
         try {
             if (window.electronAPI) {
-                const result = await window.electronAPI.users.create(formData);
-                if (result.success) {
-                    setShowForm(false);
-                    setFormData({ username: '', password: '', fullName: '', roleId: 2 });
-                    await loadData();
-                    showToast('User created successfully', 'success');
+                if (editingUser) {
+                    // Update existing user
+                    const updateData: any = {
+                        fullName: formData.fullName,
+                        roleId: formData.roleId,
+                        qualification: formData.qualification,
+                        signature: formData.signature,
+                    };
+                    if (formData.password) {
+                        updateData.password = formData.password;
+                    }
+                    const result = await window.electronAPI.users.update(editingUser.id, updateData);
+                    if (result.success) {
+                        setShowForm(false);
+                        resetForm();
+                        await loadData();
+                        showToast('User updated successfully', 'success');
+                    } else {
+                        setError(result.error || 'Failed to update user');
+                    }
                 } else {
-                    setError(result.error || 'Failed to create user');
+                    // Create new user
+                    const result = await window.electronAPI.users.create(formData);
+                    if (result.success) {
+                        setShowForm(false);
+                        resetForm();
+                        await loadData();
+                        showToast('User created successfully', 'success');
+                    } else {
+                        setError(result.error || 'Failed to create user');
+                    }
                 }
             }
         } catch (e: any) {
             setError(e.message);
+        }
+    };
+
+    const handleDelete = async (user: User) => {
+        if (user.username === 'admin') return;
+        if (!confirm(`Are you sure you want to delete user "${user.full_name}"?`)) return;
+
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.users.delete(user.id);
+                if (result.success) {
+                    await loadData();
+                    showToast('User deleted', 'success');
+                } else {
+                    showToast(result.error || 'Failed to delete user', 'error');
+                }
+            }
+        } catch (e) {
+            console.error('Failed to delete user:', e);
         }
     };
 
@@ -129,6 +203,27 @@ export default function AdminPage() {
         } catch (e) {
             console.error('Failed to toggle user:', e);
         }
+    };
+
+    const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select an image file', 'error');
+            return;
+        }
+
+        if (file.size > 500 * 1024) { // 500KB limit
+            showToast('Signature image must be under 500KB', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setFormData(prev => ({ ...prev, signature: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
     };
 
     const getRoleLabel = (roleName: string): string => {
@@ -176,7 +271,7 @@ export default function AdminPage() {
                 <>
                     <div className="page-header">
                         <h1 className="page-title">User Management</h1>
-                        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+                        <button className="btn btn-primary" onClick={openCreateForm}>
                             + New User
                         </button>
                     </div>
@@ -184,7 +279,7 @@ export default function AdminPage() {
                     {showForm && (
                         <div className="modal-overlay">
                             <div className="modal user-form-modal">
-                                <h2>Create New User</h2>
+                                <h2>{editingUser ? 'Edit User' : 'Create New User'}</h2>
 
                                 {error && (
                                     <div className="error-banner">
@@ -203,6 +298,8 @@ export default function AdminPage() {
                                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                                 required
                                                 autoFocus
+                                                disabled={!!editingUser}
+                                                style={editingUser ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                                             />
                                         </div>
                                         <div className="form-group">
@@ -218,13 +315,13 @@ export default function AdminPage() {
 
                                     <div className="form-row">
                                         <div className="form-group">
-                                            <label>Password</label>
+                                            <label>{editingUser ? 'New Password (leave blank to keep)' : 'Password'}</label>
                                             <input
                                                 className="input"
                                                 type="password"
                                                 value={formData.password}
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                required
+                                                required={!editingUser}
                                             />
                                         </div>
                                         <div className="form-group">
@@ -241,9 +338,53 @@ export default function AdminPage() {
                                         </div>
                                     </div>
 
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Qualification</label>
+                                            <input
+                                                className="input"
+                                                value={formData.qualification}
+                                                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                                                placeholder="e.g. DMLT, MD Pathology"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-group full-width">
+                                            <label>Signature</label>
+                                            <div className="signature-upload-area">
+                                                {formData.signature ? (
+                                                    <div className="signature-preview">
+                                                        <img src={formData.signature} alt="Signature" style={{ maxHeight: 80, maxWidth: 200 }} />
+                                                        <button type="button" className="btn btn-sm btn-secondary" onClick={() => {
+                                                            setFormData(prev => ({ ...prev, signature: '' }));
+                                                            if (fileInputRef.current) fileInputRef.current.value = '';
+                                                        }}>
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="signature-placeholder" onClick={() => fileInputRef.current?.click()}>
+                                                        📝 Click to upload signature image (PNG/JPG, max 500KB)
+                                                    </div>
+                                                )}
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleSignatureUpload}
+                                                    style={{ display: 'none' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="form-actions">
-                                        <button type="submit" className="btn btn-primary">Create User</button>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                                        <button type="submit" className="btn btn-primary">
+                                            {editingUser ? 'Update User' : 'Create User'}
+                                        </button>
+                                        <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>
                                             Cancel
                                         </button>
                                     </div>
@@ -260,13 +401,14 @@ export default function AdminPage() {
                                         <th>Username</th>
                                         <th>Full Name</th>
                                         <th>Role</th>
+                                        <th>Qualification</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {users.length === 0 ? (
-                                        <tr><td colSpan={5} className="empty">No users found</td></tr>
+                                        <tr><td colSpan={6} className="empty">No users found</td></tr>
                                     ) : (
                                         users.map(user => (
                                             <tr key={user.id}>
@@ -277,20 +419,40 @@ export default function AdminPage() {
                                                         {getRoleLabel(user.role_name)}
                                                     </span>
                                                 </td>
+                                                <td>{user.qualification || '—'}</td>
                                                 <td>
                                                     <span className={`badge ${user.is_active ? 'badge-success' : 'badge-warning'}`}>
                                                         {user.is_active ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    {user.username !== 'admin' && (
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
                                                         <button
                                                             className="btn btn-secondary btn-sm"
-                                                            onClick={() => handleToggleActive(user.id)}
+                                                            onClick={() => openEditForm(user)}
+                                                            title="Edit user"
                                                         >
-                                                            {user.is_active ? 'Disable' : 'Enable'}
+                                                            ✏️
                                                         </button>
-                                                    )}
+                                                        {user.username !== 'admin' && (
+                                                            <>
+                                                                <button
+                                                                    className="btn btn-secondary btn-sm"
+                                                                    onClick={() => handleToggleActive(user.id)}
+                                                                >
+                                                                    {user.is_active ? 'Disable' : 'Enable'}
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-sm"
+                                                                    style={{ background: '#ef4444', color: '#fff' }}
+                                                                    onClick={() => handleDelete(user)}
+                                                                    title="Delete user"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

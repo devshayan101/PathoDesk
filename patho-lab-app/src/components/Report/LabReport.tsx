@@ -110,6 +110,12 @@ const styles = StyleSheet.create({
         width: '100%',
         marginBottom: 5,
     },
+    signatureImage: {
+        width: 120,
+        height: 40,
+        objectFit: 'contain' as const,
+        marginBottom: 4,
+    },
     disclaimer: {
         fontSize: 7,
         color: '#999',
@@ -174,6 +180,16 @@ interface ReportData {
     referringDoctor?: {
         name: string;
         specialty?: string;
+    } | null;
+    labTechnician?: {
+        name: string;
+        qualification?: string;
+        signature?: string;
+    } | null;
+    pathologist?: {
+        name: string;
+        qualification?: string;
+        signature?: string;
     } | null;
 }
 
@@ -374,10 +390,33 @@ export default function LabReport({ data, labSettings }: Props) {
                                 <Text style={styles.label}>Verified: {formatDate(sample.verified_at)}</Text>
                             )}
                         </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                        {/* Lab Technician Signature */}
                         <View style={styles.signatureBox}>
-                            <View style={styles.signatureLine} />
-                            <Text style={styles.label}>{sample.verified_by_name || 'Authorized Signatory'}</Text>
-                            <Text style={styles.label}>Pathologist</Text>
+                            {data.labTechnician?.signature ? (
+                                <Image src={data.labTechnician.signature} style={styles.signatureImage} />
+                            ) : (
+                                <View style={styles.signatureLine} />
+                            )}
+                            <Text style={styles.label}>{data.labTechnician?.name || 'Lab Technician'}</Text>
+                            {data.labTechnician?.qualification && (
+                                <Text style={[styles.label, { fontSize: 7 }]}>{data.labTechnician.qualification}</Text>
+                            )}
+                            <Text style={[styles.label, { fontWeight: 'bold' }]}>Lab Technician</Text>
+                        </View>
+                        {/* Pathologist Signature */}
+                        <View style={styles.signatureBox}>
+                            {data.pathologist?.signature ? (
+                                <Image src={data.pathologist.signature} style={styles.signatureImage} />
+                            ) : (
+                                <View style={styles.signatureLine} />
+                            )}
+                            <Text style={styles.label}>{data.pathologist?.name || sample.verified_by_name || 'Pathologist'}</Text>
+                            {data.pathologist?.qualification && (
+                                <Text style={[styles.label, { fontSize: 7 }]}>{data.pathologist.qualification}</Text>
+                            )}
+                            <Text style={[styles.label, { fontWeight: 'bold' }]}>Pathologist</Text>
                         </View>
                     </View>
                     <Text style={styles.disclaimer}>{labSettings.disclaimer}</Text>
