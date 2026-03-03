@@ -321,6 +321,7 @@ export default function TestMasterPage() {
                     };
                     return {
                         category: find(['category', 'department', 'dept']),
+                        testCode: String(find(['test code', 'test_code', 'code'])).trim().toUpperCase(),
                         testName: find(['test name', 'test_name', 'testname', 'test']),
                         parameter: find(['parameter', 'param', 'analyte']),
                         referenceRange: String(find(['reference', 'ref range', 'range', 'normal'])),

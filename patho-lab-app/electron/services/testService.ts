@@ -383,6 +383,7 @@ export function createDraftFromExisting(testId: number): number {
 
 export interface BulkImportRow {
   category: string;
+  testCode?: string;
   testName: string;
   parameter: string;
   referenceRange: string;
@@ -419,12 +420,19 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
     try {
       const firstRow = testRows[0];
 
-      // Generate a test_code from test name (uppercase, no spaces, max 20 chars)
-      const testCode = testName
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '_')
-        .replace(/_+/g, '_')
-        .substring(0, 20);
+      // Use explicit test_code if provided, else generate from test name (uppercase, no spaces, max 20 chars)
+      let testCode = firstRow.testCode;
+
+      if (!testCode) {
+        testCode = testName
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '_')
+          .replace(/_+/g, '_')
+          .substring(0, 20);
+      } else {
+        // Enforce basic formatting if provided
+        testCode = testCode.replace(/[^A-Z0-9_-]/gi, '').substring(0, 20).toUpperCase();
+      }
 
       // Check if test already exists (active or not, if it has the same code we don't import since code is generated from name, but if we deleted it we appended _DEL so the code is free)
       const existingTest = queryOne<{ id: number }>('SELECT id FROM tests WHERE test_code = ?', [testCode]);
