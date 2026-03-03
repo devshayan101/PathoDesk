@@ -173,6 +173,7 @@ export function listTestPrices(priceListId: number): TestPriceRow[] {
       AND tp.is_active = 1
       AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
       AND tv.status = 'PUBLISHED'
+      AND t.is_active = 1
     GROUP BY tp.test_id
     ORDER BY tv.test_name ASC
   `, [priceListId]);
@@ -187,6 +188,7 @@ export function getTestPrice(testId: number, priceListId: number): TestPriceRow 
     WHERE tp.test_id = ?
       AND tp.price_list_id = ?
       AND tp.is_active = 1
+      AND t.is_active = 1
       AND tp.effective_from <= datetime('now')
       AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
     ORDER BY tp.effective_from DESC
@@ -271,6 +273,7 @@ export function getTestPricesForTests(testIds: number[], priceListId: number): M
     WHERE tp.test_id IN (${placeholders})
       AND tp.price_list_id = ?
       AND tp.is_active = 1
+      AND t.is_active = 1
       AND tp.effective_from <= datetime('now')
       AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
     ORDER BY tp.effective_from DESC
