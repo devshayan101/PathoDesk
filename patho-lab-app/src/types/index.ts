@@ -149,6 +149,7 @@ export const IPC_CHANNELS = {
     TEST_CREATE: 'test:create',
     TEST_UPDATE: 'test:update',
     TEST_DELETE: 'test:delete',
+    TEST_BULK_DELETE: 'test:bulkDelete',
 
     // Test Wizard
     TEST_WIZARD_GET_DRAFTS: 'testWizard:getDrafts',

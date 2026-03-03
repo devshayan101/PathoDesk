@@ -1,5 +1,7 @@
 
 import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
+import logoUrl from '../../../public/icon.png';
+
 // Register a standard font for better rendering
 Font.register({
     family: 'Roboto',
@@ -266,7 +268,7 @@ function MicroscopeWatermark({ labName }: { labName?: string }) {
     // Using import for public assets usually resolves to a relative URL.
     return (
         <View style={styles.watermarkContainer}>
-            <Image src="/icon.png" style={{ width: 220, opacity: 0.1 }} />
+            <Image src={logoUrl} style={{ width: 220, opacity: 0.1 }} />
             {labName && (
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 10 }}>
                     {labName}
@@ -383,15 +385,7 @@ export default function LabReport({ data, labSettings }: Props) {
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <View style={styles.verification}>
-                        <View>
-                            <Text style={styles.label}>Report Status: {sample.status}</Text>
-                            {sample.verified_at && (
-                                <Text style={styles.label}>Verified: {formatDate(sample.verified_at)}</Text>
-                            )}
-                        </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
                         {/* Lab Technician Signature */}
                         <View style={styles.signatureBox}>
                             {data.labTechnician?.signature ? (
@@ -405,6 +399,15 @@ export default function LabReport({ data, labSettings }: Props) {
                             )}
                             <Text style={[styles.label, { fontWeight: 'bold' }]}>Lab Technician</Text>
                         </View>
+
+                        {/* Report Status (Middle) */}
+                        <View style={{ alignItems: 'center', marginBottom: 5 }}>
+                            <Text style={[styles.label, { fontSize: 9 }]}>Report Status: {sample.status}</Text>
+                            {sample.verified_at && (
+                                <Text style={[styles.label, { fontSize: 9 }]}>Verified: {formatDate(sample.verified_at)}</Text>
+                            )}
+                        </View>
+
                         {/* Pathologist Signature */}
                         <View style={styles.signatureBox}>
                             {data.pathologist?.signature ? (

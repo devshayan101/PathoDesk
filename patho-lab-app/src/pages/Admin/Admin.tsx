@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToastStore } from '../../stores/toastStore';
+import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import './Admin.css';
 
 interface User {
@@ -39,6 +40,7 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
     const showToast = useToastStore(s => s.showToast);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
 
     // Lab Settings State
     const [labSettings, setLabSettings] = useState<Record<string, string>>({});
@@ -175,10 +177,20 @@ export default function AdminPage() {
         }
     };
 
-    const handleDelete = async (user: User) => {
+    const handleDeleteClick = (user: User) => {
         if (user.username === 'admin') return;
-        if (!confirm(`Are you sure you want to delete user "${user.full_name}"?`)) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete User',
+            message: `Are you sure you want to delete user "${user.full_name}"? This action cannot be undone.`,
+            onConfirm: () => {
+                setConfirmDialog(null);
+                handleDelete(user);
+            }
+        });
+    };
 
+    const handleDelete = async (user: User) => {
         try {
             if (window.electronAPI) {
                 const result = await window.electronAPI.users.delete(user.id);
@@ -394,6 +406,14 @@ export default function AdminPage() {
                     )}
 
                     <div className="users-table-container">
+                        {confirmDialog && (
+                            <ConfirmDialog
+                                title={confirmDialog.title}
+                                message={confirmDialog.message}
+                                onConfirm={confirmDialog.onConfirm}
+                                onCancel={() => setConfirmDialog(null)}
+                            />
+                        )}
                         {loading ? <div className="loading">Loading users...</div> : (
                             <table className="table">
                                 <thead>
@@ -427,15 +447,15 @@ export default function AdminPage() {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <button
-                                                            className="btn btn-secondary btn-sm"
-                                                            onClick={() => openEditForm(user)}
-                                                            title="Edit user"
-                                                        >
-                                                            ✏️
-                                                        </button>
-                                                        {user.username !== 'admin' && (
+                                                        {user.username !== 'admin' ? (
                                                             <>
+                                                                <button
+                                                                    className="btn btn-secondary btn-sm"
+                                                                    onClick={() => openEditForm(user)}
+                                                                    title="Edit user"
+                                                                >
+                                                                    ✏️
+                                                                </button>
                                                                 <button
                                                                     className="btn btn-secondary btn-sm"
                                                                     onClick={() => handleToggleActive(user.id)}
@@ -445,12 +465,14 @@ export default function AdminPage() {
                                                                 <button
                                                                     className="btn btn-sm"
                                                                     style={{ background: '#ef4444', color: '#fff' }}
-                                                                    onClick={() => handleDelete(user)}
+                                                                    onClick={() => handleDeleteClick(user)}
                                                                     title="Delete user"
                                                                 >
                                                                     🗑️
                                                                 </button>
                                                             </>
+                                                        ) : (
+                                                            <span style={{ color: '#888', fontStyle: 'italic', fontSize: '0.85em' }}>System Admin</span>
                                                         )}
                                                     </div>
                                                 </td>

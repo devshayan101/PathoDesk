@@ -311,7 +311,15 @@ export function publishTest(versionId: number): void {
 }
 
 export function deleteTest(testId: number): void {
-  run('UPDATE tests SET is_active = 0 WHERE id = ?', [testId]);
+  const ts = Date.now();
+  run(`UPDATE tests SET is_active = 0, test_code = test_code || '_DEL_' || ? WHERE id = ?`, [ts, testId]);
+}
+
+export function bulkDeleteTests(testIds: number[]): void {
+  const ts = Date.now();
+  for (let i = 0; i < testIds.length; i++) {
+    run(`UPDATE tests SET is_active = 0, test_code = test_code || '_DEL_' || ? WHERE id = ?`, [ts + i, testIds[i]]);
+  }
 }
 
 export function createDraftFromExisting(testId: number): number {
@@ -386,11 +394,12 @@ export interface BulkImportRow {
 export interface BulkImportResult {
   created: number;
   skipped: number;
+  skippedNames: string[];
   errors: string[];
 }
 
 export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
-  const result: BulkImportResult = { created: 0, skipped: 0, errors: [] };
+  const result: BulkImportResult = { created: 0, skipped: 0, skippedNames: [], errors: [] };
 
   // Group rows by testName
   const testMap = new Map<string, BulkImportRow[]>();
@@ -417,10 +426,11 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         .replace(/_+/g, '_')
         .substring(0, 20);
 
-      // Check if test already exists
+      // Check if test already exists (active or not, if it has the same code we don't import since code is generated from name, but if we deleted it we appended _DEL so the code is free)
       const existingTest = queryOne<{ id: number }>('SELECT id FROM tests WHERE test_code = ?', [testCode]);
       if (existingTest) {
         result.skipped++;
+        result.skippedNames.push(testName.trim());
         continue;
       }
 

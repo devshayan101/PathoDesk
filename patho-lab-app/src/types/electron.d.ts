@@ -23,7 +23,8 @@ export interface ElectronAPI {
         updateParameter: (parameterId: number, data: any) => Promise<{ success: boolean; error?: string }>;
         deleteParameter: (parameterId: number) => Promise<{ success: boolean; error?: string }>;
         delete: (testId: number) => Promise<void>;
-        bulkImport: (rows: any[]) => Promise<{ created: number; skipped: number; errors: string[] }>;
+        bulkDelete: (ids: number[]) => Promise<void>;
+        bulkImport: (rows: any[]) => Promise<{ created: number; skipped: number; skippedNames: string[]; errors: string[] }>;
     };
     testWizard: {
         getDrafts: () => Promise<any[]>;

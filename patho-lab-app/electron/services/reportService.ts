@@ -141,23 +141,45 @@ export function getReportData(sampleId: number): ReportData | null {
     }));
 
     // Get Lab Technician info (from entered_by in test_results)
-    const technicianData = queryOne<any>(`
+    let technicianData = queryOne<any>(`
     SELECT DISTINCT u.full_name, u.qualification, u.signature
     FROM test_results tr
     JOIN users u ON tr.entered_by = u.id
+    JOIN roles r ON u.role_id = r.id
     JOIN order_tests ot ON tr.order_test_id = ot.id
     JOIN samples s ON s.order_test_id = ot.id
-    WHERE s.id = ?
+    WHERE s.id = ? AND r.name IN ('technician', 'pathologist')
     LIMIT 1
   `, [sampleId]);
 
+    if (!technicianData) {
+        technicianData = queryOne<any>(`
+        SELECT u.full_name, u.qualification, u.signature
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'technician' AND u.is_active = 1
+        LIMIT 1
+        `);
+    }
+
     // Get Pathologist info (from verified_by in samples)
-    const pathologistData = queryOne<any>(`
+    let pathologistData = queryOne<any>(`
     SELECT u.full_name, u.qualification, u.signature
     FROM samples s
     JOIN users u ON s.verified_by = u.id
-    WHERE s.id = ?
+    JOIN roles r ON u.role_id = r.id
+    WHERE s.id = ? AND r.name = 'pathologist'
   `, [sampleId]);
+
+    if (!pathologistData) {
+        pathologistData = queryOne<any>(`
+        SELECT u.full_name, u.qualification, u.signature
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE r.name = 'pathologist' AND u.is_active = 1
+        LIMIT 1
+        `);
+    }
 
     return {
         sample: {

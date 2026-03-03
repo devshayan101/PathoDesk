@@ -85,6 +85,12 @@ export default function OrdersPage() {
     const [testSearch, setTestSearch] = useState('');
     const [listSearch, setListSearch] = useState('');
 
+    // Quick Add Modals
+    const [showAddPatient, setShowAddPatient] = useState(false);
+    const [newPatient, setNewPatient] = useState({ fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
+    const [showAddDoctor, setShowAddDoctor] = useState(false);
+    const [newDoctor, setNewDoctor] = useState({ name: '', phone: '', email: '', specialization: '', priceListId: '' });
+
     useEffect(() => {
         loadData();
     }, []);
@@ -134,6 +140,83 @@ export default function OrdersPage() {
             console.error('Failed to load data:', e);
         }
         setLoading(false);
+    };
+
+    const handleQuickAddPatient = async () => {
+        if (!newPatient.fullName || !newPatient.phone || !newPatient.age) {
+            showToast('Please fill required fields (Name, Phone, Age)', 'warning');
+            return;
+        }
+
+        // Calculate DOB roughly from Age
+        const today = new Date();
+        const ageNum = parseInt(newPatient.age) || 0;
+        let dob = new Date();
+        if (newPatient.ageUnit === 'years') dob.setFullYear(today.getFullYear() - ageNum);
+        else if (newPatient.ageUnit === 'months') dob.setMonth(today.getMonth() - ageNum);
+        else if (newPatient.ageUnit === 'days') dob.setDate(today.getDate() - ageNum);
+
+        try {
+            const result = await window.electronAPI.patients.create({
+                fullName: newPatient.fullName,
+                dob: dob.toISOString().split('T')[0],
+                gender: newPatient.gender,
+                phone: newPatient.phone,
+                email: '',
+                address: ''
+            });
+
+            if (result > 0) {
+                showToast('Patient added successfully', 'success');
+                setShowAddPatient(false);
+                setNewPatient({ fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
+                const pts = await window.electronAPI.patients.list();
+                setPatients(pts);
+
+                // Fetch the new patient's UID
+                const justAdded = pts.find((p: any) => p.id === result);
+                if (justAdded) {
+                    setSelectedPatientId(result);
+                    setPatientSearch(`${justAdded.full_name} (${justAdded.patient_uid})`);
+                }
+            }
+        } catch (e: any) {
+            showToast('Failed to add patient: ' + e.message, 'error');
+        }
+    };
+
+    const handleQuickAddDoctor = async () => {
+        if (!newDoctor.name) {
+            showToast('Name is required', 'warning');
+            return;
+        }
+
+        try {
+            const result = await window.electronAPI.doctors.create({
+                name: newDoctor.name,
+                phone: newDoctor.phone,
+                email: newDoctor.email,
+                specialization: newDoctor.specialization,
+                priceListId: newDoctor.priceListId ? Number(newDoctor.priceListId) : undefined
+            });
+
+            if (result.success && result.id) {
+                showToast('Doctor added successfully', 'success');
+                setShowAddDoctor(false);
+                setNewDoctor({ name: '', phone: '', email: '', specialization: '', priceListId: '' });
+
+                const drs = await window.electronAPI.doctors.listAll();
+                setDoctors(drs);
+
+                const justAdded = drs.find((d: any) => d.id === result.id);
+                if (justAdded) {
+                    handleDoctorChange(result.id);
+                    setDoctorSearch(`${justAdded.name} (${justAdded.doctor_code})`);
+                }
+            }
+        } catch (e: any) {
+            showToast('Failed to add doctor: ' + e.message, 'error');
+        }
     };
 
     // Pre-fill patient if coming from another page
@@ -377,6 +460,20 @@ export default function OrdersPage() {
                                                         <small style={{ opacity: 0.7 }}>{p.patient_uid}</small>
                                                     </div>
                                                 ))}
+                                                <div
+                                                    onClick={() => {
+                                                        setPatientDropdownOpen(false);
+                                                        setShowAddPatient(true);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.5rem 0.75rem', cursor: 'pointer', fontWeight: 'bold', borderTop: '1px solid var(--color-border)',
+                                                        color: 'var(--color-accent)', textAlign: 'center', background: 'var(--color-bg-card)'
+                                                    }}
+                                                    onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'var(--color-bg-tertiary)'}
+                                                    onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'var(--color-bg-card)'}
+                                                >
+                                                    + Add New Patient
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -438,6 +535,20 @@ export default function OrdersPage() {
                                                         <div style={{ fontWeight: 500 }}>{d.name} ({d.doctor_code}){d.price_list_id ? ' ★' : ''}</div>
                                                     </div>
                                                 ))}
+                                                <div
+                                                    onClick={() => {
+                                                        setDoctorDropdownOpen(false);
+                                                        setShowAddDoctor(true);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.5rem 0.75rem', cursor: 'pointer', fontWeight: 'bold', borderTop: '1px solid var(--color-border)',
+                                                        color: 'var(--color-accent)', textAlign: 'center', background: 'var(--color-bg-card)'
+                                                    }}
+                                                    onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'var(--color-bg-tertiary)'}
+                                                    onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'var(--color-bg-card)'}
+                                                >
+                                                    + Add New Doctor
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -645,6 +756,81 @@ export default function OrdersPage() {
                     </div>
                 )}
             </div>
+            {/* Inline Quick Add Patient Modal */}
+            {showAddPatient && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                    <div className="modal" style={{ maxWidth: '400px' }}>
+                        <h2>Quick Add Patient</h2>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Full Name *</label>
+                            <input className="input" value={newPatient.fullName} onChange={e => setNewPatient({ ...newPatient, fullName: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Phone *</label>
+                            <input className="input" value={newPatient.phone} onChange={e => setNewPatient({ ...newPatient, phone: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div className="form-group">
+                                <label>Gender *</label>
+                                <select className="input" value={newPatient.gender} onChange={e => setNewPatient({ ...newPatient, gender: e.target.value })}>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Age *</label>
+                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                    <input type="number" className="input" style={{ width: '60px' }} value={newPatient.age} onChange={e => setNewPatient({ ...newPatient, age: e.target.value })} />
+                                    <select className="input" value={newPatient.ageUnit} onChange={e => setNewPatient({ ...newPatient, ageUnit: e.target.value })}>
+                                        <option value="years">Y</option>
+                                        <option value="months">M</option>
+                                        <option value="days">D</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowAddPatient(false)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleQuickAddPatient}>Save Patient</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Inline Quick Add Doctor Modal */}
+            {showAddDoctor && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                    <div className="modal" style={{ maxWidth: '400px' }}>
+                        <h2>Quick Add Doctor</h2>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Doctor Name *</label>
+                            <input className="input" value={newDoctor.name} onChange={e => setNewDoctor({ ...newDoctor, name: e.target.value })} placeholder="Dr. " />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Phone</label>
+                            <input className="input" value={newDoctor.phone} onChange={e => setNewDoctor({ ...newDoctor, phone: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Specialization</label>
+                            <input className="input" value={newDoctor.specialization} onChange={e => setNewDoctor({ ...newDoctor, specialization: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label>Price List (Optional)</label>
+                            <select className="input" value={newDoctor.priceListId} onChange={e => setNewDoctor({ ...newDoctor, priceListId: e.target.value })}>
+                                <option value="">-- No specific price list --</option>
+                                {priceLists.map(pl => (
+                                    <option key={pl.id} value={pl.id}>{pl.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowAddDoctor(false)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleQuickAddDoctor}>Save Doctor</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

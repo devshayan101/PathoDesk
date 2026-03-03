@@ -173,6 +173,10 @@ function registerIpcHandlers() {
     return testService.deleteTest(testId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.TEST_BULK_DELETE, (_, testIds: number[]) => {
+    return testService.bulkDeleteTests(testIds)
+  })
+
   // Test Wizard
   ipcMain.handle(IPC_CHANNELS.TEST_WIZARD_GET_DRAFTS, () => {
     return testService.getDrafts()

@@ -39,6 +39,7 @@ export default function TestMasterPage() {
     const [testSearch, setTestSearch] = useState('');
     const showToast = useToastStore(s => s.showToast);
     const [selectedTest, setSelectedTest] = useState<Test | null>(null);
+    const [selectedTestIds, setSelectedTestIds] = useState<Set<number>>(new Set());
     const [parameters, setParameters] = useState<Parameter[]>([]);
     const [selectedParam, setSelectedParam] = useState<Parameter | null>(null);
     const [refRanges, setRefRanges] = useState<RefRange[]>([]);
@@ -183,11 +184,37 @@ export default function TestMasterPage() {
                         await window.electronAPI.tests.delete(testId);
                         await loadTests();
                         setSelectedTest(null);
+                        setSelectedTestIds(prev => { const next = new Set(prev); next.delete(testId); return next; });
                         showToast('Test deleted successfully', 'success');
                         setTimeout(() => window.focus(), 100);
                     }
                 } catch (e: any) {
                     showToast('Failed to delete test: ' + e.message, 'error');
+                }
+            }
+        });
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedTestIds.size === 0) return;
+        setConfirmDialog({
+            title: 'Delete Selected Tests',
+            message: `Are you sure you want to delete ${selectedTestIds.size} tests? This action cannot be undone.`,
+            confirmLabel: 'Delete All',
+            variant: 'danger',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                    if (window.electronAPI) {
+                        await window.electronAPI.tests.bulkDelete(Array.from(selectedTestIds));
+                        await loadTests();
+                        setSelectedTest(null);
+                        setSelectedTestIds(new Set());
+                        showToast(`${selectedTestIds.size} tests deleted successfully`, 'success');
+                        setTimeout(() => window.focus(), 100);
+                    }
+                } catch (e: any) {
+                    showToast('Failed to delete tests: ' + e.message, 'error');
                 }
             }
         });
@@ -328,7 +355,17 @@ export default function TestMasterPage() {
             if (result.created > 0) msgs.push(`${result.created} tests created`);
             if (result.skipped > 0) msgs.push(`${result.skipped} skipped (already exist)`);
             if (result.errors.length > 0) msgs.push(`${result.errors.length} errors`);
-            showToast(msgs.join(', '), result.errors.length > 0 ? 'warning' : 'success');
+            if (result.skipped > 0 && result.skippedNames && result.skippedNames.length > 0) {
+                setConfirmDialog({
+                    title: 'Import Partial Success',
+                    message: `${result.created} tests created. \n\n${result.skipped} tests were skipped because they already exist:\n${result.skippedNames.join(', ')}`,
+                    confirmLabel: 'OK',
+                    variant: 'default',
+                    onConfirm: () => setConfirmDialog(null)
+                });
+            } else {
+                showToast(msgs.join(', '), result.errors.length > 0 ? 'warning' : 'success');
+            }
             if (result.errors.length > 0) {
                 console.warn('Import errors:', result.errors);
             }
@@ -352,6 +389,9 @@ export default function TestMasterPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 className="panel-title">Tests</h2>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {selectedTestIds.size > 0 && (
+                                    <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>🗑 Delete ({selectedTestIds.size})</button>
+                                )}
                                 <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>📤 Import Excel</button>
                                 <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileImport} style={{ display: 'none' }} />
                                 <button className="btn btn-primary btn-sm" onClick={() => {
@@ -361,14 +401,29 @@ export default function TestMasterPage() {
                                 }}>+ New</button>
                             </div>
                         </div>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="🔍 Search tests..."
-                            value={testSearch}
-                            onChange={(e) => setTestSearch(e.target.value)}
-                            style={{ fontSize: '0.85rem', padding: '0.4rem' }}
-                        />
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <input
+                                type="checkbox"
+                                checked={tests.length > 0 && selectedTestIds.size === tests.filter(t => t.test_name.toLowerCase().includes(testSearch.toLowerCase()) || t.test_code.toLowerCase().includes(testSearch.toLowerCase())).length}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        const visibleIds = tests.filter(t => t.test_name.toLowerCase().includes(testSearch.toLowerCase()) || t.test_code.toLowerCase().includes(testSearch.toLowerCase())).map(t => t.id);
+                                        setSelectedTestIds(new Set(visibleIds));
+                                    } else {
+                                        setSelectedTestIds(new Set());
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="🔍 Search tests..."
+                                value={testSearch}
+                                onChange={(e) => setTestSearch(e.target.value)}
+                                style={{ fontSize: '0.85rem', padding: '0.4rem', flex: 1 }}
+                            />
+                        </div>
                     </div>
                     <ul className="test-list">
                         {(() => {
@@ -387,6 +442,19 @@ export default function TestMasterPage() {
                                     className={`test-item ${selectedTest?.id === test.id ? 'selected' : ''}`}
                                     onClick={() => setSelectedTest(test)}
                                 >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedTestIds.has(test.id)}
+                                        readOnly
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const next = new Set(selectedTestIds);
+                                            if (next.has(test.id)) next.delete(test.id);
+                                            else next.add(test.id);
+                                            setSelectedTestIds(next);
+                                        }}
+                                        style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+                                    />
                                     <div className="test-info">
                                         <strong>{test.test_code}</strong>
                                         <span>{test.test_name}</span>
