@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
+import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import LabReport from './LabReport';
 import './ReportPreview.css';
 
@@ -24,6 +24,26 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
     const [labSettings, setLabSettings] = useState<LabSettings>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [printing, setPrinting] = useState(false);
+
+    const handlePrint = async () => {
+        if (!reportData) return;
+        setPrinting(true);
+        try {
+            const blob = await pdf(<LabReport data={reportData} labSettings={labSettings} />).toBlob();
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url);
+            if (printWindow) {
+                printWindow.addEventListener('load', () => {
+                    printWindow.print();
+                    URL.revokeObjectURL(url);
+                });
+            }
+        } catch (e) {
+            console.error('Failed to print report:', e);
+        }
+        setPrinting(false);
+    };
 
     useEffect(() => {
         loadData();
@@ -83,6 +103,13 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
                 <div className="report-header">
                     <h2>Lab Report - {reportData.patient.full_name}</h2>
                     <div className="report-actions">
+                        <button
+                            className="btn btn-primary"
+                            onClick={handlePrint}
+                            disabled={printing}
+                        >
+                            {printing ? 'Preparing...' : '🖨 Print'}
+                        </button>
                         <PDFDownloadLink
                             document={<LabReport data={reportData} labSettings={labSettings} />}
                             fileName={`Report_${reportData.sample.sample_uid}.pdf`}

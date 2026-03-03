@@ -1,5 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useLicenseStore } from '../../stores/licenseStore';
 import { ThemeToggle } from './ThemeToggle';
@@ -8,7 +8,7 @@ import logoUrl from '/icon.png';
 import {
     LayoutDashboard, Users, FileText, FlaskConical, Stethoscope,
     Receipt, Database, Settings, Phone, CheckCircle, Search, Save,
-    LogOut, UserCircle, Shield
+    LogOut, UserCircle, Shield, ChevronDown, Wrench
 } from 'lucide-react';
 import './Layout.css';
 
@@ -20,22 +20,25 @@ interface NavItem {
     requiredModule?: LicenseModule;
 }
 
-const navItems: NavItem[] = [
+const primaryNavItems: NavItem[] = [
     { path: '/', label: 'Overview', icon: <LayoutDashboard size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
     { path: '/patients', label: 'Patients', icon: <Users size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
     { path: '/orders', label: 'Orders', icon: <FileText size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist'] },
     { path: '/samples', label: 'Samples', icon: <FlaskConical size={20} />, roles: ['admin', 'technician', 'pathologist'] },
     { path: '/results', label: 'Results', icon: <CheckCircle size={20} />, roles: ['admin', 'technician', 'pathologist'] },
-    { path: '/qc', label: 'QC', icon: <Search size={20} />, roles: ['admin', 'technician'], requiredModule: 'QC_AUDIT' },
     { path: '/billing/invoices', label: 'Billing', icon: <Receipt size={20} />, roles: ['admin', 'receptionist'] },
     { path: '/test-master', label: 'Tests', icon: <Database size={20} />, roles: ['admin'] },
     { path: '/doctors', label: 'Doctors', icon: <Stethoscope size={20} />, roles: ['admin', 'technician', 'pathologist'] },
     { path: '/admin/price-lists', label: 'Pricing', icon: <FileText size={20} />, roles: ['admin'] },
-    { path: '/audit', label: 'Audit', icon: <Search size={20} />, roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
-    { path: '/admin/license', label: 'License', icon: <Shield size={20} />, roles: ['admin'] },
-    { path: '/admin/backup', label: 'Backup', icon: <Save size={20} />, roles: ['admin'] },
-    { path: '/admin', label: 'Settings', icon: <Settings size={20} />, roles: ['admin'] },
     { path: '/contact', label: 'Contact', icon: <Phone size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
+];
+
+const adminDropdownItems: NavItem[] = [
+    { path: '/qc', label: 'QC', icon: <Search size={20} />, roles: ['admin', 'technician'], requiredModule: 'QC_AUDIT' },
+    { path: '/audit', label: 'Audit', icon: <Search size={20} />, roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
+    { path: '/admin/backup', label: 'Backup', icon: <Save size={20} />, roles: ['admin'] },
+    { path: '/admin/license', label: 'License', icon: <Shield size={20} />, roles: ['admin'] },
+    { path: '/admin', label: 'Settings', icon: <Settings size={20} />, roles: ['admin'] },
 ];
 
 function LicenseStatusBadge() {
@@ -86,6 +89,72 @@ function LicenseStatusBadge() {
     );
 }
 
+function AdminDropdown({ items, isNavItemVisible }: { items: NavItem[], isNavItemVisible: (item: NavItem) => boolean }) {
+    const [open, setOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const visibleItems = items.filter(isNavItemVisible);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Close on route change
+    useEffect(() => {
+        setOpen(false);
+    }, [location.pathname]);
+
+    if (visibleItems.length === 0) return null;
+
+    // Check if any child route is currently active
+    const isChildActive = visibleItems.some(item => {
+        if (item.path === '/admin') {
+            return location.pathname === '/admin';
+        }
+        return location.pathname.startsWith(item.path);
+    });
+
+    return (
+        <div className="nav-dropdown" ref={dropdownRef}>
+            <button
+                className={`nav-link nav-dropdown-trigger ${isChildActive ? 'active' : ''}`}
+                onClick={() => setOpen(!open)}
+                title="Admin"
+            >
+                <span className="nav-icon"><Wrench size={20} /></span>
+                <span className="nav-label">Admin</span>
+                <ChevronDown size={14} className={`dropdown-chevron ${open ? 'open' : ''}`} />
+            </button>
+            {open && (
+                <div className="nav-dropdown-menu">
+                    {visibleItems.map(item => (
+                        <button
+                            key={item.path}
+                            className={`nav-dropdown-item ${item.path === '/admin'
+                                    ? location.pathname === '/admin' ? 'active' : ''
+                                    : location.pathname.startsWith(item.path) ? 'active' : ''
+                                }`}
+                            onClick={() => navigate(item.path)}
+                        >
+                            <span className="dropdown-item-icon">{item.icon}</span>
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function Header() {
     const { session, logout } = useAuthStore();
     const { status } = useLicenseStore();
@@ -131,7 +200,7 @@ export function Header() {
             </div>
 
             <nav className="header-nav">
-                {navItems.filter(isNavItemVisible).map(item => (
+                {primaryNavItems.filter(isNavItemVisible).map(item => (
                     <NavLink
                         key={item.path}
                         to={item.path}
@@ -142,6 +211,7 @@ export function Header() {
                         <span className="nav-label">{item.label}</span>
                     </NavLink>
                 ))}
+                <AdminDropdown items={adminDropdownItems} isNavItemVisible={isNavItemVisible} />
             </nav>
 
             <div className="header-user">
