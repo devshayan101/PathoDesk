@@ -183,6 +183,7 @@ interface ReportData {
         unit: string | null;
         abnormal_flag: string | null;
         ref_range_text: string | null;
+        is_header?: number;
     }[];
     referringDoctor?: {
         name: string;
@@ -374,17 +375,23 @@ export default function LabReport({ data, labSettings }: Props) {
                             <Text style={styles.colFlag}>Flag</Text>
                         </View>
                         {results.map((result, idx) => (
-                            <View key={idx} style={styles.tableRow} wrap={false}>
-                                <Text style={styles.colParameter}>{result.parameter_name}</Text>
-                                <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
-                                    {result.result_value || '-'}
-                                </Text>
-                                <Text style={styles.colUnit}>{result.unit || ''}</Text>
-                                <Text style={styles.colRange}>{result.ref_range_text || '-'}</Text>
-                                <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
-                                    {formatFlag(result.abnormal_flag)}
-                                </Text>
-                            </View>
+                            result.is_header === 1 ? (
+                                <View key={idx} style={[styles.tableRow, { backgroundColor: '#f0f0f0', paddingVertical: 4, minHeight: 20 }]} wrap={false}>
+                                    <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 11 }]}>{result.parameter_name}</Text>
+                                </View>
+                            ) : (
+                                <View key={idx} style={styles.tableRow} wrap={false}>
+                                    <Text style={[styles.colParameter, { paddingLeft: 8 }]}>{result.parameter_name}</Text>
+                                    <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
+                                        {result.result_value || '-'}
+                                    </Text>
+                                    <Text style={styles.colUnit}>{result.unit || ''}</Text>
+                                    <Text style={styles.colRange}>{result.ref_range_text || '-'}</Text>
+                                    <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
+                                        {formatFlag(result.abnormal_flag)}
+                                    </Text>
+                                </View>
+                            )
                         ))}
                     </View>
                 )}

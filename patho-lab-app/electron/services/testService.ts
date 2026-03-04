@@ -28,6 +28,7 @@ interface ParameterRow {
   decimal_precision: number | null;
   display_order: number | null;
   is_mandatory: number;
+  is_header: number;
   formula: string | null;
 }
 
@@ -152,12 +153,13 @@ export function addParameter(testVersionId: number, data: {
   parameterName: string;
   dataType: string;
   unit?: string;
+  isHeader?: number;
 }): number {
   const maxOrder = queryOne<{ max_o: number }>('SELECT COALESCE(MAX(display_order), 0) as max_o FROM test_parameters WHERE test_version_id = ?', [testVersionId]);
   return runWithId(`
-    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory)
-    VALUES (?, ?, ?, ?, ?, 2, ?, 1)
-  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1]);
+    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory, is_header)
+    VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?)
+  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1, data.isHeader ? 1 : 0]);
 }
 
 export function updateParameter(parameterId: number, data: {
@@ -165,12 +167,19 @@ export function updateParameter(parameterId: number, data: {
   parameterName: string;
   dataType: string;
   unit?: string;
+  isHeader?: number;
 }): void {
   run(`
     UPDATE test_parameters 
-    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?
+    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?, is_header = ?
     WHERE id = ?
-  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, parameterId]);
+  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, data.isHeader ? 1 : 0, parameterId]);
+}
+
+export function updateParameterOrder(paramAId: number, newOrderA: number, paramBId: number, newOrderB: number): void {
+  // Use a transaction-like logical swap
+  run('UPDATE test_parameters SET display_order = ? WHERE id = ?', [newOrderA, paramAId]);
+  run('UPDATE test_parameters SET display_order = ? WHERE id = ?', [newOrderB, paramBId]);
 }
 
 
@@ -266,22 +275,22 @@ export function saveTestParameters(versionId: number, parameters: Omit<Parameter
       run(`
         UPDATE test_parameters 
         SET parameter_name = ?, data_type = ?, unit = ?, decimal_precision = ?, 
-            display_order = ?, is_mandatory = ?, formula = ?
+            display_order = ?, is_mandatory = ?, is_header = ?, formula = ?
         WHERE id = ?
       `, [
         param.parameter_name, param.data_type, param.unit, param.decimal_precision,
-        param.display_order, param.is_mandatory, param.formula, existing.id
+        param.display_order, param.is_mandatory, param.is_header || 0, param.formula, existing.id
       ]);
     } else {
       // Insert
       run(`
         INSERT INTO test_parameters (
           test_version_id, parameter_code, parameter_name, data_type, 
-          unit, decimal_precision, display_order, is_mandatory, formula
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          unit, decimal_precision, display_order, is_mandatory, is_header, formula
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         versionId, param.parameter_code, param.parameter_name, param.data_type,
-        param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.formula
+        param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.is_header || 0, param.formula
       ]);
     }
   }
@@ -351,11 +360,11 @@ export function createDraftFromExisting(testId: number): number {
     const newParamId = runWithId(`
       INSERT INTO test_parameters (
         test_version_id, parameter_code, parameter_name, data_type, 
-        unit, decimal_precision, display_order, is_mandatory, formula
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        unit, decimal_precision, display_order, is_mandatory, is_header, formula
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newVersionId, param.parameter_code, param.parameter_name, param.data_type,
-      param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.formula
+      param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.is_header || 0, param.formula
     ]);
     paramMap.set(param.parameter_code, newParamId);
   }

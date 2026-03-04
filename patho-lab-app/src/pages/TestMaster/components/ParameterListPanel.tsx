@@ -1,4 +1,4 @@
-// Types
+import { useToastStore } from '../../../stores/toastStore';
 
 interface Test {
     id: number;
@@ -13,6 +13,8 @@ interface Parameter {
     parameter_name: string;
     data_type: string;
     unit: string | null;
+    display_order?: number;
+    is_header?: number;
 }
 
 interface ParameterFormState {
@@ -21,6 +23,7 @@ interface ParameterFormState {
     dataType: string;
     unit: string;
     formula: string;
+    isHeader: boolean;
 }
 
 interface ParameterListPanelProps {
@@ -41,14 +44,62 @@ interface ParameterListPanelProps {
     onDeleteParamClick: (paramId: number) => void;
     onSaveParam: () => void;
     onCancelForm: () => void;
+    onReloadParams?: () => void; // Add reload prop
 }
 
 export default function ParameterListPanel({
     selectedTest, parameters, selectedParam, onSelectParam,
     showAddParam, isEditingParam, newParam, setNewParam,
     onShowAddForm, onEditParamClick, onDeleteParamClick,
-    onSaveParam, onCancelForm
+    onSaveParam, onCancelForm, onReloadParams
 }: ParameterListPanelProps) {
+    const showToast = useToastStore(s => s.showToast);
+
+    const handleMoveUp = async (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        if (index === 0) return;
+
+        const currentParam = parameters[index];
+        const prevParam = parameters[index - 1];
+
+        try {
+            if (window.electronAPI) {
+                // Swap display_order
+                await window.electronAPI.tests.updateParameterOrder(
+                    currentParam.id,
+                    prevParam.display_order || index,
+                    prevParam.id,
+                    currentParam.display_order || (index + 1)
+                );
+                if (onReloadParams) onReloadParams();
+            }
+        } catch (err: any) {
+            showToast('Failed to reorder: ' + err.message, 'error');
+        }
+    };
+
+    const handleMoveDown = async (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        if (index === parameters.length - 1) return;
+
+        const currentParam = parameters[index];
+        const nextParam = parameters[index + 1];
+
+        try {
+            if (window.electronAPI) {
+                // Swap display_order
+                await window.electronAPI.tests.updateParameterOrder(
+                    currentParam.id,
+                    nextParam.display_order || (index + 2),
+                    nextParam.id,
+                    currentParam.display_order || (index + 1)
+                );
+                if (onReloadParams) onReloadParams();
+            }
+        } catch (err: any) {
+            showToast('Failed to reorder: ' + err.message, 'error');
+        }
+    };
     return (
         <div className="params-panel">
             <div className="panel-header">
@@ -62,7 +113,7 @@ export default function ParameterListPanel({
             {selectedTest && (
                 <>
                     <ul className="param-list">
-                        {parameters.map(param => (
+                        {parameters.map((param, index) => (
                             <li
                                 key={param.id}
                                 className={`param-item ${selectedParam?.id === param.id ? 'selected' : ''}`}
@@ -74,7 +125,10 @@ export default function ParameterListPanel({
                                 </div>
                                 <div className="param-meta-row">
                                     {param.unit && <span className="unit">{param.unit}</span>}
+                                    {param.is_header === 1 && <span className="badge badge-info" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', marginLeft: '0.5rem' }}>Header</span>}
                                     <div className="item-actions">
+                                        <button className="btn-icon-sm" title="Move Up" onClick={(e) => handleMoveUp(e, index)} disabled={index === 0}>↑</button>
+                                        <button className="btn-icon-sm" title="Move Down" onClick={(e) => handleMoveDown(e, index)} disabled={index === parameters.length - 1}>↓</button>
                                         <button className="btn-icon-sm" title="Edit" onClick={(e) => {
                                             e.stopPropagation();
                                             onEditParamClick(param);

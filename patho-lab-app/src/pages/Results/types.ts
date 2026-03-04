@@ -21,6 +21,7 @@ export interface ResultParameter {
     parameter_code: string;
     parameter_name: string;
     unit: string;
+    is_header?: number;
     result_value?: string;
     abnormal_flag?: string;
     ref_ranges: RefRange[];

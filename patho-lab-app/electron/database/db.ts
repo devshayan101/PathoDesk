@@ -1259,6 +1259,13 @@ function getMigrations() {
         INSERT OR IGNORE INTO users (username, password_hash, full_name, role_id, is_active, created_at, qualification)
         VALUES ('pathologist', '$2a$10$rOzJqQZQxLhQJaVKD9GEF.fPwvgbRI4Px4xvVhGGzZxo4hfXk.kfS', 'Dr. Pathologist', 4, 1, datetime('now'), 'MD Pathology');
       `
+    },
+    {
+      name: '018_test_master_enhancements',
+      sql: `
+        -- Add is_header column to test_parameters (0 = normal parameter, 1 = header parameter)
+        ALTER TABLE test_parameters ADD COLUMN is_header INTEGER DEFAULT 0;
+      `
     }
   ];
 }

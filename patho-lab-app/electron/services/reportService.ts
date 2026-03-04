@@ -55,6 +55,7 @@ interface ResultItem {
     unit: string | null;
     abnormal_flag: string | null;
     ref_range_text: string | null;
+    is_header?: number;
 }
 
 // Get all lab settings as key-value object
@@ -112,7 +113,7 @@ export function getReportData(sampleId: number): ReportData | null {
     // Get results with reference ranges
     const results = queryAll<any>(`
     SELECT 
-      tp.parameter_code, tp.parameter_name, 
+      tp.parameter_code, tp.parameter_name, tp.is_header,
       tr.result_value, tp.unit, tr.abnormal_flag,
       rr.lower_limit, rr.upper_limit
     FROM samples s
@@ -130,6 +131,7 @@ export function getReportData(sampleId: number): ReportData | null {
     const formattedResults: ResultItem[] = results.map(r => ({
         parameter_code: r.parameter_code,
         parameter_name: r.parameter_name,
+        is_header: r.is_header,
         result_value: r.result_value || '',
         unit: r.unit,
         abnormal_flag: r.abnormal_flag,

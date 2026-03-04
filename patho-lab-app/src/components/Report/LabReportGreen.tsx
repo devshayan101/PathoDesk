@@ -215,7 +215,7 @@ interface ReportData {
     sample: { id: number; sample_uid: string; received_at: string; status: string; verified_at?: string; verified_by_name?: string; };
     patient: { id: number; patient_uid: string; full_name: string; dob: string; gender: string; phone?: string; };
     test: { test_code: string; test_name: string; department: string; method: string; sample_type: string; };
-    results: { parameter_code: string; parameter_name: string; result_value: string; unit: string | null; abnormal_flag: string | null; ref_range_text: string | null; }[];
+    results: { parameter_code: string; parameter_name: string; result_value: string; unit: string | null; abnormal_flag: string | null; ref_range_text: string | null; is_header?: number; }[];
     referringDoctor?: { name: string; specialty?: string; } | null;
     labTechnician?: { name: string; qualification?: string; signature?: string; } | null;
     pathologist?: { name: string; qualification?: string; signature?: string; } | null;
@@ -350,14 +350,20 @@ export default function LabReportGreen({ data, labSettings }: Props) {
 
                             {/* Rows */}
                             {results.map((r, i) => (
-                                <View key={i} style={s.tableRow} wrap={false}>
-                                    <Text style={s.colTest}>{r.parameter_name}</Text>
-                                    <Text style={[s.colResult, flagStyle(r.abnormal_flag)]}>
-                                        {flagPrefix(r.abnormal_flag)}{r.result_value || '-'}
-                                    </Text>
-                                    <Text style={s.colUnit}>{r.unit || ''}</Text>
-                                    <Text style={s.colRange}>{r.ref_range_text || '-'}</Text>
-                                </View>
+                                r.is_header === 1 ? (
+                                    <View key={i} style={[s.tableRow, { backgroundColor: '#f0fdf4', paddingVertical: 4, minHeight: 20 }]} wrap={false}>
+                                        <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{r.parameter_name}</Text>
+                                    </View>
+                                ) : (
+                                    <View key={i} style={s.tableRow} wrap={false}>
+                                        <Text style={[s.colTest, { paddingLeft: 8 }]}>{r.parameter_name}</Text>
+                                        <Text style={[s.colResult, flagStyle(r.abnormal_flag)]}>
+                                            {flagPrefix(r.abnormal_flag)}{r.result_value || '-'}
+                                        </Text>
+                                        <Text style={s.colUnit}>{r.unit || ''}</Text>
+                                        <Text style={s.colRange}>{r.ref_range_text || '-'}</Text>
+                                    </View>
+                                )
                             ))}
                         </>
                     )}

@@ -21,6 +21,7 @@ export interface ElectronAPI {
         getParameters: (testVersionId: number) => Promise<any[]>;
         addParameter: (testVersionId: number, data: any) => Promise<{ success: boolean; id?: number; error?: string }>;
         updateParameter: (parameterId: number, data: any) => Promise<{ success: boolean; error?: string }>;
+        updateParameterOrder: (paramAId: number, newOrderA: number, paramBId: number, newOrderB: number) => Promise<{ success: boolean; error?: string }>;
         deleteParameter: (parameterId: number) => Promise<{ success: boolean; error?: string }>;
         delete: (testId: number) => Promise<void>;
         bulkDelete: (ids: number[]) => Promise<void>;

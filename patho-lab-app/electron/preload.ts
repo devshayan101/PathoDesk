@@ -41,6 +41,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_CREATE, testVersionId, data),
     updateParameter: (parameterId: number, data: any) =>
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_UPDATE, parameterId, data),
+    updateParameterOrder: (paramAId: number, newOrderA: number, paramBId: number, newOrderB: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_UPDATE_ORDER, paramAId, newOrderA, paramBId, newOrderB),
     deleteParameter: (parameterId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.PARAMETER_DELETE, parameterId),
     delete: (testId: number) =>

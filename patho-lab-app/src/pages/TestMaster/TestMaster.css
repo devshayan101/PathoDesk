@@ -203,3 +203,12 @@
     color: var(--color-text-muted);
     padding: var(--spacing-xl);
 }
+
+/* Make columns resizable in tables within TestMaster layouts */
+.test-master-layout th {
+    resize: horizontal;
+    overflow: auto;
+    /* Required for resize to work */
+    min-width: 50px;
+    max-width: 500px;
+}

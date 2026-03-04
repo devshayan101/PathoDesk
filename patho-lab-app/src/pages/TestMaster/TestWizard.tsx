@@ -196,7 +196,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
     const addParam = () => {
         setParameters([...parameters, {
             parameter_code: '', parameter_name: '', data_type: 'NUMERIC', unit: '',
-            decimal_precision: 2, display_order: parameters.length + 1, is_mandatory: 1, formula: ''
+            decimal_precision: 2, display_order: parameters.length + 1, is_mandatory: 1, is_header: 0, formula: ''
         }]);
     };
     const updateParam = (idx: number, field: string, value: any) => {
@@ -205,6 +205,28 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
         setParameters(newParams);
     };
     const removeParam = (idx: number) => setParameters(parameters.filter((_, i) => i !== idx));
+
+    const moveParamUp = (idx: number) => {
+        if (idx === 0) return;
+        const newParams = [...parameters];
+        const temp = newParams[idx - 1];
+        newParams[idx - 1] = newParams[idx];
+        newParams[idx] = temp;
+        // Update display_order
+        newParams.forEach((p, i) => p.display_order = i + 1);
+        setParameters(newParams);
+    };
+
+    const moveParamDown = (idx: number) => {
+        if (idx === parameters.length - 1) return;
+        const newParams = [...parameters];
+        const temp = newParams[idx + 1];
+        newParams[idx + 1] = newParams[idx];
+        newParams[idx] = temp;
+        // Update display_order
+        newParams.forEach((p, i) => p.display_order = i + 1);
+        setParameters(newParams);
+    };
 
     // --- Ref Range helpers (Step 3) ---
     const handleAddRefRange = async () => {
@@ -331,12 +353,17 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                 <table className="table">
                     <thead>
                         <tr>
-                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th>Formula</th><th></th>
+                            <th style={{ width: 60 }}></th>
+                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th>Header?</th><th>Formula</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {parameters.map((p, idx) => (
                             <tr key={idx}>
+                                <td>
+                                    <button className="btn-icon-sm" onClick={() => moveParamUp(idx)} disabled={idx === 0} title="Move Up">↑</button>
+                                    <button className="btn-icon-sm" onClick={() => moveParamDown(idx)} disabled={idx === parameters.length - 1} title="Move Down">↓</button>
+                                </td>
                                 <td><input className="input-sm" value={p.parameter_code} onChange={e => updateParam(idx, 'parameter_code', e.target.value)} /></td>
                                 <td><input className="input-sm" value={p.parameter_name} onChange={e => updateParam(idx, 'parameter_name', e.target.value)} /></td>
                                 <td><input className="input-sm" value={p.unit || ''} onChange={e => updateParam(idx, 'unit', e.target.value)} /></td>
@@ -346,6 +373,9 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                     </select>
                                 </td>
                                 <td><input className="input-sm" type="number" style={{ width: 50 }} value={p.decimal_precision ?? 2} onChange={e => updateParam(idx, 'decimal_precision', parseInt(e.target.value) || 0)} /></td>
+                                <td style={{ textAlign: 'center' }}>
+                                    <input type="checkbox" checked={p.is_header === 1} onChange={e => updateParam(idx, 'is_header', e.target.checked ? 1 : 0)} />
+                                </td>
                                 <td>
                                     {p.data_type === 'CALCULATED' ? (
                                         <input className="input-sm" value={p.formula || ''} onChange={e => updateParam(idx, 'formula', e.target.value)} placeholder="e.g. {A}/{B}" />
@@ -552,11 +582,6 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                     </tbody>
                 </table>
             </div>
-            <div className="review-actions">
-                <button className="btn btn-success" onClick={handlePublish} disabled={loading}>
-                    {loading ? 'Publishing...' : '✓ Publish Test'}
-                </button>
-            </div>
         </div>
     );
 
@@ -603,6 +628,11 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                         {currentStep < WizardStep.REVIEW && (
                             <button className="btn btn-primary" onClick={handleNext} disabled={loading}>
                                 {loading ? 'Saving...' : 'Next'}
+                            </button>
+                        )}
+                        {currentStep === WizardStep.REVIEW && (
+                            <button className="btn btn-primary" onClick={handlePublish} disabled={loading}>
+                                {loading ? 'Publishing...' : '✓ Publish Test'}
                             </button>
                         )}
                     </div>

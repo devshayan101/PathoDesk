@@ -165,6 +165,7 @@ export const IPC_CHANNELS = {
     PARAMETER_LIST: 'parameter:list',
     PARAMETER_CREATE: 'parameter:create',
     PARAMETER_UPDATE: 'parameter:update',
+    PARAMETER_UPDATE_ORDER: 'parameter:updateOrder',
     PARAMETER_DELETE: 'parameter:delete',
 
     // Reference Ranges

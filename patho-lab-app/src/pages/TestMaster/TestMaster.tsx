@@ -26,6 +26,7 @@ interface Parameter {
     parameter_name: string;
     data_type: string;
     unit: string | null;
+    is_header?: number;
 }
 
 interface RefRange {
@@ -54,7 +55,7 @@ export default function TestMasterPage() {
     const [isEditingParam, setIsEditingParam] = useState(false);
     const [editingParamId, setEditingParamId] = useState<number | null>(null);
     const [newParam, setNewParam] = useState({
-        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: ''
+        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false
     });
 
     // Reference Ranges state
@@ -259,7 +260,7 @@ export default function TestMasterPage() {
                 setShowAddParam(false);
                 setIsEditingParam(false);
                 setEditingParamId(null);
-                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '' });
+                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false });
                 showToast(isEditingParam ? 'Parameter updated' : 'Parameter added', 'success');
             }
         } catch (e: any) {
@@ -293,7 +294,7 @@ export default function TestMasterPage() {
     };
 
     const handleShowAddParamForm = () => {
-        setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '' });
+        setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false });
         setShowAddParam(true);
         setIsEditingParam(false);
     };
@@ -304,7 +305,8 @@ export default function TestMasterPage() {
             parameterName: param.parameter_name,
             dataType: param.data_type,
             unit: param.unit || '',
-            formula: (param as any).formula || ''
+            formula: (param as any).formula || '',
+            isHeader: param.is_header === 1
         });
         setEditingParamId(param.id);
         setIsEditingParam(true);

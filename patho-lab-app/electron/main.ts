@@ -160,6 +160,15 @@ function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle(IPC_CHANNELS.PARAMETER_UPDATE_ORDER, (_, paramAId: number, newOrderA: number, paramBId: number, newOrderB: number) => {
+    try {
+      testService.updateParameterOrder(paramAId, newOrderA, paramBId, newOrderB)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
   ipcMain.handle(IPC_CHANNELS.PARAMETER_DELETE, (_, id: number) => {
     try {
       testService.deleteParameter(id)

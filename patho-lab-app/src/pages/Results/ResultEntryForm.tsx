@@ -417,6 +417,21 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         </thead>
                         <tbody>
                             {resultData.parameters.map(param => {
+                                if (param.is_header === 1) {
+                                    return (
+                                        <tr key={param.parameter_id} className="header-row">
+                                            <td colSpan={6} style={{
+                                                backgroundColor: 'var(--color-bg-tertiary)',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.95rem',
+                                                color: 'var(--color-text-primary)'
+                                            }}>
+                                                {param.parameter_name}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
                                 const isAuthorized = session?.role === 'admin' || session?.role === 'pathologist';
                                 const isReadOnly = (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && !isAuthorized;
 
@@ -426,7 +441,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
 
                                 return (
                                     <tr key={param.parameter_id} className={flag ? `row-${flag.toLowerCase()}` : ''}>
-                                        <td>{param.parameter_name}</td>
+                                        <td style={{ paddingLeft: '1.5rem' }}>{param.parameter_name}</td>
                                         <td>
                                             <input
                                                 className="input result-input"

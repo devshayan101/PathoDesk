@@ -126,7 +126,8 @@ export function getSampleResults(sampleId: number): ResultData | null {
       tp.id as parameter_id, 
       tp.parameter_code, 
       tp.parameter_name, 
-      tp.unit
+      tp.unit,
+      tp.is_header
     FROM test_parameters tp
     WHERE tp.test_version_id = ?
     ORDER BY tp.display_order
@@ -169,6 +170,7 @@ export function getSampleResults(sampleId: number): ResultData | null {
       parameter_code: param.parameter_code,
       parameter_name: param.parameter_name,
       unit: param.unit,
+      is_header: param.is_header,
       result_value: existingResult?.result_value,
       abnormal_flag: existingResult?.abnormal_flag,
       ref_ranges: refRanges
