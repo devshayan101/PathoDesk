@@ -89,13 +89,10 @@ const styles = StyleSheet.create({
     flagLow: { color: '#007bff', fontWeight: 'bold' },
     flagCritical: { color: '#dc3545', fontWeight: 'bold', textDecoration: 'underline' },
     footer: {
-        position: 'absolute',
-        bottom: 30,
-        left: 30,
-        right: 30,
         borderTopWidth: 1,
         borderTopColor: '#ccc',
         paddingTop: 10,
+        marginTop: 'auto',
     },
     verification: {
         flexDirection: 'row',
@@ -222,15 +219,13 @@ function calculateAge(dob: string): string {
     return `${years} years`;
 }
 
-// Format date
+// Format date (date only, no time)
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
     });
 }
 
@@ -259,35 +254,26 @@ function formatFlag(flag: string | null): string {
     }
 }
 
-// Microscope watermark SVG component
-function MicroscopeWatermark({ labName }: { labName?: string }) {
-    // Determine the path to the public background image. In a Vite/Electron environment, 
-    // referencing it relative to the base URL is usually safe for rendering, but depending on the setup 
-    // we can use standard relative paths or rely on the build to resolve it.
-    // For react-pdf specifically, using a base64 encoded string or a direct import is best. 
-    // Using import for public assets usually resolves to a relative URL.
-    return (
-        <View style={styles.watermarkContainer}>
-            <Image src={logoUrl} style={{ width: 220, opacity: 0.1 }} />
-            {labName && (
-                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 10 }}>
-                    {labName}
-                </Text>
-            )}
-        </View>
-    );
-}
+
 
 export default function LabReport({ data, labSettings }: Props) {
     const { sample, patient, test, results, referringDoctor } = data;
 
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
-                {/* Microscope Watermark */}
-                <MicroscopeWatermark labName={labSettings.lab_name} />
-                {/* Header - Lab Info */}
-                <View style={styles.header}>
+            <Page size="A4" style={[styles.page, { display: 'flex', flexDirection: 'column' }]}>
+                {/* Microscope Watermark - fixed on every page */}
+                <View style={styles.watermarkContainer} fixed>
+                    <Image src={logoUrl} style={{ width: 220, opacity: 0.1 }} />
+                    {labSettings.lab_name && (
+                        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 10 }}>
+                            {labSettings.lab_name}
+                        </Text>
+                    )}
+                </View>
+
+                {/* Header - Lab Info - fixed on every page */}
+                <View style={styles.header} fixed>
                     <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                     <Text style={styles.labInfo}>{labSettings.address_line1}</Text>
                     <Text style={styles.labInfo}>{labSettings.address_line2}</Text>
@@ -369,7 +355,7 @@ export default function LabReport({ data, labSettings }: Props) {
                         <Text style={styles.colFlag}>Flag</Text>
                     </View>
                     {results.map((result, idx) => (
-                        <View key={idx} style={styles.tableRow}>
+                        <View key={idx} style={styles.tableRow} wrap={false}>
                             <Text style={styles.colParameter}>{result.parameter_name}</Text>
                             <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
                                 {result.result_value || '-'}
@@ -383,8 +369,8 @@ export default function LabReport({ data, labSettings }: Props) {
                     ))}
                 </View>
 
-                {/* Footer */}
-                <View style={styles.footer}>
+                {/* Footer - normal flow, pushed to bottom with marginTop:auto */}
+                <View style={styles.footer} wrap={false}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
                         {/* Lab Technician Signature */}
                         <View style={styles.signatureBox}>
@@ -425,8 +411,8 @@ export default function LabReport({ data, labSettings }: Props) {
                     <Text style={styles.disclaimer}>{labSettings.disclaimer}</Text>
                 </View>
 
-                {/* Software Branding */}
-                <View style={styles.brandingContainer}>
+                {/* Software Branding - fixed at bottom of every page */}
+                <View style={styles.brandingContainer} fixed>
                     <Text style={styles.brandingText}>Software by FMS Softwares</Text>
                     <Text style={styles.brandingText}>Email: fmsenterprises001@gmail.com | WhatsApp: +91-7765009936</Text>
                 </View>
