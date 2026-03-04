@@ -312,3 +312,140 @@
     color: var(--color-text-secondary);
     font-weight: 600;
 }
+
+/* ===== Responsive Breakpoints ===== */
+
+/* Prevent nav clipping at any size */
+.header-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.header-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* Medium screens — shrink spacing, hide lab name subtitle */
+@media (max-width: 1100px) {
+    .app-header {
+        gap: var(--spacing-md);
+        padding: 0 var(--spacing-md);
+    }
+
+    .nav-link {
+        padding: 0.4rem 0.5rem;
+        font-size: var(--font-size-xs);
+    }
+
+    .header-logo {
+        height: 36px;
+    }
+
+    .brand-text {
+        font-size: var(--font-size-base);
+    }
+
+    .brand-text .lab-name {
+        display: none;
+    }
+
+    .user-text {
+        display: none;
+    }
+
+    .user-dropdown {
+        gap: 0.5rem;
+        padding-left: 0.5rem;
+    }
+
+    .license-badge {
+        padding: 3px 6px;
+        font-size: 10px;
+    }
+
+    .license-label {
+        display: none;
+    }
+}
+
+/* Small screens — icon-only nav, very compact header */
+@media (max-width: 768px) {
+    .app-header {
+        height: 52px;
+        gap: var(--spacing-sm);
+        padding: 0 var(--spacing-sm);
+    }
+
+    .header-logo {
+        height: 28px;
+    }
+
+    .brand-text {
+        font-size: var(--font-size-sm);
+    }
+
+    .nav-link {
+        padding: 0.35rem;
+    }
+
+    /* Force icon-only at this breakpoint */
+    .nav-label {
+        display: none !important;
+    }
+
+    .nav-icon {
+        display: flex !important;
+    }
+
+    .header-nav {
+        gap: 0.125rem;
+    }
+
+    .header-user {
+        gap: 0.5rem;
+    }
+
+    .user-avatar {
+        width: 20px;
+        height: 20px;
+    }
+
+    .btn-logout {
+        padding: 0.3rem;
+    }
+
+    /* Main content */
+    .app-main {
+        padding: var(--spacing-sm);
+    }
+
+    .page-title {
+        font-size: var(--font-size-lg);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .app-footer {
+        font-size: 9px;
+        padding: 4px var(--spacing-sm);
+    }
+}
+
+/* Extra small — phones */
+@media (max-width: 480px) {
+    .app-header {
+        height: 48px;
+    }
+
+    .header-logo {
+        height: 24px;
+    }
+
+    .brand-text {
+        display: none;
+    }
+
+    .license-badge {
+        display: none;
+    }
+}

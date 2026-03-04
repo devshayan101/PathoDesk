@@ -1,6 +1,7 @@
 
 import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 import logoUrl from '../../../public/icon.png';
+import WidalTable, { isWidalTest } from './WidalTable';
 
 // Register a standard font for better rendering
 Font.register({
@@ -360,29 +361,33 @@ export default function LabReport({ data, labSettings }: Props) {
                 {/* Test Name */}
                 <Text style={styles.testHeader}>{test.test_name}</Text>
 
-                {/* Results Table */}
-                <View style={styles.table}>
-                    <View style={styles.tableHeader}>
-                        <Text style={styles.colParameter}>Parameter</Text>
-                        <Text style={styles.colResult}>Result</Text>
-                        <Text style={styles.colUnit}>Unit</Text>
-                        <Text style={styles.colRange}>Reference Range</Text>
-                        <Text style={styles.colFlag}>Flag</Text>
-                    </View>
-                    {results.map((result, idx) => (
-                        <View key={idx} style={styles.tableRow} wrap={false}>
-                            <Text style={styles.colParameter}>{result.parameter_name}</Text>
-                            <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
-                                {result.result_value || '-'}
-                            </Text>
-                            <Text style={styles.colUnit}>{result.unit || ''}</Text>
-                            <Text style={styles.colRange}>{result.ref_range_text || '-'}</Text>
-                            <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
-                                {formatFlag(result.abnormal_flag)}
-                            </Text>
+                {/* Results — Widal matrix or normal table */}
+                {isWidalTest(test.test_name) ? (
+                    <WidalTable testName={test.test_name} results={results} />
+                ) : (
+                    <View style={styles.table}>
+                        <View style={styles.tableHeader}>
+                            <Text style={styles.colParameter}>Parameter</Text>
+                            <Text style={styles.colResult}>Result</Text>
+                            <Text style={styles.colUnit}>Unit</Text>
+                            <Text style={styles.colRange}>Reference Range</Text>
+                            <Text style={styles.colFlag}>Flag</Text>
                         </View>
-                    ))}
-                </View>
+                        {results.map((result, idx) => (
+                            <View key={idx} style={styles.tableRow} wrap={false}>
+                                <Text style={styles.colParameter}>{result.parameter_name}</Text>
+                                <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
+                                    {result.result_value || '-'}
+                                </Text>
+                                <Text style={styles.colUnit}>{result.unit || ''}</Text>
+                                <Text style={styles.colRange}>{result.ref_range_text || '-'}</Text>
+                                <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
+                                    {formatFlag(result.abnormal_flag)}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 {/* Footer - fixed at bottom of every page */}
                 <View style={styles.footer} fixed>

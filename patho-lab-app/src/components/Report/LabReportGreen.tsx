@@ -2,6 +2,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import logoUrl from '../../../public/icon.png';
 import { formatDate } from './LabReport';
+import WidalTable, { isWidalTest } from './WidalTable';
 
 // Green Clinical Theme Styles
 const FOOTER_HEIGHT = 110;
@@ -334,25 +335,32 @@ export default function LabReportGreen({ data, labSettings }: Props) {
                     {/* Test Name */}
                     <Text style={s.testNameHeader}>{test.test_name}</Text>
 
-                    {/* Table Header */}
-                    <View style={s.tableHeader}>
-                        <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
-                        <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
-                        <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
-                        <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
-                    </View>
+                    {/* Widal matrix or normal table */}
+                    {isWidalTest(test.test_name) ? (
+                        <WidalTable testName={test.test_name} results={results} />
+                    ) : (
+                        <>
+                            {/* Table Header */}
+                            <View style={s.tableHeader}>
+                                <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
+                                <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
+                                <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
+                                <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
+                            </View>
 
-                    {/* Rows */}
-                    {results.map((r, i) => (
-                        <View key={i} style={s.tableRow} wrap={false}>
-                            <Text style={s.colTest}>{r.parameter_name}</Text>
-                            <Text style={[s.colResult, flagStyle(r.abnormal_flag)]}>
-                                {flagPrefix(r.abnormal_flag)}{r.result_value || '-'}
-                            </Text>
-                            <Text style={s.colUnit}>{r.unit || ''}</Text>
-                            <Text style={s.colRange}>{r.ref_range_text || '-'}</Text>
-                        </View>
-                    ))}
+                            {/* Rows */}
+                            {results.map((r, i) => (
+                                <View key={i} style={s.tableRow} wrap={false}>
+                                    <Text style={s.colTest}>{r.parameter_name}</Text>
+                                    <Text style={[s.colResult, flagStyle(r.abnormal_flag)]}>
+                                        {flagPrefix(r.abnormal_flag)}{r.result_value || '-'}
+                                    </Text>
+                                    <Text style={s.colUnit}>{r.unit || ''}</Text>
+                                    <Text style={s.colRange}>{r.ref_range_text || '-'}</Text>
+                                </View>
+                            ))}
+                        </>
+                    )}
                 </View>
 
                 {/* Footer - fixed at bottom of every page */}
