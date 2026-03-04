@@ -177,7 +177,7 @@ export default function SamplesPage() {
                                             >
                                                 🖨️ <span className="text-hidden-sm">Barcode</span>
                                             </button>
-                                            {(sample.status === 'VERIFIED' || sample.status === 'RECEIVED' || sample.status === 'SUBMITTED') && (
+                                            {(sample.status === 'VERIFIED' || sample.status === 'RECEIVED' || sample.status === 'SUBMITTED' || sample.status === 'DRAFT') && (
                                                 <button
                                                     className="btn btn-secondary btn-sm"
                                                     onClick={() => navigate('/results', { state: { filterSampleUid: sample.sample_uid } })}

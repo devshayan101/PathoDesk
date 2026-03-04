@@ -38,11 +38,11 @@ export function getDashboardStats(): DashboardStats {
          WHERE date(o.order_date) = date(?)`, [today]
     );
 
-    // Count pending results (samples not finalized)
+    // Count pending results (samples not finalized and not verified)
     const pendingCount = queryOne<{ count: number }>(
         `SELECT COUNT(*) as count 
          FROM samples s 
-         WHERE s.status NOT IN ('FINALIZED', 'REJECTED')`
+         WHERE s.status NOT IN ('FINALIZED', 'REJECTED', 'VERIFIED')`
     );
 
     // Count critical results (unflagged critical that aren't finalized)
@@ -138,7 +138,7 @@ export function getDashboardStats(): DashboardStats {
          JOIN test_versions tv ON ot.test_version_id = tv.id
          JOIN orders o ON ot.order_id = o.id
          JOIN patients p ON o.patient_id = p.id
-         WHERE s.status NOT IN ('FINALIZED', 'REJECTED')
+         WHERE s.status NOT IN ('FINALIZED', 'REJECTED', 'VERIFIED')
          ORDER BY s.received_at DESC
          LIMIT 20`
     );
