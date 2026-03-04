@@ -55,6 +55,8 @@ export interface TestParameter {
     decimalPrecision?: number;
     displayOrder?: number;
     isMandatory: boolean;
+    is_header?: number;
+    parent_id?: number | null;
     formula?: string;
 }
 

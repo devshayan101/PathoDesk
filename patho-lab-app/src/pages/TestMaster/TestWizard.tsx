@@ -196,7 +196,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
     const addParam = () => {
         setParameters([...parameters, {
             parameter_code: '', parameter_name: '', data_type: 'NUMERIC', unit: '',
-            decimal_precision: 2, display_order: parameters.length + 1, is_mandatory: 1, is_header: 0, formula: ''
+            decimal_precision: 2, display_order: parameters.length + 1, is_mandatory: 1, is_header: 0, formula: '', parent_id: null
         }]);
     };
     const updateParam = (idx: number, field: string, value: any) => {
@@ -354,7 +354,7 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                     <thead>
                         <tr>
                             <th style={{ width: 60 }}></th>
-                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th>Header?</th><th>Formula</th><th></th>
+                            <th>Code</th><th>Name</th><th>Unit</th><th>Type</th><th>Precision</th><th>Header?</th><th>Group Under</th><th>Formula</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -374,7 +374,20 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                 </td>
                                 <td><input className="input-sm" type="number" style={{ width: 50 }} value={p.decimal_precision ?? 2} onChange={e => updateParam(idx, 'decimal_precision', parseInt(e.target.value) || 0)} /></td>
                                 <td style={{ textAlign: 'center' }}>
-                                    <input type="checkbox" checked={p.is_header === 1} onChange={e => updateParam(idx, 'is_header', e.target.checked ? 1 : 0)} />
+                                    <input type="checkbox" checked={p.is_header === 1} onChange={e => {
+                                        updateParam(idx, 'is_header', e.target.checked ? 1 : 0);
+                                        if (e.target.checked) updateParam(idx, 'parent_id', null);
+                                    }} />
+                                </td>
+                                <td>
+                                    {p.is_header !== 1 && (
+                                        <select className="input-sm" value={p.parent_id || ''} onChange={e => updateParam(idx, 'parent_id', e.target.value ? parseInt(e.target.value) : null)}>
+                                            <option value="">-- None --</option>
+                                            {parameters.filter(hp => hp.is_header === 1 && hp !== p).map((hp, i) => (
+                                                <option key={i} value={hp.id || hp.parameter_code}>{hp.parameter_name || `Header ${i + 1}`}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </td>
                                 <td>
                                     {p.data_type === 'CALCULATED' ? (

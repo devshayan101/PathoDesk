@@ -1266,6 +1266,13 @@ function getMigrations() {
         -- Add is_header column to test_parameters (0 = normal parameter, 1 = header parameter)
         ALTER TABLE test_parameters ADD COLUMN is_header INTEGER DEFAULT 0;
       `
+    },
+    {
+      name: '019_parameter_grouping',
+      sql: `
+        -- Add parent_id for grouping sub-parameters under a header
+        ALTER TABLE test_parameters ADD COLUMN parent_id INTEGER REFERENCES test_parameters(id);
+      `
     }
   ];
 }

@@ -27,6 +27,7 @@ interface Parameter {
     data_type: string;
     unit: string | null;
     is_header?: number;
+    parent_id?: number | null;
 }
 
 interface RefRange {
@@ -55,7 +56,7 @@ export default function TestMasterPage() {
     const [isEditingParam, setIsEditingParam] = useState(false);
     const [editingParamId, setEditingParamId] = useState<number | null>(null);
     const [newParam, setNewParam] = useState({
-        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false
+        parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false, parentId: null as number | null
     });
 
     // Reference Ranges state
@@ -260,7 +261,7 @@ export default function TestMasterPage() {
                 setShowAddParam(false);
                 setIsEditingParam(false);
                 setEditingParamId(null);
-                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false });
+                setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false, parentId: null });
                 showToast(isEditingParam ? 'Parameter updated' : 'Parameter added', 'success');
             }
         } catch (e: any) {
@@ -294,7 +295,7 @@ export default function TestMasterPage() {
     };
 
     const handleShowAddParamForm = () => {
-        setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false });
+        setNewParam({ parameterCode: '', parameterName: '', dataType: 'NUMERIC', unit: '', formula: '', isHeader: false, parentId: null });
         setShowAddParam(true);
         setIsEditingParam(false);
     };
@@ -306,7 +307,8 @@ export default function TestMasterPage() {
             dataType: param.data_type,
             unit: param.unit || '',
             formula: (param as any).formula || '',
-            isHeader: param.is_header === 1
+            isHeader: param.is_header === 1,
+            parentId: param.parent_id || null
         });
         setEditingParamId(param.id);
         setIsEditingParam(true);
