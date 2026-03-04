@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import LabReport from './LabReport';
+import LabReportGreen from './LabReportGreen';
 import './ReportPreview.css';
 
 interface ReportData {
@@ -26,11 +27,14 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [printing, setPrinting] = useState(false);
 
+    // Pick the right report component based on theme setting
+    const ReportComponent = labSettings.report_theme === 'green' ? LabReportGreen : LabReport;
+
     const handlePrint = async () => {
         if (!reportData) return;
         setPrinting(true);
         try {
-            const blob = await pdf(<LabReport data={reportData} labSettings={labSettings} />).toBlob();
+            const blob = await pdf(<ReportComponent data={reportData} labSettings={labSettings} />).toBlob();
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url);
             if (printWindow) {
@@ -111,7 +115,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
                             {printing ? 'Preparing...' : '🖨 Print'}
                         </button>
                         <PDFDownloadLink
-                            document={<LabReport data={reportData} labSettings={labSettings} />}
+                            document={<ReportComponent data={reportData} labSettings={labSettings} />}
                             fileName={`Report_${reportData.sample.sample_uid}.pdf`}
                             className="btn btn-primary"
                         >
@@ -123,7 +127,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
 
                 <div className="pdf-viewer-container">
                     <PDFViewer width="100%" height="100%" showToolbar={false}>
-                        <LabReport data={reportData} labSettings={labSettings} />
+                        <ReportComponent data={reportData} labSettings={labSettings} />
                     </PDFViewer>
                 </div>
             </div>

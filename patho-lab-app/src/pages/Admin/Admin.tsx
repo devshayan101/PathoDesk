@@ -525,6 +525,29 @@ export default function AdminPage() {
                             <div className="lab-settings-card">
                                 <h3 className="card-section-title">Report Configuration</h3>
                                 <div className="settings-grid">
+                                    {/* Report Theme selector */}
+                                    <div className="form-group">
+                                        <label>Report Theme</label>
+                                        <select
+                                            className="input"
+                                            value={labSettings.report_theme || 'default'}
+                                            onChange={(e) => updateLabSetting('report_theme', e.target.value)}
+                                        >
+                                            <option value="default">Classic Blue</option>
+                                            <option value="green">Clinical Green</option>
+                                        </select>
+                                    </div>
+                                    {/* Show time toggle */}
+                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            id="show_time_in_report"
+                                            checked={labSettings.show_time_in_report === 'true'}
+                                            onChange={(e) => updateLabSetting('show_time_in_report', e.target.checked ? 'true' : 'false')}
+                                            style={{ width: 18, height: 18, cursor: 'pointer' }}
+                                        />
+                                        <label htmlFor="show_time_in_report" style={{ cursor: 'pointer', margin: 0 }}>Show time in report dates</label>
+                                    </div>
                                     {labSettingsFields.slice(6).map(field => (
                                         <div key={field.key} className="form-group full-width">
                                             <label>{field.label}</label>

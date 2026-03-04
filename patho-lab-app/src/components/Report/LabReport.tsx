@@ -12,9 +12,13 @@ Font.register({
 });
 
 // PDF Styles
+const FOOTER_HEIGHT = 110;
 const styles = StyleSheet.create({
     page: {
-        padding: 30,
+        paddingTop: 30,
+        paddingLeft: 30,
+        paddingRight: 30,
+        paddingBottom: FOOTER_HEIGHT + 30,
         fontSize: 10,
         fontFamily: 'Helvetica',
     },
@@ -37,7 +41,7 @@ const styles = StyleSheet.create({
     },
     patientSection: {
         flexDirection: 'row',
-        marginBottom: 15,
+        marginBottom: 5,
         backgroundColor: '#f5f5f5',
         padding: 10,
         borderRadius: 4,
@@ -89,10 +93,13 @@ const styles = StyleSheet.create({
     flagLow: { color: '#007bff', fontWeight: 'bold' },
     flagCritical: { color: '#dc3545', fontWeight: 'bold', textDecoration: 'underline' },
     footer: {
+        position: 'absolute',
+        bottom: 25,
+        left: 30,
+        right: 30,
         borderTopWidth: 1,
         borderTopColor: '#ccc',
         paddingTop: 10,
-        marginTop: 'auto',
     },
     verification: {
         flexDirection: 'row',
@@ -200,6 +207,8 @@ interface LabSettings {
     email?: string;
     nabl_accreditation?: string;
     disclaimer?: string;
+    show_time_in_report?: string;
+    report_theme?: string;
 }
 
 interface Props {
@@ -219,14 +228,19 @@ function calculateAge(dob: string): string {
     return `${years} years`;
 }
 
-// Format date (date only, no time)
-function formatDate(dateStr: string): string {
+// Format date — optionally includes time
+export function formatDate(dateStr: string, showTime = false): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-IN', {
+    const opts: Intl.DateTimeFormatOptions = {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-    });
+    };
+    if (showTime) {
+        opts.hour = '2-digit';
+        opts.minute = '2-digit';
+    }
+    return date.toLocaleDateString('en-IN', opts);
 }
 
 // Get flag style
@@ -258,6 +272,7 @@ function formatFlag(flag: string | null): string {
 
 export default function LabReport({ data, labSettings }: Props) {
     const { sample, patient, test, results, referringDoctor } = data;
+    const showTime = labSettings.show_time_in_report === 'true';
 
     return (
         <Document>
@@ -310,11 +325,11 @@ export default function LabReport({ data, labSettings }: Props) {
                 <View style={styles.patientSection}>
                     <View style={styles.patientCol}>
                         <Text style={styles.label}>Sample Received</Text>
-                        <Text style={styles.value}>{formatDate(sample.received_at)}</Text>
+                        <Text style={styles.value}>{formatDate(sample.received_at, showTime)}</Text>
                     </View>
                     <View style={styles.patientCol}>
                         <Text style={styles.label}>Report Date</Text>
-                        <Text style={styles.value}>{formatDate(new Date().toISOString())}</Text>
+                        <Text style={styles.value}>{formatDate(new Date().toISOString(), showTime)}</Text>
                     </View>
                     <View style={styles.patientCol}>
                         <Text style={styles.label}>Sample Type</Text>
@@ -369,8 +384,8 @@ export default function LabReport({ data, labSettings }: Props) {
                     ))}
                 </View>
 
-                {/* Footer - normal flow, pushed to bottom with marginTop:auto */}
-                <View style={styles.footer} wrap={false}>
+                {/* Footer - fixed at bottom of every page */}
+                <View style={styles.footer} fixed>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
                         {/* Lab Technician Signature */}
                         <View style={styles.signatureBox}>
@@ -390,7 +405,7 @@ export default function LabReport({ data, labSettings }: Props) {
                         <View style={{ alignItems: 'center', marginBottom: 5 }}>
                             <Text style={[styles.label, { fontSize: 9 }]}>Report Status: {sample.status}</Text>
                             {sample.verified_at && (
-                                <Text style={[styles.label, { fontSize: 9 }]}>Verified: {formatDate(sample.verified_at)}</Text>
+                                <Text style={[styles.label, { fontSize: 9 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
                             )}
                         </View>
 
@@ -413,7 +428,7 @@ export default function LabReport({ data, labSettings }: Props) {
 
                 {/* Software Branding - fixed at bottom of every page */}
                 <View style={styles.brandingContainer} fixed>
-                    <Text style={styles.brandingText}>Software by FMS Softwares</Text>
+                    <Text style={styles.brandingText}>FMS Software Solutions</Text>
                     <Text style={styles.brandingText}>Email: fmsenterprises001@gmail.com | WhatsApp: +91-7765009936</Text>
                 </View>
             </Page>
