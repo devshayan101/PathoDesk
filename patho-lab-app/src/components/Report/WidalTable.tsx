@@ -184,7 +184,7 @@ function parseWidalResults(results: ResultItem[]) {
     return { matrix, impression, method, extraRows };
 }
 
-export default function WidalTable({ testName, results }: WidalTableProps) {
+export default function WidalTable({ results }: WidalTableProps) {
     const { matrix, impression, method, extraRows } = parseWidalResults(results);
 
     return (

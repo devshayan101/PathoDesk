@@ -1,6 +1,6 @@
 
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import logoUrl from '../../../public/icon.png';
+import logoUrl from '/icon.png';
 import { formatDate } from './LabReport';
 import WidalTable, { isWidalTest } from './WidalTable';
 

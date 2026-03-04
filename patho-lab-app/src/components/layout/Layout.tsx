@@ -27,13 +27,13 @@ const primaryNavItems: NavItem[] = [
     { path: '/samples', label: 'Samples', icon: <FlaskConical size={20} />, roles: ['admin', 'technician', 'pathologist'] },
     { path: '/results', label: 'Results', icon: <CheckCircle size={20} />, roles: ['admin', 'technician', 'pathologist'] },
     { path: '/billing/invoices', label: 'Billing', icon: <Receipt size={20} />, roles: ['admin', 'receptionist'] },
-    { path: '/test-master', label: 'Tests', icon: <Database size={20} />, roles: ['admin'] },
     { path: '/doctors', label: 'Doctors', icon: <Stethoscope size={20} />, roles: ['admin', 'technician', 'pathologist'] },
-    { path: '/admin/price-lists', label: 'Pricing', icon: <FileText size={20} />, roles: ['admin'] },
     { path: '/contact', label: 'Contact', icon: <Phone size={20} />, roles: ['admin', 'receptionist', 'technician', 'pathologist', 'auditor'] },
 ];
 
 const adminDropdownItems: NavItem[] = [
+    { path: '/test-master', label: 'Tests', icon: <Database size={20} />, roles: ['admin'] },
+    { path: '/admin/price-lists', label: 'Pricing', icon: <FileText size={20} />, roles: ['admin'] },
     { path: '/qc', label: 'QC', icon: <Search size={20} />, roles: ['admin', 'technician'], requiredModule: 'QC_AUDIT' },
     { path: '/audit', label: 'Audit', icon: <Search size={20} />, roles: ['admin', 'auditor'], requiredModule: 'QC_AUDIT' },
     { path: '/admin/backup', label: 'Backup', icon: <Save size={20} />, roles: ['admin'] },
@@ -127,8 +127,9 @@ function AdminDropdown({ items, isNavItemVisible }: { items: NavItem[], isNavIte
         <div className="nav-dropdown" ref={dropdownRef}>
             <button
                 className={`nav-link nav-dropdown-trigger ${isChildActive ? 'active' : ''}`}
-                onClick={() => setOpen(!open)}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }}
                 title="Admin"
+                type="button"
             >
                 <span className="nav-icon"><Wrench size={20} /></span>
                 <span className="nav-label">Admin</span>
@@ -139,16 +140,60 @@ function AdminDropdown({ items, isNavItemVisible }: { items: NavItem[], isNavIte
                     {visibleItems.map(item => (
                         <button
                             key={item.path}
+                            type="button"
                             className={`nav-dropdown-item ${item.path === '/admin'
-                                    ? location.pathname === '/admin' ? 'active' : ''
-                                    : location.pathname.startsWith(item.path) ? 'active' : ''
+                                ? location.pathname === '/admin' ? 'active' : ''
+                                : location.pathname.startsWith(item.path) ? 'active' : ''
                                 }`}
-                            onClick={() => navigate(item.path)}
+                            onClick={() => { setOpen(false); navigate(item.path); }}
                         >
                             <span className="dropdown-item-icon">{item.icon}</span>
                             {item.label}
                         </button>
                     ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function UserPopup({ session, logout }: { session: any; logout: () => void }) {
+    const [open, setOpen] = useState(false);
+    const popupRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="user-popup-container" ref={popupRef}>
+            <button
+                type="button"
+                className="user-avatar-btn"
+                onClick={() => setOpen(!open)}
+                title={session?.fullName || 'User'}
+            >
+                <UserCircle size={26} />
+            </button>
+            {open && (
+                <div className="user-popup-menu">
+                    <div className="user-popup-info">
+                        <UserCircle size={32} className="user-popup-avatar" />
+                        <div>
+                            <div className="user-popup-name">{session?.fullName}</div>
+                            <div className="user-popup-role">{session?.role}</div>
+                        </div>
+                    </div>
+                    <button type="button" className="user-popup-logout" onClick={() => { setOpen(false); logout(); }}>
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                    </button>
                 </div>
             )}
         </div>
@@ -217,18 +262,7 @@ export function Header() {
             <div className="header-user">
                 <LicenseStatusBadge />
                 <ThemeToggle />
-                <div className="user-dropdown">
-                    <div className="user-info">
-                        <UserCircle size={24} className="user-avatar" />
-                        <div className="user-text">
-                            <span className="user-name">{session?.fullName}</span>
-                            <span className="user-role">{session?.role}</span>
-                        </div>
-                    </div>
-                    <button className="btn-logout" onClick={logout} title="Logout">
-                        <LogOut size={18} />
-                    </button>
-                </div>
+                <UserPopup session={session} logout={logout} />
             </div>
         </header>
     );

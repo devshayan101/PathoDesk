@@ -1,6 +1,6 @@
 
 import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
-import logoUrl from '../../../public/icon.png';
+import logoUrl from '/icon.png';
 import WidalTable, { isWidalTest } from './WidalTable';
 
 // Register a standard font for better rendering
