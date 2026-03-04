@@ -51,8 +51,9 @@ export function getDashboardStats(): DashboardStats {
         const criticalCount = queryOne<{ count: number }>(
             `SELECT COUNT(*) as count 
              FROM test_results tr 
-             WHERE tr.abnormal_flag = 'CRITICAL' 
-             AND tr.status != 'FINALIZED'`
+             JOIN samples s ON tr.sample_id = s.id
+             WHERE tr.abnormal_flag IN ('CRITICAL', 'CRITICAL_HIGH', 'CRITICAL_LOW') 
+             AND s.status NOT IN ('FINALIZED', 'VERIFIED')`
         );
         criticalAlerts = criticalCount?.count || 0;
     } catch {
@@ -159,7 +160,7 @@ export function getDashboardStats(): DashboardStats {
          LIMIT 20`
     );
 
-    // Recent activity - last 10 finalized samples
+    // Recent activity - last 10 finalized/verified samples
     const recentActivity = queryAll<any>(
         `SELECT 
             s.id, s.sample_uid, s.status,
@@ -171,8 +172,8 @@ export function getDashboardStats(): DashboardStats {
          JOIN test_versions tv ON ot.test_version_id = tv.id
          JOIN orders o ON ot.order_id = o.id
          JOIN patients p ON o.patient_id = p.id
-         WHERE s.status = 'FINALIZED'
-         ORDER BY s.verified_at DESC
+         WHERE s.status IN ('FINALIZED', 'VERIFIED')
+         ORDER BY COALESCE(s.verified_at, s.received_at) DESC
          LIMIT 10`
     );
 

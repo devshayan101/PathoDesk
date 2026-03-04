@@ -256,10 +256,10 @@ export function Header() {
                         <span className="nav-label">{item.label}</span>
                     </NavLink>
                 ))}
-                <AdminDropdown items={adminDropdownItems} isNavItemVisible={isNavItemVisible} />
             </nav>
 
             <div className="header-user">
+                <AdminDropdown items={adminDropdownItems} isNavItemVisible={isNavItemVisible} />
                 <LicenseStatusBadge />
                 <ThemeToggle />
                 <UserPopup session={session} logout={logout} />
