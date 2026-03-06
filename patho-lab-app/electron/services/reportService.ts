@@ -56,6 +56,7 @@ interface ResultItem {
     abnormal_flag: string | null;
     ref_range_text: string | null;
     is_header?: number;
+    parent_id?: number | null;
 }
 
 // Get all lab settings as key-value object
@@ -113,7 +114,7 @@ export function getReportData(sampleId: number): ReportData | null {
     // Get results with reference ranges
     const results = queryAll<any>(`
     SELECT 
-      tp.parameter_code, tp.parameter_name, tp.is_header,
+      tp.parameter_code, tp.parameter_name, tp.is_header, tp.parent_id,
       tr.result_value, tp.unit, tr.abnormal_flag,
       rr.lower_limit, rr.upper_limit
     FROM samples s
@@ -132,6 +133,7 @@ export function getReportData(sampleId: number): ReportData | null {
         parameter_code: r.parameter_code,
         parameter_name: r.parameter_name,
         is_header: r.is_header,
+        parent_id: r.parent_id,
         result_value: r.result_value || '',
         unit: r.unit,
         abnormal_flag: r.abnormal_flag,
@@ -225,4 +227,27 @@ export function getReportData(sampleId: number): ReportData | null {
         } : null,
         results: formattedResults
     };
+}
+
+// Get report data for all finalized tests in an order
+export function getOrderReportData(orderId: number): ReportData[] {
+    const reportDataList: ReportData[] = [];
+
+    // Get all samples for this order regardless of status (for previewing during entry)
+    // We filter down to VERIFIED or FINALIZED in the UI or let the user see drafts.
+    const samples = queryAll<any>(`
+        SELECT s.id as sample_id
+        FROM samples s
+        JOIN order_tests ot ON s.order_test_id = ot.id
+        WHERE ot.order_id = ?
+    `, [orderId]);
+
+    for (const s of samples) {
+        const data = getReportData(s.sample_id);
+        if (data) {
+            reportDataList.push(data);
+        }
+    }
+
+    return reportDataList;
 }

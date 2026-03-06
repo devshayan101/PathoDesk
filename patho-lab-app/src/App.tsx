@@ -8,6 +8,7 @@ import LoginPage from './pages/Login/Login';
 import DashboardPage from './pages/Dashboard/Dashboard';
 import PatientsPage from './pages/Patients/Patients';
 import OrdersPage from './pages/Orders/Orders';
+import OrderResultsPage from './pages/Orders/OrderResults';
 import SamplesPage from './pages/Samples/Samples';
 import ResultsPage from './pages/Results/Results';
 import TestMasterPage from './pages/TestMaster/TestMaster';
@@ -127,6 +128,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders/:id/results"
+            element={
+              <ProtectedRoute>
+                <OrderResultsPage />
               </ProtectedRoute>
             }
           />

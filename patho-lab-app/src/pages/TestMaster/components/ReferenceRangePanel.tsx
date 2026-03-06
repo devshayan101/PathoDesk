@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { useToastStore } from '../../../stores/toastStore';
 import AgeInput from '../../../components/AgeInput/AgeInput';
 
 interface Parameter {
@@ -51,6 +53,34 @@ export default function ReferenceRangePanel({
     onShowAddForm, onEditRangeClick, onDeleteRangeClick,
     onSaveRange, onCancelForm
 }: ReferenceRangePanelProps) {
+    const showToast = useToastStore(s => s.showToast);
+    const [criticalLow, setCriticalLow] = useState('');
+    const [criticalHigh, setCriticalHigh] = useState('');
+
+    // Load critical values when parameter changes
+    useEffect(() => {
+        if (selectedParam?.id && window.electronAPI) {
+            window.electronAPI.tests.getCriticalValues(selectedParam.id).then((cv: any) => {
+                setCriticalLow(cv?.critical_low != null ? String(cv.critical_low) : '');
+                setCriticalHigh(cv?.critical_high != null ? String(cv.critical_high) : '');
+            });
+        } else {
+            setCriticalLow('');
+            setCriticalHigh('');
+        }
+    }, [selectedParam?.id]);
+
+    const handleSaveCriticalValues = async () => {
+        if (!selectedParam?.id || !window.electronAPI) return;
+        const low = criticalLow ? parseFloat(criticalLow) : null;
+        const high = criticalHigh ? parseFloat(criticalHigh) : null;
+        const result = await window.electronAPI.tests.setCriticalValues(selectedParam.id, low, high);
+        if (result.success) {
+            showToast('Critical values saved', 'success');
+        } else {
+            showToast(result.error || 'Failed to save', 'error');
+        }
+    };
 
     const formatAge = (days: number): string => {
         if (days >= 365) return `${Math.floor(days / 365)}y`;
@@ -119,6 +149,35 @@ export default function ReferenceRangePanel({
                             )}
                         </tbody>
                     </table>
+
+                    {/* Critical Values */}
+                    {selectedParam.data_type === 'NUMERIC' && (
+                        <div className="add-range-form" style={{ marginTop: '1rem' }}>
+                            <h3>⚠ Critical Values</h3>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem' }}>
+                                Results outside these thresholds will be flagged as CRITICAL.
+                            </p>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Critical Low</label>
+                                    <input className="input" type="number" step="0.1" value={criticalLow}
+                                        onChange={e => setCriticalLow(e.target.value)}
+                                        placeholder="e.g. 3.0" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Critical High</label>
+                                    <input className="input" type="number" step="0.1" value={criticalHigh}
+                                        onChange={e => setCriticalHigh(e.target.value)}
+                                        placeholder="e.g. 20.0" />
+                                </div>
+                            </div>
+                            <div className="form-actions">
+                                <button className="btn btn-primary" onClick={handleSaveCriticalValues}>
+                                    Save Critical Values
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {showAddRange && (
                         <div className="add-range-form">

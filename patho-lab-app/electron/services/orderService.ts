@@ -1,4 +1,5 @@
 import { queryAll, queryOne, run, runWithId } from '../database/db';
+import { getTestPricesForTests } from './billingService';
 
 
 interface OrderRow {
@@ -12,6 +13,7 @@ interface OrderRow {
   discount: number;
   net_amount: number;
   payment_status: string;
+  report_status?: string;
 }
 
 interface OrderTestRow {
@@ -28,7 +30,21 @@ interface OrderTestRow {
 export function listOrders(limit = 50, offset = 0): OrderRow[] {
   return queryAll<OrderRow>(`
     SELECT o.*, p.full_name as patient_name, p.patient_uid,
-           d.name as doctor_name
+           d.name as doctor_name,
+           (
+              SELECT 
+                CASE 
+                  WHEN COUNT(*) = 0 THEN 'NO_TESTS'
+                  WHEN SUM(CASE WHEN status = 'FINALIZED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'FINALIZED'
+                  WHEN SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'VERIFIED'
+                  WHEN SUM(CASE WHEN status IN ('VERIFIED', 'FINALIZED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIAL'
+                  WHEN SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) > 0 THEN 'SUBMITTED'
+                  WHEN SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) > 0 THEN 'DRAFT'
+                  WHEN SUM(CASE WHEN status = 'RECEIVED' THEN 1 ELSE 0 END) > 0 THEN 'RECEIVED'
+                  ELSE 'PENDING'
+                END
+              FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
+           ) as report_status
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
     LEFT JOIN doctors d ON o.referring_doctor_id = d.id
@@ -65,14 +81,34 @@ export function getOrder(orderId: number) {
 export function createOrder(data: {
   patientId: number;
   testVersionIds: number[];
+  priceListId: number;
   discount?: number;
   referringDoctorId?: number | null;
 }): { success: boolean; orderId?: number; orderUid?: string; error?: string } {
   try {
     const orderUid = `ORD-${Date.now().toString(36).toUpperCase()}`;
 
-    // Calculate total from test prices (simplified - using fixed price for now)
-    const totalAmount = data.testVersionIds.length * 500; // Placeholder price
+    // Get test IDs from version IDs
+    const testIds: number[] = [];
+    const versionToTestMap = new Map<number, number>();
+
+    for (const vId of data.testVersionIds) {
+      const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
+      if (tv) {
+        testIds.push(tv.test_id);
+        versionToTestMap.set(vId, tv.test_id);
+      }
+    }
+
+    // Lookup real test prices
+    const pricesMap = getTestPricesForTests(testIds, data.priceListId);
+
+    // Calculate total from actual test prices
+    let totalAmount = 0;
+    for (const tId of testIds) {
+      totalAmount += pricesMap.get(tId)?.base_price || 0;
+    }
+
     const discount = data.discount || 0;
     const netAmount = totalAmount - discount;
 
@@ -84,10 +120,13 @@ export function createOrder(data: {
 
     // Insert order tests and auto-generate samples
     for (const testVersionId of data.testVersionIds) {
+      const tId = versionToTestMap.get(testVersionId);
+      const testPrice = tId ? (pricesMap.get(tId)?.base_price || 0) : 0;
+
       const orderTestId = runWithId(`
         INSERT INTO order_tests (order_id, test_version_id, status, price)
-        VALUES (?, ?, 'ORDERED', 500)
-      `, [orderId, testVersionId]);
+        VALUES (?, ?, 'ORDERED', ?)
+      `, [orderId, testVersionId, testPrice]);
 
       // Auto-generate sample for this test
       // unique sample UID: S + timestamp + random 3 chars
@@ -110,7 +149,26 @@ export function createOrder(data: {
 export function getPatientOrders(patientId: number): OrderRow[] {
   return queryAll<OrderRow>(`
     SELECT o.*, p.full_name as patient_name, p.patient_uid,
-           d.name as doctor_name
+           d.name as doctor_name,
+           (SELECT IFNULL(SUM(amount), 0) FROM payments pay JOIN invoices inv ON pay.invoice_id = inv.id WHERE inv.order_id = o.id) as paid_amount,
+           (SELECT GROUP_CONCAT(tv.test_name, ', ') 
+            FROM order_tests ot 
+            JOIN test_versions tv ON ot.test_version_id = tv.id 
+            WHERE ot.order_id = o.id) as test_names,
+           (
+              SELECT 
+                CASE 
+                  WHEN COUNT(*) = 0 THEN 'NO_TESTS'
+                  WHEN SUM(CASE WHEN status = 'FINALIZED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'FINALIZED'
+                  WHEN SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'VERIFIED'
+                  WHEN SUM(CASE WHEN status IN ('VERIFIED', 'FINALIZED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIAL'
+                  WHEN SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) > 0 THEN 'SUBMITTED'
+                  WHEN SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) > 0 THEN 'DRAFT'
+                  WHEN SUM(CASE WHEN status = 'RECEIVED' THEN 1 ELSE 0 END) > 0 THEN 'RECEIVED'
+                  ELSE 'PENDING'
+                END
+              FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
+           ) as report_status
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
     LEFT JOIN doctors d ON o.referring_doctor_id = d.id

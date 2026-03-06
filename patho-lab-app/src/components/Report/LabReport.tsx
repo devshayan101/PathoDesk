@@ -184,6 +184,7 @@ interface ReportData {
         abnormal_flag: string | null;
         ref_range_text: string | null;
         is_header?: number;
+        parent_id?: number | null;
     }[];
     referringDoctor?: {
         name: string;
@@ -381,7 +382,7 @@ export default function LabReport({ data, labSettings }: Props) {
                                 </View>
                             ) : (
                                 <View key={idx} style={styles.tableRow} wrap={false}>
-                                    <Text style={[styles.colParameter, { paddingLeft: 8 }]}>{result.parameter_name}</Text>
+                                    <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 16 : 8 }]}>{result.parameter_name}</Text>
                                     <Text style={[styles.colResult, getFlagStyle(result.abnormal_flag)]}>
                                         {result.result_value || '-'}
                                     </Text>

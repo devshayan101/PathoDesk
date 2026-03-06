@@ -26,6 +26,8 @@ export interface ElectronAPI {
         delete: (testId: number) => Promise<void>;
         bulkDelete: (ids: number[]) => Promise<void>;
         bulkImport: (rows: any[]) => Promise<{ created: number; skipped: number; skippedNames: string[]; errors: string[] }>;
+        getCriticalValues: (parameterId: number) => Promise<{ critical_low: number | null; critical_high: number | null } | null>;
+        setCriticalValues: (parameterId: number, criticalLow: number | null, criticalHigh: number | null) => Promise<{ success: boolean; error?: string }>;
     };
     testWizard: {
         getDrafts: () => Promise<any[]>;
@@ -48,6 +50,7 @@ export interface ElectronAPI {
         get: (orderId: number) => Promise<any>;
         create: (data: any) => Promise<{ success: boolean; orderId?: number; orderUid?: string; error?: string }>;
         getPending: () => Promise<any[]>;
+        getByPatient: (patientId: number) => Promise<any[]>;
     };
     samples: {
         list: (status?: string) => Promise<any[]>;
@@ -76,9 +79,14 @@ export interface ElectronAPI {
     };
     reports: {
         getData: (sampleId: number) => Promise<any>;
+        getOrderData: (orderId: number) => Promise<any[]>;
+        generatePdf: (data: any, options: any) => Promise<{ success: boolean; filePath?: string; error?: string }>;
     };
     dashboard: {
         getStats: () => Promise<any>;
+    };
+    settings: {
+        getAll: () => Promise<any[]>;
     };
     labSettings: {
         get: () => Promise<any>;

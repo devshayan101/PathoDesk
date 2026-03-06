@@ -193,6 +193,23 @@ export function deleteParameter(parameterId: number): void {
   run('DELETE FROM test_parameters WHERE id = ?', [parameterId]);
 }
 
+// --- Critical Values ---
+export function getCriticalValues(parameterId: number): { critical_low: number | null; critical_high: number | null } | null {
+  return queryOne<{ critical_low: number | null; critical_high: number | null }>(
+    'SELECT critical_low, critical_high FROM critical_values WHERE parameter_id = ?',
+    [parameterId]
+  ) || null;
+}
+
+export function setCriticalValues(parameterId: number, criticalLow: number | null, criticalHigh: number | null): void {
+  const existing = queryOne<{ id: number }>('SELECT id FROM critical_values WHERE parameter_id = ?', [parameterId]);
+  if (existing) {
+    run('UPDATE critical_values SET critical_low = ?, critical_high = ? WHERE parameter_id = ?', [criticalLow, criticalHigh, parameterId]);
+  } else {
+    run('INSERT INTO critical_values (parameter_id, critical_low, critical_high) VALUES (?, ?, ?)', [parameterId, criticalLow, criticalHigh]);
+  }
+}
+
 // --- Test Creation Wizard Methods ---
 
 export function getDrafts(): (TestRow & TestVersionRow & { wizard_step: number, status: string })[] {

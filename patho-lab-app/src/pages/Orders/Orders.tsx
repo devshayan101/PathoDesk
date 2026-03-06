@@ -36,6 +36,7 @@ interface Order {
     net_amount: number;
     test_names?: string;
     doctor_name?: string;
+    report_status?: string;
 }
 
 interface Doctor {
@@ -91,6 +92,10 @@ export default function OrdersPage() {
     const [showAddDoctor, setShowAddDoctor] = useState(false);
     const [newDoctor, setNewDoctor] = useState({ name: '', phone: '', email: '', specialization: '', priceListId: '' });
 
+    // Order View Modal
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [showOrderModal, setShowOrderModal] = useState(false);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -140,6 +145,20 @@ export default function OrdersPage() {
             console.error('Failed to load data:', e);
         }
         setLoading(false);
+    };
+
+    const handleViewOrder = async (order: Order) => {
+        try {
+            if (window.electronAPI) {
+                const data = await window.electronAPI.orders.get(order.id);
+                if (data) {
+                    setSelectedOrder(data);
+                    setShowOrderModal(true);
+                }
+            }
+        } catch (e: any) {
+            showToast('Failed to load order details', 'error');
+        }
     };
 
     const handleQuickAddPatient = async () => {
@@ -295,6 +314,7 @@ export default function OrdersPage() {
             const orderResult = await window.electronAPI.orders.create({
                 patientId: Number(selectedPatientId),
                 testVersionIds: selectedTestIds,
+                priceListId: selectedPriceListId,
                 discount: 0, // Will be handled in invoice
                 referringDoctorId: selectedDoctorId ? Number(selectedDoctorId) : null
             });
@@ -708,11 +728,13 @@ export default function OrdersPage() {
                             <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--color-bg-tertiary)' }}>
                                 <tr>
                                     <th>Order ID</th>
-                                    <th>Patient</th>
-                                    <th>Referring Doctor</th>
+                                    <th>Patient UID</th>
+                                    <th>Doctor Name</th>
                                     <th>Date</th>
                                     <th style={{ textAlign: 'right' }}>Amount</th>
-                                    <th>Status</th>
+                                    <th>Payment</th>
+                                    <th>Report Status</th>
+                                    <th style={{ textAlign: 'center' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -747,6 +769,21 @@ export default function OrdersPage() {
                                                 <span className={`badge ${order.payment_status === 'PAID' ? 'badge-success' : order.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>
                                                     {order.payment_status}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${order.report_status === 'FINALIZED' ? 'badge-success' :
+                                                    order.report_status === 'VERIFIED' ? 'badge-info' :
+                                                        order.report_status === 'PARTIAL' ? 'badge-warning' :
+                                                            'badge-default'
+                                                    }`}>
+                                                    {order.report_status?.replace('_', ' ') || 'PENDING'}
+                                                </span>
+                                            </td>
+                                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                <button className="btn btn-secondary btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleViewOrder(order)}>View</button>
+                                                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/orders/${order.id}/results`)}>
+                                                    🔬 Enter Results
+                                                </button>
                                             </td>
                                         </tr>
                                     ));
@@ -827,6 +864,60 @@ export default function OrdersPage() {
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                             <button className="btn btn-secondary" onClick={() => setShowAddDoctor(false)}>Cancel</button>
                             <button className="btn btn-primary" onClick={handleQuickAddDoctor}>Save Doctor</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Order Details Modal */}
+            {showOrderModal && selectedOrder && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowOrderModal(false)}>
+                    <div className="modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                        <h2>Order Details: {selectedOrder.order_uid}</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', background: 'var(--color-bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+                            <div>
+                                <div><span className="text-muted">Patient:</span> <strong>{selectedOrder.patient_name}</strong> <small>({selectedOrder.patient_uid})</small></div>
+                                <div><span className="text-muted">Doctor:</span> {selectedOrder.doctor_name || 'Self'}</div>
+                                <div><span className="text-muted">Date:</span> {new Date(selectedOrder.order_date).toLocaleString()}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div><span className="text-muted">Amount:</span> <strong>₹{(selectedOrder.net_amount || selectedOrder.total_amount).toLocaleString()}</strong></div>
+                                <div><span className="text-muted">Payment:</span> <span className={`badge ${selectedOrder.payment_status === 'PAID' ? 'badge-success' : selectedOrder.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>{selectedOrder.payment_status}</span></div>
+                            </div>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Tests Ordered</h3>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <table className="table" style={{ marginBottom: '1.5rem' }}>
+                                <thead style={{ position: 'sticky', top: 0 }}>
+                                    <tr>
+                                        <th>Test Code</th>
+                                        <th>Test Name</th>
+                                        <th>Status</th>
+                                        <th style={{ textAlign: 'right' }}>Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedOrder.tests?.map((t: any) => (
+                                        <tr key={t.id}>
+                                            <td>{t.test_code}</td>
+                                            <td>{t.test_name}</td>
+                                            <td><span className={`badge ${t.status === 'FINALIZED' ? 'badge-success' : t.status === 'VERIFIED' ? 'badge-info' : 'badge-default'}`}>{t.status}</span></td>
+                                            <td style={{ textAlign: 'right' }}>₹{t.price?.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                            <button className="btn btn-primary" onClick={() => {
+                                setShowOrderModal(false);
+                                navigate(`/orders/${selectedOrder.id}/results`);
+                            }}>
+                                🔬 Enter Results
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => setShowOrderModal(false)}>Close</button>
                         </div>
                     </div>
                 </div>

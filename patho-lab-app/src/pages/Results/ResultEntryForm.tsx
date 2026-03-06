@@ -476,7 +476,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                     </table>
 
                     <div className="result-actions">
-                        {resultData.status === 'RECEIVED' || resultData.status === 'DRAFT' ? (
+                        {(resultData.status === 'RECEIVED' || resultData.status === 'DRAFT' || resultData.status === 'COLLECTED') ? (
                             <>
                                 <button className="btn btn-secondary" onClick={handleSave}>
                                     <span className="kbd">F5</span> Save Draft

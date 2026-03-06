@@ -25,6 +25,7 @@ export default function PatientsPage() {
     });
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
+    const [orderHistoryModal, setOrderHistoryModal] = useState<{ patient: Patient; orders: any[] } | null>(null);
     const [confirmDialog, setConfirmDialog] = useState<{
         title: string; message: string; confirmLabel: string;
         variant: 'danger' | 'warning' | 'default'; onConfirm: () => void;
@@ -165,6 +166,17 @@ export default function PatientsPage() {
         });
     };
 
+    const handleViewOrders = async (patient: Patient) => {
+        try {
+            if (window.electronAPI) {
+                const orders = await window.electronAPI.orders.getByPatient(patient.id);
+                setOrderHistoryModal({ patient, orders });
+            }
+        } catch (e: any) {
+            showToast('Failed to load orders: ' + e.message, 'error');
+        }
+    };
+
     return (
         <div className="patients-page">
             <div className="page-header">
@@ -286,8 +298,10 @@ export default function PatientsPage() {
                                                         title="Edit Patient">✎</button>
                                                     <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(patient)}
                                                         title="Delete Patient" style={{ color: 'var(--color-error)' }}>✕</button>
+                                                    <button className="btn btn-secondary btn-sm" onClick={() => handleViewOrders(patient)}
+                                                        title="View Patient Orders">📋 Orders</button>
                                                     <button className="btn btn-secondary btn-sm" onClick={() => navigate('/orders', { state: { newOrderForPatientId: patient.id } })}
-                                                        title="Create New Order for Patient">📋 New Order</button>
+                                                        title="Create New Order for Patient">+ Order</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -308,6 +322,63 @@ export default function PatientsPage() {
                     onConfirm={confirmDialog.onConfirm}
                     onCancel={() => setConfirmDialog(null)}
                 />
+            )}
+
+            {/* Order History Modal */}
+            {orderHistoryModal && (
+                <div className="modal-overlay" onClick={() => setOrderHistoryModal(null)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0 }}>Order History: {orderHistoryModal.patient.full_name}</h2>
+                            <button className="btn-icon" onClick={() => setOrderHistoryModal(null)}>✕</button>
+                        </div>
+
+                        {orderHistoryModal.orders.length === 0 ? (
+                            <div className="empty" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                No orders found for this patient.
+                            </div>
+                        ) : (
+                            orderHistoryModal.orders.map(order => {
+                                const pendingAmount = order.net_amount - (order.discount || 0) - (order.paid_amount || 0);
+                                return (
+                                    <div key={order.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '1rem', marginBottom: '1rem', background: 'var(--color-bg-tertiary)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+                                            <div>
+                                                <strong>{order.order_uid}</strong>
+                                                <span style={{ marginLeft: '1rem', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                                                    {new Date(order.order_date).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                {pendingAmount <= 0 ? (
+                                                    <span className="badge badge-success">Paid: ₹{order.net_amount}</span>
+                                                ) : (
+                                                    <span className="badge badge-error"
+                                                        style={{ cursor: 'pointer' }}
+                                                        title="Click to receive payment"
+                                                        onClick={() => {
+                                                            setOrderHistoryModal(null);
+                                                            navigate('/billing', { state: { openReceiveForOrder: order.order_uid } });
+                                                        }}>
+                                                        Pending: ₹{pendingAmount}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div style={{ fontSize: '0.9rem' }}>
+                                            <p style={{ margin: '0 0 0.5rem' }}><strong>Tests:</strong> {order.test_names || 'None'}</p>
+                                        </div>
+                                        <div style={{ marginTop: '0.5rem', textAlign: 'right' }}>
+                                            <button className="btn btn-secondary btn-sm" title="View Combined Report">📄 View Report</button>
+                                        </div>
+                                    </div>
+                                )
+                            })
+                        )}
+
+                    </div>
+                </div>
             )}
         </div>
     );

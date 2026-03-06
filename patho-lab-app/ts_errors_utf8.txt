@@ -1,0 +1,5 @@
+﻿src/components/Report/CombinedReportPreview.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/Report/CombinedReportPreview.tsx(21,32): error TS2339: Property 'settings' does not exist on type 'ElectronAPI'.
+src/components/Report/CombinedReportPreview.tsx(21,55): error TS7006: Parameter 'settings' implicitly has an 'any' type.
+src/components/Report/CombinedReportPreview.tsx(37,63): error TS2339: Property 'getOrderData' does not exist on type '{ getData: (sampleId: number) => Promise<any>; }'.
+src/components/Report/CombinedReportPreview.tsx(69,46): error TS2339: Property 'generatePdf' does not exist on type '{ getData: (sampleId: number) => Promise<any>; }'.

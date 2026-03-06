@@ -171,7 +171,7 @@ export function listTestPrices(priceListId: number): TestPriceRow[] {
     JOIN test_versions tv ON t.id = tv.test_id
     WHERE tp.price_list_id = ?
       AND tp.is_active = 1
-      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+      AND (tp.effective_to IS NULL OR datetime(tp.effective_to) >= datetime('now'))
       AND tv.status = 'PUBLISHED'
       AND t.is_active = 1
     GROUP BY tp.test_id
@@ -189,8 +189,8 @@ export function getTestPrice(testId: number, priceListId: number): TestPriceRow 
       AND tp.price_list_id = ?
       AND tp.is_active = 1
       AND t.is_active = 1
-      AND tp.effective_from <= datetime('now')
-      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+      AND datetime(tp.effective_from) <= datetime('now')
+      AND (tp.effective_to IS NULL OR datetime(tp.effective_to) >= datetime('now'))
     ORDER BY tp.effective_from DESC
     LIMIT 1
   `, [testId, priceListId]);
@@ -274,8 +274,8 @@ export function getTestPricesForTests(testIds: number[], priceListId: number): M
       AND tp.price_list_id = ?
       AND tp.is_active = 1
       AND t.is_active = 1
-      AND tp.effective_from <= datetime('now')
-      AND (tp.effective_to IS NULL OR tp.effective_to >= datetime('now'))
+      AND datetime(tp.effective_from) <= datetime('now')
+      AND (tp.effective_to IS NULL OR datetime(tp.effective_to) >= datetime('now'))
     ORDER BY tp.effective_from DESC
   `, [...testIds, priceListId]);
 

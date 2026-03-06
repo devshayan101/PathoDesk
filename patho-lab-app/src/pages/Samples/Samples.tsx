@@ -17,6 +17,7 @@ export default function SamplesPage() {
     const [samples, setSamples] = useState<Sample[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [barcodeModalSample, setBarcodeModalSample] = useState<Sample | null>(null);
 
     useEffect(() => {
         loadSamples();
@@ -171,12 +172,20 @@ export default function SamplesPage() {
                                         <td className="action-buttons" style={{ textAlign: 'right' }}>
                                             <button
                                                 className="btn btn-secondary btn-sm"
+                                                onClick={() => setBarcodeModalSample(sample)}
+                                                style={{ marginRight: '0.5rem' }}
+                                                title="View Barcode"
+                                            >
+                                                <span className="text-hidden-sm">Barcode</span>
+                                            </button>
+                                            {/* <button
+                                                className="btn btn-secondary btn-sm"
                                                 onClick={() => handlePrintBarcode(sample)}
                                                 style={{ marginRight: '0.5rem' }}
                                                 title="Print Barcode"
                                             >
-                                                🖨️ <span className="text-hidden-sm">Barcode</span>
-                                            </button>
+                                                🖨️ <span className="text-hidden-sm">Print</span>
+                                            </button> */}
                                             {(sample.status === 'VERIFIED' || sample.status === 'RECEIVED' || sample.status === 'SUBMITTED' || sample.status === 'DRAFT') && (
                                                 <button
                                                     className="btn btn-secondary btn-sm"
@@ -203,6 +212,34 @@ export default function SamplesPage() {
                     </table>
                 )}
             </div>
+
+            {/* Barcode View Modal */}
+            {barcodeModalSample && (
+                <div className="modal-overlay" onClick={() => setBarcodeModalSample(null)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Sample Barcode</h3>
+                        <div style={{ border: '2px solid #000', padding: '15px', display: 'inline-block', margin: '10px', background: '#fff' }}>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '3px', fontFamily: 'monospace' }}>
+                                {barcodeModalSample.sample_uid}
+                            </div>
+                            <div style={{ fontSize: '36px', letterSpacing: '-2px', margin: '10px 0', fontFamily: 'monospace' }}>
+                                |||||||||||||||||||
+                            </div>
+                            <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#555' }}>
+                                {barcodeModalSample.patient_name}<br />
+                                {barcodeModalSample.test_name}<br />
+                                {new Date().toLocaleDateString()}
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                            <button className="btn btn-primary" onClick={() => {
+                                handlePrintBarcode(barcodeModalSample);
+                            }}>🖨️ Print</button>
+                            <button className="btn btn-secondary" onClick={() => setBarcodeModalSample(null)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

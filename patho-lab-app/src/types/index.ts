@@ -85,6 +85,8 @@ export interface Order {
     patientId: number;
     orderDate: string;
     patient?: Patient;
+    payment_status?: string;
+    report_status?: string;
 }
 
 export interface OrderTest {
@@ -136,6 +138,7 @@ export const IPC_CHANNELS = {
     ORDER_GET: 'order:get',
     ORDER_LIST: 'order:list',
     ORDER_PENDING: 'order:pending',
+    ORDER_GET_BY_PATIENT: 'order:getByPatient',
 
     // Samples
     SAMPLE_CREATE: 'sample:create',
@@ -176,6 +179,10 @@ export const IPC_CHANNELS = {
     REF_RANGE_UPDATE: 'refRange:update',
     REF_RANGE_DELETE: 'refRange:delete',
 
+    // Critical Values
+    CRITICAL_VALUE_GET: 'criticalValue:get',
+    CRITICAL_VALUE_SET: 'criticalValue:set',
+
     // Results
     RESULT_PENDING_SAMPLES: 'result:pendingSamples',
     RESULT_GET: 'result:get',
@@ -198,6 +205,8 @@ export const IPC_CHANNELS = {
 
     // Reports
     REPORT_GET_DATA: 'report:getData',
+    REPORT_GET_ORDER_DATA: 'report:getOrderData',
+    REPORT_GENERATE_PDF: 'report:generatePdf',
 
     // Lab Settings
     LAB_SETTINGS_GET: 'labSettings:get',

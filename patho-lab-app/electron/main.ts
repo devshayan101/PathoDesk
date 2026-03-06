@@ -244,6 +244,20 @@ function registerIpcHandlers() {
     return { success: true }
   })
 
+  // Critical Values
+  ipcMain.handle(IPC_CHANNELS.CRITICAL_VALUE_GET, (_, parameterId: number) => {
+    return testService.getCriticalValues(parameterId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CRITICAL_VALUE_SET, (_, parameterId: number, criticalLow: number | null, criticalHigh: number | null) => {
+    try {
+      testService.setCriticalValues(parameterId, criticalLow, criticalHigh)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
   // Orders
   ipcMain.handle(IPC_CHANNELS.ORDER_LIST, () => {
     return orderService.listOrders()
@@ -259,6 +273,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.ORDER_PENDING, () => {
     return orderService.getPendingOrders()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORDER_GET_BY_PATIENT, (_, patientId: number) => {
+    return orderService.getPatientOrders(patientId)
   })
 
   // Samples

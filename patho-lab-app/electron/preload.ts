@@ -51,6 +51,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_BULK_DELETE, ids),
     bulkImport: (rows: any[]) =>
       ipcRenderer.invoke(IPC_CHANNELS.TESTS_BULK_IMPORT, rows),
+    getCriticalValues: (parameterId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.CRITICAL_VALUE_GET, parameterId),
+    setCriticalValues: (parameterId: number, criticalLow: number | null, criticalHigh: number | null) =>
+      ipcRenderer.invoke(IPC_CHANNELS.CRITICAL_VALUE_SET, parameterId, criticalLow, criticalHigh),
   },
 
   // Test Wizard
@@ -83,6 +87,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.ORDER_CREATE, data),
     getPending: () =>
       ipcRenderer.invoke(IPC_CHANNELS.ORDER_PENDING),
+    getByPatient: (patientId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_GET_BY_PATIENT, patientId),
   },
 
   // Samples
@@ -151,6 +157,10 @@ const api = {
   reports: {
     getData: (sampleId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_DATA, sampleId),
+    getOrderData: (orderId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_ORDER_DATA, orderId),
+    generatePdf: (data: any, options: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REPORT_GENERATE_PDF, data, options),
   },
 
   // Dashboard
