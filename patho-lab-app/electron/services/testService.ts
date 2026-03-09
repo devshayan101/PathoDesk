@@ -415,10 +415,13 @@ export interface BulkImportRow {
   testCode?: string;
   testName: string;
   parameter: string;
+  paramCode?: string;
   referenceRange: string;
   unit: string;
   price: number;
   sampleType: string;
+  criticalLow?: string;
+  criticalHigh?: string;
   isHeader?: string;
 }
 
@@ -495,11 +498,15 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
       for (let i = 0; i < testRows.length; i++) {
         const row = testRows[i];
         const paramName = row.parameter.trim();
-        const paramCode = paramName
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '_')
-          .replace(/_+/g, '_')
-          .substring(0, 20);
+
+        let paramCode = (row.paramCode || '').trim().toUpperCase();
+        if (!paramCode) {
+          paramCode = paramName
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .substring(0, 20);
+        }
 
         // Determine data type from reference range
         const refRange = (row.referenceRange || '').trim();
@@ -552,6 +559,18 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
             VALUES (?, 'A', 0, 36500, ?, ?, ?, datetime('now'))
           `, [paramId, lowerLimit, upperLimit, displayText]);
         }
+
+        // 5. Create critical values if present
+        if (row.criticalLow || row.criticalHigh) {
+          run(`
+            INSERT INTO critical_values (parameter_id, critical_low, critical_high)
+            VALUES (?, ?, ?)
+          `, [
+            paramId,
+            parseFloat(row.criticalLow || '') || null,
+            parseFloat(row.criticalHigh || '') || null
+          ]);
+        }
       }
 
       // 4.5. Second pass for parent_ids based on isHeader group assignments
@@ -596,8 +615,11 @@ export function exportTests(): any[] {
       tv.department as category,
       t.test_code as testCode,
       tv.test_name as testName,
+      tp.parameter_code as paramCode,
       tp.parameter_name as parameter,
       rr.display_text as referenceRange,
+      cv.critical_low as criticalLow,
+      cv.critical_high as criticalHigh,
       tp.unit,
       tp.is_header as isHeaderRaw,
       (SELECT parameter_name FROM test_parameters parent WHERE parent.id = tp.parent_id) as parentName,
@@ -610,6 +632,7 @@ export function exportTests(): any[] {
     JOIN test_versions tv ON t.id = tv.test_id AND tv.status = 'PUBLISHED'
     JOIN test_parameters tp ON tv.id = tp.test_version_id
     LEFT JOIN reference_ranges rr ON tp.id = rr.parameter_id AND (rr.gender = 'A' OR rr.gender IS NULL)
+    LEFT JOIN critical_values cv ON tp.id = cv.parameter_id
     WHERE t.is_active = 1
     ORDER BY tv.department, tv.test_name, tp.display_order
   `);

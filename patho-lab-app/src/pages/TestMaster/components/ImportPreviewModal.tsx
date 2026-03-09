@@ -29,10 +29,14 @@ export default function ImportPreviewModal({ show, importPreview, importing, onC
                             <tr>
                                 <th>Category</th>
                                 <th>Test Name</th>
+                                <th>Param Code</th>
                                 <th>Parameter</th>
                                 <th>Ref Range</th>
+                                <th>Crit Low</th>
+                                <th>Crit High</th>
                                 <th>Unit</th>
                                 <th>Price</th>
+                                <th>Is Header</th>
                                 <th>Sample Type</th>
                             </tr>
                         </thead>
@@ -41,16 +45,20 @@ export default function ImportPreviewModal({ show, importPreview, importing, onC
                                 <tr key={idx}>
                                     <td>{row.category}</td>
                                     <td><strong>{row.testName}</strong></td>
+                                    <td>{row.paramCode}</td>
                                     <td>{row.parameter}</td>
                                     <td>{row.referenceRange}</td>
+                                    <td>{row.criticalLow}</td>
+                                    <td>{row.criticalHigh}</td>
                                     <td>{row.unit}</td>
                                     <td>{row.price || '-'}</td>
+                                    <td>{row.isHeader || 'No'}</td>
                                     <td>{row.sampleType}</td>
                                 </tr>
                             ))}
                             {importPreview.length > 100 && (
                                 <tr>
-                                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                    <td colSpan={11} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
                                         ...and {importPreview.length - 100} more rows
                                     </td>
                                 </tr>

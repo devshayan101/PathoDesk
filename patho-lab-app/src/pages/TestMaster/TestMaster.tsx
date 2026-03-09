@@ -419,6 +419,7 @@ export default function TestMasterPage() {
                     onToggleSelectAll={handleToggleSelectAll}
                     onImportClick={handleImportClick}
                     onExportClick={handleExportClick}
+                    onRefreshClick={loadTests}
                     onNewClick={() => {
                         setWizardDraftId(undefined);
                         setIsEditing(false);
