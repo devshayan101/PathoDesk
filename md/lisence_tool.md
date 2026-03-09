@@ -30,7 +30,7 @@ licenseService.ts
 .
 
 Step 2: Create a License (Interactive)
-npx ts-node scripts/generate-license.ts create
+npx tsx scripts/generate-license.ts create
 Example Session:
 
 📝 Create New License

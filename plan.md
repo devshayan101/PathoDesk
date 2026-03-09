@@ -279,6 +279,68 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] sample page: after sample collection, Results should be enabled. [Results button should be appear after sample collection.] 
 - [x] sample page: Results button: Results button should open results entry page for that sample.
 - [x] Redesign nav bar with modern minimalist design.
+- [x] report print button in report view.
+- [x] club screens [QC, AUDIT, BACKUP, LICENSE, SETTINGS] under single menu item / nav item, use dropdown menu.
+- [x] admin > settings > user management: 1. add option to edit and delete user details. 2. add a field to add user Qualification . 3. add a filed to add user signature. 4. by default add a lab technician and pathologist with their signatures.
+- [x] Results > Report pdf: Report pdf should contain both lab technician and pathologist signatures. When pathologist user login it should be able to use lab technician signature as well as pathologist signature. When lab technician user login it should be able to use only lab technician signature. In case of multiple lab technician users available, pathologist user should be able to select lab technician signature from dropdown menu.
+- [X] Invoice > Record payment > Payment mode: Remove credit/ due option.
+- [x] Remove doctor code field from add doctor button, add doctor code from backend automatically.
+- [x] Remove edit from admin user in user management. [Admin user should not be editable]
+- [x] Report pdf is not showing logo watermark. Logo address /public/icon.png.
+- [ ] add tests
+- [x] Report pdf is showing lab technician with adminstrator user, do not use admin user for signature, use lab technician user details. [Use only lab technician and pathologist user for signature]
+- [x] Report pdf: Report Status should be placed between lab technician and pathologist signature.
+- [x] admin > settings > user management: deleting user giver confirm dialouge box, use confirm-toast instead.
+- [x] Tests > Test Master > Tests : When adding new tests from excel sheet, it skips adding some tests independently without any confirmation msg. 
+- [x] Tests > Test Master > Tests : Feature to select and delete multiple tests.
+- [x] Orders Screen > New Order button > Create new order modal > 'Select Patient' and 'Reffering Doctor' here add option to add new patient and new doctor (add new patient and new doctor modal should open)
+- [x] test master: import tests from excel: add another column for test code.
+- [x] Price list: It shows tests added from test master, but it also shows deleted tests.
+- [x] Report pdf: Remove time, keep date.
+- [x] Report pdf: When there are more number of parameters, at footer parameters and footer (lab technician and pathologist signatures and footer contents) overlap each other. also when page 2 is added it is missing watermark and pathology lab name.
+- [x] Removed time from dates — formatDate() now only shows dd-MMM-yyyy (e.g. "03 Mar 2026") without hours/minutes. - [add setting to enable/disable time]
+- [x] Fixed footer overlap — The footer (signatures + disclaimer) was using position: absolute which pinned it to the bottom of page 1 regardless of content length. Now it uses normal document flow with marginTop: auto to fill remaining space, and wrap={false} ensures the entire signature block stays together and pushes to the next page if needed. [footer should be at bottom of every page, content should not overlap footer. When there is more content that can fit in single page, content should not overlap footer, and extra content should be pushed to next page.]
+- [x] Add another theme / format for report pdf. [use attached image for theme. Add option to select theme in admin > settings > report format]
+- [x] this is attachment is for widal test with its parameters, format is different than other tests. In result it takes + or -. [use this format for widal test] 
+- [x] Make screen responsive for tablets and mobile devices. [Use responsive design for tablets and mobile devices.] [Use tailwind css for responsive design.] [Bug: For lesser resolution screens part of nav-bar is not visible.]
+- [x] Nav bar: 1. admin dropdown not working. 2. add [Tests, Pricing] to admin dropdown. 3. [User id + Name display + logout icon ] - change this layout to take minimum space.[Use pop-up display for user id + Name display + logout icon]
+- [x] Dashboard: dashboard screen is displaying wrong data.
+- [x] Test Master: Parameters: 1. Add option to arrange order of parameters [move up down a parameter] 2. Add option to add sub parameters inside parameter. 
+- [x] Instead of /public/icon.png, use /icon.png.
+- [x] dashboard: pending samples and pending results shows old data.
+- [x] Test Master : Test Edit / Creation Wizard: 1. Add option to add sub parameters inside parameter. 2. Review screen: Publish button is not visible. 3. Add tests from attachments; In CBC Differential Leucocyte Count (DLC) has sub parameters [Neutrophils, Lymphocytes, Monocytes, Eosinophils, Basophils].
+- [x] Test Master: Add option to group parameters under a parameter marked 'Is Header'.
+- [x] Test Master : Add option to resize size of columns [Tests, Parameters, Reference Ranges].
+- [x] Test Master: 1. Reference range panel is not resizeable. 2. Redesign UI of [Tests, Parameters, Reference Ranges panels.] with modern minimalist design, use screen space accordingly - Tests - 30%, Parameters - 30%, Reference Ranges - 30%.
+- [x] Orders: Price of tests are set, but in new order modal it shows 0 price. Orders screen shows orders of different price from that which was set. Billing screen shows 0 amount.
+- [x] Report pdf: Grouped prameters under 'Is Header' marked parameter should be displayed under its header parameter with indentation.
+- [ ] Test Master: Critical value input option not available.
+- [x] Sample: view barcode option.
+- [x] orders : In a order there can be multiple tests, report entry should be such that user flow is smooth. These report entry should be such that user can enter results for all tests in a order in one go. All test reports should clubed together in a single report / pdf. - desgin this system.
+- [x] patients : add patient's order history.
+- [x] Combined results entry: When submits tests, screen moves back to test 1. 
+- [x] Combined results entry: 'View combined Report' button gives error.[Cannot read properties of undefined (reading 'getAll')]
+- [x] orders: order list: 'view' button is not working.
+- [x] Test Master: 1. Add support to import tests from excel sheet as well as csv sheet. 2. Add option to export tests. 3. In Import tests, add column for 'Is Header' if yes then it should be checked.
+- [x] Combined results entry: 1.'View Combined Report' button is giving msg: No finalized reports found for this order. even when report is verified.
+- [x] combinedreportpreview: reportDataList is always empty.
+- [x] Test Master: 'Is Header' checkbox not working in Test Edit / Creation Wizard.
+- [x] Test Master: 1. Test Import: In 'isHeader' column if yes or true value then parameter is header, else it is normal parameter. 'isHeader' takes header values to group parameters under it. If a parameter's 'isHeader' column has a parameter value and that parameter is marked as header, then the parameter is grouped under that parameter (header parameter). - last implementation is not working
+- [x] test master: import / export tests: add support for critical values, also in import test preview.
+- [x] test master: import test: unable to import tests with all parameters.
+- [x] test master: import test preview: not showing column for critical values and isHeader.
+- [x] test master: add button to refresh / reload screen. 
+- [x] test master: import test: add 'parameter code' column support, also add support in test import preview.
+- [x] test master: import test: 1. only single parameter is imported from parameter list. 2. interchange import and export button icons.
+- [x] test master: test edit wizard: Parameters: Import groups: parameters grouped under a header parameter, should display it by selecting header parameter from select dropdown of header parameters (Group Under).
+- [x] test master: test edit / creation wizard: Report Layout: Interpretation Template not working. [Text entered in 'interpretation template' is not displayed in report.]
+- [x] Results Entry: View Combined Report button not working. [Cannot read properties of null (reading 'show_time_in_report')]
+- [x] Results: Report pdf: Green Theme: Implement 'flag' based value reporting as in blue theme.
+- [x] Results Entry: Parameters grouped under a header parameter should be displayed under its header parameter with indentation.
+- [x] Results Entry: View Combined Report button not working. [Failed to set an indexed property [0] on 'CSSStyleDeclaration': Indexed property setter is not supported.] 
+- [ ] test master: test edit / creation wizard: Report Layout: Interpretation Template not working. [Text entered in 'interpretation template' is not displayed in report.]
+- [ ] Auto Updater: How to setup Github Personal Access token, where to enter token.
+- [ ] Auto Backup: Create a simple soultion to store lab data in cloud. Create md file for the design. Design should consider simplicity and cost effctiveness [implement solution with no or minimal cost]. Create 3 iterations of design and compare them and choose best one with performace, robustness, cost and ease of implementation.
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 

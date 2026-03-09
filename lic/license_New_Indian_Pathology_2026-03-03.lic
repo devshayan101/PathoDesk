@@ -1,0 +1,22 @@
+{
+  "data": {
+    "license_id": "LIC-DAWH-JQZA-M3IA-V68H",
+    "lab_name": "New Indian Pathology",
+    "issued_to": "Faizan Khan",
+    "machine_id_hash": "badc72e31081c2012e921bffd708fea715104733745901feea05fd3d3750856a",
+    "edition": "ANNUAL",
+    "binding_mode": "STRICT",
+    "enabled_modules": [
+      "BILLING",
+      "QC_AUDIT",
+      "ANALYZER",
+      "INVENTORY",
+      "DOCTOR_COMMISSION"
+    ],
+    "max_users": 5,
+    "issue_date": "2026-03-03",
+    "expiry_date": "2026-03-18",
+    "grace_period_days": 2
+  },
+  "signature": "O9OOkyaNCzn9Pw8Zqvs5ZqfFq01dXk2F6kuGLoD+qzMLmbvHfv4rtr7NNienLkRt5wzTss4TCDn+5lyEb6SIpjrpPGBkvP8FN+jZMY6HD5mJMhAmKCctR2+KiduojsKyg+Iz6cThT9c9bmFx3VZh210jVAIgXY196G8tKdO4JwRAYWOad69doZAACnmrFz/l6JsR8ZDQZ+waC0TuGVwy4QR9mucnfFaWjCRBzcrsKcYLkBaQx+kj0MB9LO1Ejme0TBA91uvnZLktioEYDvJQuo/FEjVKh86/j4nU3Q/lGI8m4DGJac3gXMLAadcmdoQdOYn6VmhTIwSznu8/2AQigQ=="
+}
