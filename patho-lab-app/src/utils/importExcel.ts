@@ -9,6 +9,7 @@ export interface ParsedTestRow {
     unit: string;
     price: number;
     sampleType: string;
+    isHeader: string;
 }
 
 export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> => {
@@ -41,6 +42,7 @@ export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> =
                         unit: find(['unit']),
                         price: parseFloat(find(['price', 'cost', 'rate', 'mrp'])) || 0,
                         sampleType: find(['sample', 'specimen', 'sample type', 'sample_type']),
+                        isHeader: String(find(['is header', 'is_header', 'header', 'group', 'isheader'])).trim()
                     };
                 }).filter((r: any) => r.testName && r.parameter);
 

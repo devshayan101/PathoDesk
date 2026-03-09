@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../stores/toastStore';
 import { parseExcelForTests, ParsedTestRow } from '../../utils/importExcel';
+import { exportTestsToExcel } from '../../utils/exportExcel';
 import './TestMaster.css';
 import TestWizard from './TestWizard';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
@@ -145,7 +146,7 @@ export default function TestMasterPage() {
         if (selectedTestIds.size === 0) return;
         setConfirmDialog({
             title: 'Delete Selected Tests',
-            message: `Are you sure you want to delete ${selectedTestIds.size} tests? This action cannot be undone.`,
+            message: `Are you sure you want to delete ${selectedTestIds.size} tests ? This action cannot be undone.`,
             confirmLabel: 'Delete All',
             variant: 'danger',
             onConfirm: async () => {
@@ -213,12 +214,12 @@ export default function TestMasterPage() {
             const result = await window.electronAPI.tests.bulkImport(importPreview);
             const msgs = [];
             if (result.created > 0) msgs.push(`${result.created} tests created`);
-            if (result.skipped > 0) msgs.push(`${result.skipped} skipped (already exist)`);
+            if (result.skipped > 0) msgs.push(`${result.skipped} skipped(already exist)`);
             if (result.errors.length > 0) msgs.push(`${result.errors.length} errors`);
             if (result.skipped > 0 && result.skippedNames && result.skippedNames.length > 0) {
                 setConfirmDialog({
                     title: 'Import Partial Success',
-                    message: `${result.created} tests created. \n\n${result.skipped} tests were skipped because they already exist:\n${result.skippedNames.join(', ')}`,
+                    message: `${result.created} tests created.\n\n${result.skipped} tests were skipped because they already exist: \n${result.skippedNames.join(', ')} `,
                     confirmLabel: 'OK',
                     variant: 'default',
                     onConfirm: () => setConfirmDialog(null)
@@ -236,6 +237,18 @@ export default function TestMasterPage() {
             showToast('Import failed: ' + e.message, 'error');
         }
         setImporting(false);
+    };
+
+    const handleExportClick = async () => {
+        try {
+            if (window.electronAPI) {
+                const data = await window.electronAPI.tests.export();
+                exportTestsToExcel(data);
+                showToast('Tests exported successfully', 'success');
+            }
+        } catch (e: any) {
+            showToast('Failed to export tests: ' + e.message, 'error');
+        }
     };
 
     // --- Action Handlers: Parameters ---
@@ -405,6 +418,7 @@ export default function TestMasterPage() {
                     onToggleSelectTest={handleToggleSelectTest}
                     onToggleSelectAll={handleToggleSelectAll}
                     onImportClick={handleImportClick}
+                    onExportClick={handleExportClick}
                     onNewClick={() => {
                         setWizardDraftId(undefined);
                         setIsEditing(false);

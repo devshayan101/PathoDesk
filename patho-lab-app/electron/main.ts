@@ -363,6 +363,10 @@ function registerIpcHandlers() {
     return reportService.getReportData(sampleId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.REPORT_GET_ORDER_DATA, (_, orderId: number) => {
+    return reportService.getOrderReportData(orderId)
+  })
+
   // Lab Settings
   ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_GET, () => {
     return reportService.getLabSettings()
@@ -691,8 +695,12 @@ function registerIpcHandlers() {
   })
 
   // Bulk Import
-  ipcMain.handle(IPC_CHANNELS.TESTS_BULK_IMPORT, async (_, rows: any[]) => {
+  ipcMain.handle(IPC_CHANNELS.TESTS_BULK_IMPORT, (_, rows: any[]) => {
     return testService.bulkImportTests(rows)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TESTS_EXPORT, () => {
+    return testService.exportTests()
   })
 
   // Backup & Restore

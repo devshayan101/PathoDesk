@@ -20,6 +20,7 @@ interface TestListPanelProps {
     onToggleSelectTest: (testId: number) => void;
     onToggleSelectAll: (visibleTestIds: number[], checked: boolean) => void;
     onImportClick: (file: File) => void;
+    onExportClick: () => void;
     onNewClick: () => void;
     onBulkDeleteClick: () => void;
     onEditTestClick: (testId: number) => void;
@@ -29,7 +30,7 @@ interface TestListPanelProps {
 export default function TestListPanel({
     tests, selectedTest, selectedTestIds, testSearch,
     onSearchChange, onSelectTest, onToggleSelectTest, onToggleSelectAll,
-    onImportClick, onNewClick, onBulkDeleteClick, onEditTestClick, onDeleteTestClick
+    onImportClick, onExportClick, onNewClick, onBulkDeleteClick, onEditTestClick, onDeleteTestClick
 }: TestListPanelProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,7 +58,8 @@ export default function TestListPanel({
                                 🗑 Delete ({selectedTestIds.size})
                             </button>
                         )}
-                        <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>📤 Import Excel</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import from Excel/CSV">📤 Import</button>
+                        <button className="btn btn-secondary btn-sm" onClick={onExportClick} title="Export to Excel">📥 Export</button>
                         <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} style={{ display: 'none' }} />
                         <button className="btn btn-primary btn-sm" onClick={onNewClick}>+ New</button>
                     </div>

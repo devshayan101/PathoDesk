@@ -200,9 +200,11 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
         }]);
     };
     const updateParam = (idx: number, field: string, value: any) => {
-        const newParams = [...parameters];
-        newParams[idx] = { ...newParams[idx], [field]: value };
-        setParameters(newParams);
+        setParameters(prev => {
+            const newParams = [...prev];
+            newParams[idx] = { ...newParams[idx], [field]: value };
+            return newParams;
+        });
     };
     const removeParam = (idx: number) => setParameters(parameters.filter((_, i) => i !== idx));
 

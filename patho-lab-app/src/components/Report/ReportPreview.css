@@ -4,6 +4,7 @@
     height: 90vh;
     display: flex;
     flex-direction: column;
+    z-index: 1100;
 }
 
 .report-header {

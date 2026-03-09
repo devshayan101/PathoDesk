@@ -419,6 +419,7 @@ export interface BulkImportRow {
   unit: string;
   price: number;
   sampleType: string;
+  isHeader?: string;
 }
 
 export interface BulkImportResult {
@@ -489,6 +490,8 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
       ]);
 
       // 3. Create parameters and reference ranges
+      const createdParamIdMap = new Map<string, number>();
+
       for (let i = 0; i < testRows.length; i++) {
         const row = testRows[i];
         const paramName = row.parameter.trim();
@@ -502,19 +505,25 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         const refRange = (row.referenceRange || '').trim();
         const isNumeric = /^\d/.test(refRange) || /\d+-\d+/.test(refRange) || /\d*\.\d+/.test(refRange);
 
+        const isHeaderVal = (row.isHeader || '').toLowerCase();
+        const isTrueHeader = ['yes', 'y', '1', 'true'].includes(isHeaderVal);
+
         const paramId = runWithId(`
           INSERT INTO test_parameters (
             test_version_id, parameter_code, parameter_name, data_type,
-            unit, decimal_precision, display_order, is_mandatory
-          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1)
+            unit, decimal_precision, display_order, is_mandatory, is_header
+          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?)
         `, [
           versionId,
           paramCode,
           paramName,
           isNumeric ? 'NUMERIC' : 'TEXT',
           row.unit?.trim() || null,
-          i + 1
+          i + 1,
+          isTrueHeader ? 1 : 0
         ]);
+
+        createdParamIdMap.set(paramName.toLowerCase(), paramId);
 
         // 4. Create reference range (parse "min-max" format)
         if (refRange) {
@@ -545,6 +554,23 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         }
       }
 
+      // 4.5. Second pass for parent_ids based on isHeader group assignments
+      for (const row of testRows) {
+        const isHeaderVal = (row.isHeader || '').toLowerCase();
+        const isTrueHeader = ['yes', 'y', '1', 'true'].includes(isHeaderVal);
+        const isFalseHeader = ['no', 'n', '0', 'false', ''].includes(isHeaderVal);
+
+        if (!isTrueHeader && !isFalseHeader) {
+          // The isHeader value is a string, assume it's the parent parameter's name
+          const parentId = createdParamIdMap.get(isHeaderVal);
+          const childId = createdParamIdMap.get(row.parameter.trim().toLowerCase());
+
+          if (parentId && childId) {
+            run('UPDATE test_parameters SET parent_id = ? WHERE id = ?', [parentId, childId]);
+          }
+        }
+      }
+
       // 5. Set price in all price lists
       for (const pl of allPriceLists) {
         if (firstRow.price >= 0) { // Allow 0 price
@@ -562,4 +588,29 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
   }
 
   return result;
+}
+
+export function exportTests(): any[] {
+  return queryAll(`
+    SELECT 
+      tv.department as category,
+      t.test_code as testCode,
+      tv.test_name as testName,
+      tp.parameter_name as parameter,
+      rr.display_text as referenceRange,
+      tp.unit,
+      tp.is_header as isHeaderRaw,
+      (SELECT parameter_name FROM test_parameters parent WHERE parent.id = tp.parent_id) as parentName,
+      tv.sample_type as sampleType,
+      (SELECT base_price FROM test_prices tp2 
+       JOIN price_lists pl ON tp2.price_list_id = pl.id 
+       WHERE tp2.test_id = t.id AND pl.is_default = 1 
+       LIMIT 1) as price
+    FROM tests t
+    JOIN test_versions tv ON t.id = tv.test_id AND tv.status = 'PUBLISHED'
+    JOIN test_parameters tp ON tv.id = tp.test_version_id
+    LEFT JOIN reference_ranges rr ON tp.id = rr.parameter_id AND (rr.gender = 'A' OR rr.gender IS NULL)
+    WHERE t.is_active = 1
+    ORDER BY tv.department, tv.test_name, tp.display_order
+  `);
 }

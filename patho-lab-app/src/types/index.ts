@@ -312,6 +312,7 @@ export const IPC_CHANNELS = {
 
     // Bulk Import
     TESTS_BULK_IMPORT: 'tests:bulkImport',
+    TESTS_EXPORT: 'tests:export',
 } as const;
 
 // Billing Types

@@ -111,7 +111,7 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
             <div className="modal-overlay">
                 <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
                     <h3 style={{ margin: '0 0 1rem' }}>No Reports Available</h3>
-                    <p style={{ color: 'var(--color-text-muted)' }}>No finalized reports found for this order.</p>
+                    <p style={{ color: 'var(--color-text-muted)' }}>We couldn't generate any reports for this order. Ensure samples have tests with entered results.</p>
                     <button className="btn btn-primary" onClick={onClose} style={{ marginTop: '1rem' }}>Close</button>
                 </div>
             </div>

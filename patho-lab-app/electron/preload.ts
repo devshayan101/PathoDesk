@@ -51,6 +51,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.TEST_BULK_DELETE, ids),
     bulkImport: (rows: any[]) =>
       ipcRenderer.invoke(IPC_CHANNELS.TESTS_BULK_IMPORT, rows),
+    export: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.TESTS_EXPORT),
     getCriticalValues: (parameterId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.CRITICAL_VALUE_GET, parameterId),
     setCriticalValues: (parameterId: number, criticalLow: number | null, criticalHigh: number | null) =>
