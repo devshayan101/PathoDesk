@@ -494,6 +494,7 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
 
       // 3. Create parameters and reference ranges
       const createdParamIdMap = new Map<string, number>();
+      const usedParamCodes = new Set<string>();
 
       for (let i = 0; i < testRows.length; i++) {
         const row = testRows[i];
@@ -507,6 +508,14 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
             .replace(/_+/g, '_')
             .substring(0, 20);
         }
+
+        let baseCode = paramCode;
+        let suffix = 1;
+        while (usedParamCodes.has(paramCode)) {
+          paramCode = `${baseCode.substring(0, 15)}_${suffix}`;
+          suffix++;
+        }
+        usedParamCodes.add(paramCode);
 
         // Determine data type from reference range
         const refRange = (row.referenceRange || '').trim();

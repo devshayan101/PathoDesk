@@ -17,7 +17,7 @@ export default function ImportPreviewModal({ show, importPreview, importing, onC
         <div className="modal-overlay">
             <div className="modal" style={{ maxWidth: '900px', width: '90%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h2 style={{ margin: 0 }}>📤 Import Preview</h2>
+                    <h2 style={{ margin: 0 }}>📥 Import Preview</h2>
                     <button className="btn btn-secondary btn-sm" onClick={onCancel}>✕ Close</button>
                 </div>
                 <p style={{ color: 'var(--color-text-secondary)', marginBottom: '0.75rem', fontSize: '0.85rem' }}>

@@ -59,8 +59,8 @@ export default function TestListPanel({
                                 🗑 Delete ({selectedTestIds.size})
                             </button>
                         )}
-                        <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import from Excel/CSV">📤 Import</button>
-                        <button className="btn btn-secondary btn-sm" onClick={onExportClick} title="Export to Excel">📥 Export</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import from Excel/CSV">📥 Import</button>
+                        <button className="btn btn-secondary btn-sm" onClick={onExportClick} title="Export to Excel">📤 Export</button>
                         <button className="btn btn-secondary btn-sm" onClick={onRefreshClick} title="Refresh Tests List">↻ Refresh</button>
                         <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} style={{ display: 'none' }} />
                         <button className="btn btn-primary btn-sm" onClick={onNewClick}>+ New</button>

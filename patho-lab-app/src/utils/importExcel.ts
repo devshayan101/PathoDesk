@@ -57,7 +57,7 @@ export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> =
                         testCode: lastTestCode,
                         testName: lastTestName,
                         parameter: find(['parameter', 'param', 'analyte', 'analyte name']),
-                        paramCode: find(['param code', 'parameter code', 'param_code', 'code']).toUpperCase(),
+                        paramCode: find(['param code', 'parameter code', 'param_code', 'paramcode']).toUpperCase(),
                         referenceRange: find(['reference', 'ref range', 'range', 'normal', 'biological ref']),
                         unit: find(['unit', 'uom', 'measure']),
                         price: parseFloat(find(['price', 'cost', 'rate', 'mrp'])) || 0,
