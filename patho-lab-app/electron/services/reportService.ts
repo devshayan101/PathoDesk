@@ -30,6 +30,7 @@ interface ReportData {
         department: string;
         method: string;
         sample_type: string;
+        interpretation_template?: string;
     };
     referringDoctor?: {
         name: string;
@@ -97,7 +98,7 @@ export function getReportData(sampleId: number): ReportData | null {
     const orderData = queryOne<any>(`
     SELECT 
       p.id as patient_id, p.patient_uid, p.full_name, p.dob, p.gender, p.phone, p.address,
-      t.id as test_id, t.test_code, tv.test_name, tv.department, tv.method, tv.sample_type,
+      t.id as test_id, t.test_code, tv.test_name, tv.department, tv.method, tv.sample_type, tv.interpretation_template,
       d.name as doctor_name, d.specialty as doctor_specialty
     FROM samples s
     JOIN order_tests ot ON s.order_test_id = ot.id
@@ -209,7 +210,8 @@ export function getReportData(sampleId: number): ReportData | null {
             test_name: orderData.test_name,
             department: orderData.department,
             method: orderData.method,
-            sample_type: orderData.sample_type
+            sample_type: orderData.sample_type,
+            interpretation_template: orderData.interpretation_template
         },
         referringDoctor: orderData.doctor_name ? {
             name: orderData.doctor_name,

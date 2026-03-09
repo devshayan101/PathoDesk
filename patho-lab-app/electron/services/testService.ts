@@ -374,25 +374,37 @@ export function createDraftFromExisting(testId: number): number {
 
   // 4. Copy Parameters
   const params = getTestParameters(latest.id);
-  const paramMap = new Map<string, number>(); // code -> newId (for mapping ref ranges)
+  const paramMap = new Map<number, number>(); // oldId -> newId
 
+  // Pass 1: Create all parameters without parent_id to avoid order dependencies
   for (const param of params) {
     const newParamId = runWithId(`
       INSERT INTO test_parameters (
         test_version_id, parameter_code, parameter_name, data_type, 
         unit, decimal_precision, display_order, is_mandatory, is_header, formula, parent_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
     `, [
       newVersionId, param.parameter_code, param.parameter_name, param.data_type,
-      param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.is_header || 0, param.formula, paramMap.get(param.parent_id?.toString() || '') || param.parent_id || null
+      param.unit, param.decimal_precision, param.display_order, param.is_mandatory, param.is_header || 0, param.formula
     ]);
-    paramMap.set(param.parameter_code, newParamId);
+    paramMap.set(param.id, newParamId);
+  }
+
+  // Pass 2: Re-link parent_ids to the new cloned parameter IDs
+  for (const param of params) {
+    if (param.parent_id) {
+      const newParentId = paramMap.get(param.parent_id);
+      const newChildId = paramMap.get(param.id);
+      if (newParentId && newChildId) {
+        run('UPDATE test_parameters SET parent_id = ? WHERE id = ?', [newParentId, newChildId]);
+      }
+    }
   }
 
   // 5. Copy Reference Ranges
   // We need to fetch ranges for each OLD parameter and insert for NEW parameter
   for (const oldParam of params) {
-    const newParamId = paramMap.get(oldParam.parameter_code);
+    const newParamId = paramMap.get(oldParam.id);
     if (newParamId) {
       const ranges = listReferenceRanges(oldParam.id);
       for (const range of ranges) {

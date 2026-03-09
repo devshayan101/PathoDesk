@@ -1,5 +1,5 @@
 
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
 import { formatDate } from './LabReport';
 import WidalTable, { isWidalTest } from './WidalTable';
@@ -133,6 +133,7 @@ const s = StyleSheet.create({
     colResult: { flex: 1.5, textAlign: 'center' },
     colUnit: { flex: 1.2, textAlign: 'center' },
     colRange: { flex: 2, textAlign: 'right', paddingRight: 4 },
+    colFlag: { flex: 0.5, textAlign: 'center', paddingRight: 4 },
     flagHigh: { color: '#dc3545', fontWeight: 'bold' },
     flagLow: { color: '#007bff', fontWeight: 'bold' },
     flagCritical: { color: '#dc3545', fontWeight: 'bold', textDecoration: 'underline' },
@@ -214,7 +215,7 @@ const s = StyleSheet.create({
 interface ReportData {
     sample: { id: number; sample_uid: string; received_at: string; status: string; verified_at?: string; verified_by_name?: string; };
     patient: { id: number; patient_uid: string; full_name: string; dob: string; gender: string; phone?: string; };
-    test: { test_code: string; test_name: string; department: string; method: string; sample_type: string; };
+    test: { test_code: string; test_name: string; department: string; method: string; sample_type: string; interpretation_template?: string; };
     results: { parameter_code: string; parameter_name: string; result_value: string; unit: string | null; abnormal_flag: string | null; ref_range_text: string | null; is_header?: number; parent_id?: number | null; }[];
     referringDoctor?: { name: string; specialty?: string; } | null;
     labTechnician?: { name: string; qualification?: string; signature?: string; } | null;
@@ -238,12 +239,23 @@ function calcAge(dob: string): string {
     return `${y} Yrs`;
 }
 
-function flagPrefix(flag: string | null): string {
+// function flagPrefix(flag: string | null): string {
+//     switch (flag) {
+//         case 'HIGH': return '▲ ';
+//         case 'LOW': return '▼ ';
+//         case 'CRITICAL': case 'CRITICAL_HIGH': return '▲▲ ';
+//         case 'CRITICAL_LOW': return '▼▼ ';
+//         default: return '';
+//     }
+// }
+
+function formatFlag(flag: string | null): string {
     switch (flag) {
-        case 'HIGH': return '▲ ';
-        case 'LOW': return '▼ ';
-        case 'CRITICAL': case 'CRITICAL_HIGH': return '▲▲ ';
-        case 'CRITICAL_LOW': return '▼▼ ';
+        case 'HIGH': return 'H';
+        case 'LOW': return 'L';
+        case 'CRITICAL': case 'CRITICAL_HIGH': return 'C↑';
+        case 'CRITICAL_LOW': return 'C↓';
+        case 'NORMAL': return '';
         default: return '';
     }
 }
@@ -263,158 +275,169 @@ export default function LabReportGreen({ data, labSettings }: Props) {
     const gender = patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other';
 
     return (
-        <Document>
-            <Page size="A4" style={s.page}>
-                {/* Watermark */}
-                <View style={s.watermark} fixed>
-                    <Image src={logoUrl} style={{ width: 200, opacity: 0.1 }} />
-                    {labSettings.lab_name && (
-                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 8 }}>
-                            {labSettings.lab_name}
-                        </Text>
-                    )}
-                </View>
-
-                {/* Top green bar */}
-                <View style={s.topBar} fixed />
-
-                {/* NABL badge */}
-                {labSettings.nabl_accreditation && (
-                    <Text style={s.nablBadge} fixed>{labSettings.nabl_accreditation}</Text>
+        <Page size="A4" style={s.page}>
+            {/* Watermark */}
+            <View style={s.watermark} fixed>
+                <Image src={logoUrl} style={{ width: 200, opacity: 0.1 }} />
+                {labSettings.lab_name && (
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 8 }}>
+                        {labSettings.lab_name}
+                    </Text>
                 )}
+            </View>
 
-                {/* Header row - fixed on every page */}
-                <View style={s.headerRow} fixed>
-                    <View style={s.logoCol}>
-                        <Image src={logoUrl} style={s.logo} />
-                        <Text style={s.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
-                    </View>
-                    <View style={s.addressCol}>
-                        <Text style={s.addressText}>{labSettings.address_line1}</Text>
-                        <Text style={s.addressText}>{labSettings.address_line2}</Text>
-                        {labSettings.phone && <Text style={s.addressText}>{labSettings.phone}</Text>}
-                        {labSettings.email && <Text style={s.addressText}>{labSettings.email}</Text>}
-                    </View>
+            {/* Top green bar */}
+            <View style={s.topBar} fixed />
+
+            {/* NABL badge */}
+            {labSettings.nabl_accreditation && (
+                <Text style={s.nablBadge} fixed>{labSettings.nabl_accreditation}</Text>
+            )}
+
+            {/* Header row - fixed on every page */}
+            <View style={s.headerRow} fixed>
+                <View style={s.logoCol}>
+                    <Image src={logoUrl} style={s.logo} />
+                    <Text style={s.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                 </View>
+                <View style={s.addressCol}>
+                    <Text style={s.addressText}>{labSettings.address_line1}</Text>
+                    <Text style={s.addressText}>{labSettings.address_line2}</Text>
+                    {labSettings.phone && <Text style={s.addressText}>{labSettings.phone}</Text>}
+                    {labSettings.email && <Text style={s.addressText}>{labSettings.email}</Text>}
+                </View>
+            </View>
 
-                {/* Patient Info Box */}
-                <View style={s.patientBox}>
+            {/* Patient Info Box */}
+            <View style={s.patientBox}>
+                <View style={s.patientRow}>
+                    <Text style={s.patientLabel}>Patient Name</Text>
+                    <Text style={s.patientValue}>:  {patient.full_name}</Text>
+                    <View style={s.patientSpacer} />
+                    <Text style={s.patientLabel}>Sl. No.</Text>
+                    <Text style={s.patientValue}>:  {sample.sample_uid}</Text>
+                </View>
+                <View style={s.patientRow}>
+                    <Text style={s.patientLabel}>Age & Sex</Text>
+                    <Text style={s.patientValue}>:  {calcAge(patient.dob)}  |  {gender}</Text>
+                    <View style={s.patientSpacer} />
+                    <Text style={s.patientLabel}>Collection Date</Text>
+                    <Text style={s.patientValue}>:  {formatDate(sample.received_at, showTime)}</Text>
+                </View>
+                <View style={s.patientRow}>
+                    <Text style={s.patientLabel}>Sample Type</Text>
+                    <Text style={s.patientValue}>:  {test.sample_type}</Text>
+                    <View style={s.patientSpacer} />
+                    <Text style={s.patientLabel}>Reporting Date</Text>
+                    <Text style={s.patientValue}>:  {formatDate(new Date().toISOString(), showTime)}</Text>
+                </View>
+                {referringDoctor && (
                     <View style={s.patientRow}>
-                        <Text style={s.patientLabel}>Patient Name</Text>
-                        <Text style={s.patientValue}>:  {patient.full_name}</Text>
-                        <View style={s.patientSpacer} />
-                        <Text style={s.patientLabel}>Sl. No.</Text>
-                        <Text style={s.patientValue}>:  {sample.sample_uid}</Text>
+                        <Text style={s.patientLabel}>Referred By</Text>
+                        <Text style={s.patientValue}>:  {referringDoctor.name}</Text>
                     </View>
-                    <View style={s.patientRow}>
-                        <Text style={s.patientLabel}>Age & Sex</Text>
-                        <Text style={s.patientValue}>:  {calcAge(patient.dob)}  |  {gender}</Text>
-                        <View style={s.patientSpacer} />
-                        <Text style={s.patientLabel}>Collection Date</Text>
-                        <Text style={s.patientValue}>:  {formatDate(sample.received_at, showTime)}</Text>
-                    </View>
-                    <View style={s.patientRow}>
-                        <Text style={s.patientLabel}>Sample Type</Text>
-                        <Text style={s.patientValue}>:  {test.sample_type}</Text>
-                        <View style={s.patientSpacer} />
-                        <Text style={s.patientLabel}>Reporting Date</Text>
-                        <Text style={s.patientValue}>:  {formatDate(new Date().toISOString(), showTime)}</Text>
-                    </View>
-                    {referringDoctor && (
-                        <View style={s.patientRow}>
-                            <Text style={s.patientLabel}>Referred By</Text>
-                            <Text style={s.patientValue}>:  {referringDoctor.name}</Text>
+                )}
+            </View>
+
+            {/* Results */}
+            <View style={s.tableContainer}>
+                {/* Department */}
+                <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
+                {/* Test Name */}
+                <Text style={s.testNameHeader}>{test.test_name}</Text>
+
+                {/* Widal matrix or normal table */}
+                {isWidalTest(test.test_name) ? (
+                    <WidalTable testName={test.test_name} results={results} />
+                ) : (
+                    <>
+                        <View style={s.tableHeader}>
+                            <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
+                            <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
+                            <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
+                            <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
+                            <Text style={[s.colFlag, { fontWeight: 'bold' }]}>Flag</Text>
                         </View>
-                    )}
-                </View>
 
-                {/* Results */}
-                <View style={s.tableContainer}>
-                    {/* Department */}
-                    <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
-                    {/* Test Name */}
-                    <Text style={s.testNameHeader}>{test.test_name}</Text>
-
-                    {/* Widal matrix or normal table */}
-                    {isWidalTest(test.test_name) ? (
-                        <WidalTable testName={test.test_name} results={results} />
-                    ) : (
-                        <>
-                            {/* Table Header */}
-                            <View style={s.tableHeader}>
-                                <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
-                                <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
-                                <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
-                                <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
-                            </View>
-
-                            {/* Rows */}
-                            {results.map((r, i) => (
-                                r.is_header === 1 ? (
-                                    <View key={i} style={[s.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
-                                        <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 8 }]}>{r.parameter_name}</Text>
-                                    </View>
-                                ) : (
-                                    <View key={i} style={s.tableRow} wrap={false}>
-                                        <Text style={[s.colTest, { paddingLeft: r.parent_id ? 16 : 8 }]}>{r.parameter_name}</Text>
-                                        <Text style={[s.colResult, flagStyle(r.abnormal_flag)]}>
-                                            {flagPrefix(r.abnormal_flag)}{r.result_value || '-'}
-                                        </Text>
-                                        <Text style={s.colUnit}>{r.unit || ''}</Text>
-                                        <Text style={s.colRange}>{r.ref_range_text || '-'}</Text>
-                                    </View>
-                                )
-                            ))}
-                        </>
-                    )}
-                </View>
-
-                {/* Footer - fixed at bottom of every page */}
-                <View style={s.footer} fixed>
-                    <View style={s.sigRow}>
-                        <View style={s.sigBox}>
-                            {data.labTechnician?.signature ? (
-                                <Image src={data.labTechnician.signature} style={s.sigImage} />
+                        {/* Rows */}
+                        {results.map((r, i) => (
+                            r.is_header === 1 ? (
+                                <View key={i} style={[s.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
+                                    <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{r.parameter_name}</Text>
+                                </View>
                             ) : (
-                                <View style={s.sigLine} />
-                            )}
-                            <Text style={s.sigLabel}>{data.labTechnician?.name || 'Lab Technician'}</Text>
-                            {data.labTechnician?.qualification && (
-                                <Text style={s.sigTitle}>{data.labTechnician.qualification}</Text>
-                            )}
-                        </View>
+                                <View key={i} style={s.tableRow} wrap={false}>
+                                    <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
+                                    <Text style={[s.colResult, { paddingLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
+                                        {r.result_value || '-'}
+                                    </Text>
+                                    <Text style={[s.colUnit, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
+                                    <Text style={[s.colRange, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
+                                    <Text style={[s.colFlag, flagStyle(r.abnormal_flag)]}>
+                                        {formatFlag(r.abnormal_flag)}
+                                    </Text>
+                                </View>
+                            )
+                        ))}
+                    </>
+                )}
+            </View>
 
-                        {/* Middle - Report Status */}
-                        <View style={{ alignItems: 'center', marginBottom: 4 }}>
-                            <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: {sample.status}</Text>
-                            {sample.verified_at && (
-                                <Text style={[s.sigLabel, { fontSize: 8 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
-                            )}
-                        </View>
+            {/* Interpretation Template */}
+            {test.interpretation_template && (
+                <View style={{ marginTop: 15, padding: 10, borderLeft: '3px solid #2e7d32', backgroundColor: '#f9fdf9' }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#2e7d32', marginBottom: 5 }}>Interpretation:</Text>
+                    <Text style={{ fontSize: 9, color: '#333', lineHeight: 1.4 }}>
+                        {test.interpretation_template}
+                    </Text>
+                </View>
+            )}
 
-                        <View style={s.sigBox}>
-                            {data.pathologist?.signature ? (
-                                <Image src={data.pathologist.signature} style={s.sigImage} />
-                            ) : (
-                                <View style={s.sigLine} />
-                            )}
-                            <Text style={s.sigLabel}>{data.pathologist?.name || sample.verified_by_name || 'Pathologist'}</Text>
-                            {data.pathologist?.qualification && (
-                                <Text style={s.sigTitle}>{data.pathologist.qualification}</Text>
-                            )}
-                        </View>
+            {/* Footer - fixed at bottom of every page */}
+            <View style={s.footer} fixed>
+                <View style={s.sigRow}>
+                    <View style={s.sigBox}>
+                        {data.labTechnician?.signature ? (
+                            <Image src={data.labTechnician.signature} style={s.sigImage} />
+                        ) : (
+                            <View style={s.sigLine} />
+                        )}
+                        <Text style={s.sigLabel}>{data.labTechnician?.name || 'Lab Technician'}</Text>
+                        {data.labTechnician?.qualification && (
+                            <Text style={s.sigTitle}>{data.labTechnician.qualification}</Text>
+                        )}
                     </View>
-                    {labSettings.disclaimer && (
-                        <Text style={s.disclaimer}>{labSettings.disclaimer}</Text>
-                    )}
-                    <Text style={s.pageNum} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
-                </View>
 
-                {/* Branding */}
-                <View style={s.branding} fixed>
-                    <Text style={s.brandingText}>FMS Software Solutions | fmsenterprises001@gmail.com | +91-7765009936</Text>
+                    {/* Middle - Report Status */}
+                    <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: {sample.status}</Text>
+                        {sample.verified_at && (
+                            <Text style={[s.sigLabel, { fontSize: 8 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
+                        )}
+                    </View>
+
+                    <View style={s.sigBox}>
+                        {data.pathologist?.signature ? (
+                            <Image src={data.pathologist.signature} style={s.sigImage} />
+                        ) : (
+                            <View style={s.sigLine} />
+                        )}
+                        <Text style={s.sigLabel}>{data.pathologist?.name || sample.verified_by_name || 'Pathologist'}</Text>
+                        {data.pathologist?.qualification && (
+                            <Text style={s.sigTitle}>{data.pathologist.qualification}</Text>
+                        )}
+                    </View>
                 </View>
-            </Page>
-        </Document>
+                {labSettings.disclaimer && (
+                    <Text style={s.disclaimer}>{labSettings.disclaimer}</Text>
+                )}
+                <Text style={s.pageNum} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+            </View>
+
+            {/* Branding */}
+            <View style={s.branding} fixed>
+                <Text style={s.brandingText}>FMS Software Solutions | fmsenterprises001@gmail.com | +91-7765009936</Text>
+            </View>
+        </Page>
     );
 }

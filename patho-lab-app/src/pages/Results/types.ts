@@ -22,6 +22,7 @@ export interface ResultParameter {
     parameter_name: string;
     unit: string;
     is_header?: number;
+    parent_id?: number | null;
     result_value?: string;
     abnormal_flag?: string;
     ref_ranges: RefRange[];

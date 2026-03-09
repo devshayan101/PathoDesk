@@ -421,9 +421,9 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                                     return (
                                         <tr key={param.parameter_id} className="header-row">
                                             <td colSpan={6} style={{
-                                                backgroundColor: 'var(--color-bg-tertiary)',
+                                                backgroundColor: '',
                                                 fontWeight: 'bold',
-                                                fontSize: '0.95rem',
+                                                fontSize: '0.9rem',
                                                 color: 'var(--color-text-primary)'
                                             }}>
                                                 {param.parameter_name}
@@ -441,7 +441,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
 
                                 return (
                                     <tr key={param.parameter_id} className={flag ? `row-${flag.toLowerCase()}` : ''}>
-                                        <td style={{ paddingLeft: '1.5rem' }}>{param.parameter_name}</td>
+                                        <td style={{ paddingLeft: param.parent_id ? '1.5rem' : '0.5rem' }}>{param.parameter_name}</td>
                                         <td>
                                             <input
                                                 className="input result-input"

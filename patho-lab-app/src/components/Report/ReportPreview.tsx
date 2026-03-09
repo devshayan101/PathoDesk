@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer';
+import { PDFViewer, PDFDownloadLink, pdf, Document } from '@react-pdf/renderer';
 import LabReport from './LabReport';
 import LabReportGreen from './LabReportGreen';
 import './ReportPreview.css';
@@ -34,7 +34,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
         if (!reportData) return;
         setPrinting(true);
         try {
-            const blob = await pdf(<ReportComponent data={reportData} labSettings={labSettings} />).toBlob();
+            const blob = await pdf(<Document><ReportComponent data={reportData} labSettings={labSettings} /></Document>).toBlob();
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url);
             if (printWindow) {
@@ -115,7 +115,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
                             {printing ? 'Preparing...' : '🖨 Print'}
                         </button>
                         <PDFDownloadLink
-                            document={<ReportComponent data={reportData} labSettings={labSettings} />}
+                            document={<Document><ReportComponent data={reportData} labSettings={labSettings} /></Document>}
                             fileName={`Report_${reportData.sample.sample_uid}.pdf`}
                             className="btn btn-primary"
                         >
@@ -127,7 +127,9 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
 
                 <div className="pdf-viewer-container">
                     <PDFViewer width="100%" height="100%" showToolbar={false}>
-                        <ReportComponent data={reportData} labSettings={labSettings} />
+                        <Document>
+                            <ReportComponent data={reportData} labSettings={labSettings} />
+                        </Document>
                     </PDFViewer>
                 </div>
             </div>

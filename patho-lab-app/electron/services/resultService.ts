@@ -39,6 +39,8 @@ interface ResultParameter {
   parameter_code: string;
   parameter_name: string;
   unit: string;
+  is_header?: number;
+  parent_id?: number | null;
   result_value?: string;
   abnormal_flag?: string;
   ref_ranges: RefRange[];
@@ -120,14 +122,14 @@ export function getSampleResults(sampleId: number): ResultData | null {
 
   const ageDays = calculateAgeDays(sample.patient_dob);
 
-  // Get parameters for this test version
   const parameters = queryAll<any>(`
     SELECT 
       tp.id as parameter_id, 
       tp.parameter_code, 
       tp.parameter_name, 
       tp.unit,
-      tp.is_header
+      tp.is_header,
+      tp.parent_id
     FROM test_parameters tp
     WHERE tp.test_version_id = ?
     ORDER BY tp.display_order
@@ -171,6 +173,7 @@ export function getSampleResults(sampleId: number): ResultData | null {
       parameter_name: param.parameter_name,
       unit: param.unit,
       is_header: param.is_header,
+      parent_id: param.parent_id,
       result_value: existingResult?.result_value,
       abnormal_flag: existingResult?.abnormal_flag,
       ref_ranges: refRanges
