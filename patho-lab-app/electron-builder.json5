@@ -16,7 +16,8 @@
   "publish": [{
     "provider": "github",
     "owner": "devshayan101",
-    "repo": "PathoDesk"
+    "repo": "PathoDesk",
+    "private": true
   }],
   "mac": {
     "target": [

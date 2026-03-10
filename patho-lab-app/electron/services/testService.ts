@@ -268,6 +268,7 @@ export function updateTestDraft(versionId: number, data: Partial<TestVersionRow>
   if (data.method) { sets.push('method = ?'); params.push(data.method); }
   if (data.sample_type) { sets.push('sample_type = ?'); params.push(data.sample_type); }
   if (data.report_group !== undefined) { sets.push('report_group = ?'); params.push(data.report_group); }
+  if ((data as any).interpretation_template !== undefined) { sets.push('interpretation_template = ?'); params.push((data as any).interpretation_template); }
 
   if (sets.length > 0) {
     params.push(versionId);
