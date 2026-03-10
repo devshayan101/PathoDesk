@@ -398,8 +398,8 @@ export default function LabReport({ data, labSettings }: Props) {
 
             {/* Interpretation Template */}
             {test.interpretation_template && (
-                <View style={{ marginTop: 15, padding: 10, border: '1px solid #eee', borderRadius: 4 }}>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>Interpretation:</Text>
+                <View style={{ marginTop: 0, padding: 10, border: '1px solid #eee', borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'normal', marginBottom: 5 }}>Note:</Text>
                     <Text style={{ fontSize: 9, color: '#444', lineHeight: 1.4 }}>
                         {test.interpretation_template}
                     </Text>

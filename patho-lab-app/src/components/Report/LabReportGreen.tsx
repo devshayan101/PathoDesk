@@ -385,8 +385,8 @@ export default function LabReportGreen({ data, labSettings }: Props) {
 
             {/* Interpretation Template */}
             {test.interpretation_template && (
-                <View style={{ marginTop: 15, padding: 10, borderLeft: '3px solid #2e7d32', backgroundColor: '#f9fdf9' }}>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#2e7d32', marginBottom: 5 }}>Interpretation:</Text>
+                <View style={{ marginTop: 0, padding: 10, borderLeft: '3px solid #2e7d32', backgroundColor: '#f9fdf9' }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'normal', color: '#2e7d32', marginBottom: 5 }}>Interpretation:</Text>
                     <Text style={{ fontSize: 9, color: '#333', lineHeight: 1.4 }}>
                         {test.interpretation_template}
                     </Text>

@@ -343,12 +343,14 @@ export function publishTest(versionId: number): void {
 export function deleteTest(testId: number): void {
   const ts = Date.now();
   run(`UPDATE tests SET is_active = 0, test_code = test_code || '_DEL_' || ? WHERE id = ?`, [ts, testId]);
+  run(`UPDATE test_prices SET is_active = 0 WHERE test_id = ?`, [testId]);
 }
 
 export function bulkDeleteTests(testIds: number[]): void {
   const ts = Date.now();
   for (let i = 0; i < testIds.length; i++) {
     run(`UPDATE tests SET is_active = 0, test_code = test_code || '_DEL_' || ? WHERE id = ?`, [ts + i, testIds[i]]);
+    run(`UPDATE test_prices SET is_active = 0 WHERE test_id = ?`, [testIds[i]]);
   }
 }
 

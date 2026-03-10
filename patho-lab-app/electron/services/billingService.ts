@@ -144,6 +144,12 @@ export function updatePriceList(id: number, data: {
 
 export function deletePriceList(id: number): { success: boolean; error?: string } {
     try {
+        // Check if default
+        const pl = queryOne<{ is_default: number }>(`SELECT is_default FROM price_lists WHERE id = ?`, [id]);
+        if (pl?.is_default) {
+            return { success: false, error: 'Cannot delete the default price list.' };
+        }
+
         // Check if any invoices use this price list
         const invoiceCount = queryOne<{ count: number }>(`
       SELECT COUNT(*) as count FROM invoices WHERE price_list_id = ?
@@ -153,8 +159,18 @@ export function deletePriceList(id: number): { success: boolean; error?: string 
             return { success: false, error: 'Cannot delete price list with existing invoices. Deactivate instead.' };
         }
 
-        // Soft delete
-        run(`UPDATE price_lists SET is_active = 0 WHERE id = ?`, [id]);
+        // Delete packages and their items associated with this price list
+        const packages = queryAll<{ id: number }>(`SELECT id FROM packages WHERE price_list_id = ?`, [id]);
+        for (const pkg of packages) {
+            run(`DELETE FROM package_items WHERE package_id = ?`, [pkg.id]);
+        }
+        run(`DELETE FROM packages WHERE price_list_id = ?`, [id]);
+
+        // Delete test prices
+        run(`DELETE FROM test_prices WHERE price_list_id = ?`, [id]);
+
+        // Hard delete
+        run(`DELETE FROM price_lists WHERE id = ?`, [id]);
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
