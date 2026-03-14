@@ -14,6 +14,7 @@ interface OrderRow {
   net_amount: number;
   payment_status: string;
   report_status?: string;
+  uncollected_count?: number;
 }
 
 interface OrderTestRow {
@@ -44,7 +45,12 @@ export function listOrders(limit = 50, offset = 0): OrderRow[] {
                   ELSE 'PENDING'
                 END
               FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
-           ) as report_status
+           ) as report_status,
+           (
+              SELECT COUNT(*)
+              FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
+              AND status IN ('REGISTERED', 'COLLECTED')
+           ) as unreceived_count
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
     LEFT JOIN doctors d ON o.referring_doctor_id = d.id
@@ -134,7 +140,7 @@ export function createOrder(data: {
 
       run(`
         INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
-        VALUES (?, ?, 'COLLECTED', datetime('now'))
+        VALUES (?, ?, 'REGISTERED', NULL)
       `, [sampleUid, orderTestId]);
     }
 
@@ -168,7 +174,12 @@ export function getPatientOrders(patientId: number): OrderRow[] {
                   ELSE 'PENDING'
                 END
               FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
-           ) as report_status
+           ) as report_status,
+           (
+              SELECT COUNT(*)
+              FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
+              AND status IN ('REGISTERED', 'COLLECTED')
+           ) as unreceived_count
     FROM orders o
     JOIN patients p ON o.patient_id = p.id
     LEFT JOIN doctors d ON o.referring_doctor_id = d.id

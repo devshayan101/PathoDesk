@@ -21,9 +21,12 @@ export interface ResultParameter {
     parameter_id: number;
     parameter_code: string;
     parameter_name: string;
+    data_type: string;
     unit: string;
     is_header?: number;
     parent_id?: number | null;
+    formula?: string | null;
+    decimal_precision?: number;
     result_value?: string;
     abnormal_flag?: string;
     ref_ranges: RefRange[];

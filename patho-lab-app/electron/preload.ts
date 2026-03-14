@@ -99,6 +99,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST, status),
     create: (orderTestId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_CREATE, orderTestId),
+    getByOrder: (orderId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_GET_BY_ORDER, orderId),
+    updateStatus: (sampleId: number, status: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_UPDATE_STATUS, sampleId, status),
     receive: (sampleId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE, sampleId),
     reject: (sampleId: number, reason: string) =>

@@ -305,6 +305,13 @@ function registerIpcHandlers() {
     return sampleService.createSample(orderTestId)
   })
 
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_UPDATE_STATUS, (_, sampleId: number, status: string) => {
+    if (status === 'COLLECTED') {
+      return sampleService.collectSample(sampleId)
+    }
+    return false
+  })
+
   ipcMain.handle(IPC_CHANNELS.SAMPLE_RECEIVE, (_, sampleId: number) => {
     return sampleService.receiveSample(sampleId)
   })
@@ -315,6 +322,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.SAMPLE_PENDING, () => {
     return sampleService.getPendingSamples()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_GET_BY_ORDER, (_, orderId: number) => {
+    return sampleService.getSamplesByOrderId(orderId)
   })
 
   // Users (Admin)

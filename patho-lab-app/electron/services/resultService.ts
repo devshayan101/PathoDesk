@@ -38,9 +38,12 @@ interface ResultParameter {
   parameter_id: number;
   parameter_code: string;
   parameter_name: string;
+  data_type: string;
   unit: string;
   is_header?: number;
   parent_id?: number | null;
+  formula?: string | null;
+  decimal_precision?: number;
   result_value?: string;
   abnormal_flag?: string;
   ref_ranges: RefRange[];
@@ -127,9 +130,12 @@ export function getSampleResults(sampleId: number): ResultData | null {
       tp.id as parameter_id, 
       tp.parameter_code, 
       tp.parameter_name, 
+      tp.data_type,
       tp.unit,
       tp.is_header,
-      tp.parent_id
+      tp.parent_id,
+      tp.formula,
+      tp.decimal_precision
     FROM test_parameters tp
     WHERE tp.test_version_id = ?
     ORDER BY tp.display_order
@@ -171,9 +177,12 @@ export function getSampleResults(sampleId: number): ResultData | null {
       parameter_id: param.parameter_id,
       parameter_code: param.parameter_code,
       parameter_name: param.parameter_name,
+      data_type: param.data_type,
       unit: param.unit,
       is_header: param.is_header,
       parent_id: param.parent_id,
+      formula: param.formula,
+      decimal_precision: param.decimal_precision,
       result_value: existingResult?.result_value,
       abnormal_flag: existingResult?.abnormal_flag,
       ref_ranges: refRanges

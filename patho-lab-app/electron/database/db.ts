@@ -1290,6 +1290,36 @@ function getMigrations() {
         -- Add parent_id for grouping sub-parameters under a header
         ALTER TABLE test_parameters ADD COLUMN parent_id INTEGER REFERENCES test_parameters(id);
       `
+    },
+    {
+      name: '020_add_registered_status',
+      sql: `
+        -- Recreate samples table with REGISTERED added to CHECK constraint
+        
+        -- 1. Rename existing table
+        ALTER TABLE samples RENAME TO samples_old2;
+        
+        -- 2. Create new table with updated constraints
+        CREATE TABLE samples (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sample_uid TEXT UNIQUE NOT NULL,
+          order_test_id INTEGER NOT NULL REFERENCES order_tests(id),
+          collected_at TEXT,
+          received_at TEXT,
+          status TEXT CHECK (status IN ('REGISTERED','COLLECTED','RECEIVED','REJECTED','DRAFT','SUBMITTED','VERIFIED','FINALIZED')) NOT NULL,
+          rejection_reason TEXT,
+          verified_by INTEGER REFERENCES users(id),
+          verified_at TEXT
+        );
+        
+        -- 3. Copy data
+        INSERT INTO samples (id, sample_uid, order_test_id, collected_at, received_at, status, rejection_reason, verified_by, verified_at)
+        SELECT id, sample_uid, order_test_id, collected_at, received_at, status, rejection_reason, verified_by, verified_at
+        FROM samples_old2;
+        
+        -- 4. Drop old table
+        DROP TABLE samples_old2;
+      `
     }
   ];
 }

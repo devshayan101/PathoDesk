@@ -156,12 +156,13 @@ export function addParameter(testVersionId: number, data: {
   unit?: string;
   isHeader?: number;
   parentId?: number | null;
+  formula?: string;
 }): number {
   const maxOrder = queryOne<{ max_o: number }>('SELECT COALESCE(MAX(display_order), 0) as max_o FROM test_parameters WHERE test_version_id = ?', [testVersionId]);
   return runWithId(`
-    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory, is_header, parent_id)
-    VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?, ?)
-  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1, data.isHeader ? 1 : 0, data.parentId || null]);
+    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory, is_header, parent_id, formula)
+    VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?, ?, ?)
+  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1, data.isHeader ? 1 : 0, data.parentId || null, data.formula || null]);
 }
 
 export function updateParameter(parameterId: number, data: {
@@ -171,12 +172,13 @@ export function updateParameter(parameterId: number, data: {
   unit?: string;
   isHeader?: number;
   parentId?: number | null;
+  formula?: string;
 }): void {
   run(`
     UPDATE test_parameters 
-    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?, is_header = ?, parent_id = ?
+    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?, is_header = ?, parent_id = ?, formula = ?
     WHERE id = ?
-  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, data.isHeader ? 1 : 0, data.parentId || null, parameterId]);
+  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, data.isHeader ? 1 : 0, data.parentId || null, data.formula || null, parameterId]);
 }
 
 export function updateParameterOrder(paramAId: number, newOrderA: number, paramBId: number, newOrderB: number): void {

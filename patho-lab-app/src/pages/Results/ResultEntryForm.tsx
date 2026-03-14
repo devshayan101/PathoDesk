@@ -63,7 +63,10 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         existingValues[param.parameter_code] = param.result_value;
                     }
                 });
-                setValues(existingValues);
+
+                // Calculate formulas on initial load
+                const calculatedValues = calculateFormulas(existingValues, data);
+                setValues(calculatedValues);
 
                 // Also fetch QC status for this test
                 if (data.test_id && window.electronAPI?.qc?.getTestStatus) {
@@ -112,8 +115,69 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         return ((currValue - prevValue) / prevValue) * 100;
     };
 
+    function calculateFormulas(currentValues: Record<string, string>, data: ResultData): Record<string, string> {
+        const newValues = { ...currentValues };
+        let changed = true;
+        let iterations = 0;
+
+        while (changed && iterations < 5) {
+            changed = false;
+            iterations++;
+            for (const param of data.parameters) {
+                if (param.data_type === 'CALCULATED' && param.formula) {
+                    let formulaStr = param.formula.replace(/[{}]/g, '');
+                    let canCalculate = true;
+
+                    const paramCodes = data.parameters.map(p => p.parameter_code);
+                    paramCodes.sort((a, b) => b.length - a.length);
+
+                    for (const code of paramCodes) {
+                        const regex = new RegExp(`\\b${code}\\b`, 'g');
+                        if (regex.test(formulaStr)) {
+                            const valStr = newValues[code];
+                            const numVal = parseFloat(valStr || '');
+                            if (isNaN(numVal)) {
+                                canCalculate = false;
+                                break;
+                            }
+                            formulaStr = formulaStr.replace(regex, numVal.toString());
+                        }
+                    }
+
+                    if (canCalculate) {
+                        try {
+                            if (/^[0-9\.\+\-\*\/\(\)\s]+$/.test(formulaStr)) {
+                                // eslint-disable-next-line no-eval
+                                const result = eval(formulaStr);
+                                if (!isNaN(result) && isFinite(result)) {
+                                    const decimalPrecision = param.decimal_precision ?? 2;
+                                    const formattedResult = Number(result).toFixed(decimalPrecision);
+                                    if (newValues[param.parameter_code] !== formattedResult) {
+                                        newValues[param.parameter_code] = formattedResult;
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Formula eval error", e);
+                        }
+                    } else {
+                        if (newValues[param.parameter_code]) {
+                            newValues[param.parameter_code] = '';
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+        return newValues;
+    };
+
     const handleValueChange = (paramCode: string, value: string) => {
-        setValues(prev => ({ ...prev, [paramCode]: value }));
+        setValues(prev => {
+            const nextValues = { ...prev, [paramCode]: value };
+            return resultData ? calculateFormulas(nextValues, resultData) : nextValues;
+        });
         isDirtyRef.current = true;
     };
 
@@ -449,8 +513,8 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                                                 value={value}
                                                 onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
                                                 onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
-                                                placeholder="—"
-                                                disabled={isReadOnly}
+                                                placeholder={param.data_type === 'CALCULATED' ? "Auto" : "—"}
+                                                disabled={isReadOnly || param.data_type === 'CALCULATED'}
                                             />
                                         </td>
                                         <td className="unit">{param.unit}</td>

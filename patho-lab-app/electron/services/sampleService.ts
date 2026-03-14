@@ -42,13 +42,23 @@ export function createSample(orderTestId: number): { success: boolean; sampleId?
 
         const sampleId = runWithId(`
       INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
-      VALUES (?, ?, 'COLLECTED', datetime('now'))
+      VALUES (?, ?, 'REGISTERED', NULL)
     `, [sampleUid, orderTestId]);
 
         return { success: true, sampleId, sampleUid };
     } catch (error: any) {
         console.error('Create sample error:', error);
         return { success: false, error: error.message };
+    }
+}
+
+// Mark sample as collected
+export function collectSample(sampleId: number): boolean {
+    try {
+        run(`UPDATE samples SET status = 'COLLECTED', collected_at = datetime('now') WHERE id = ? AND status = 'REGISTERED'`, [sampleId]);
+        return true;
+    } catch {
+        return false;
     }
 }
 
@@ -97,4 +107,18 @@ export function getSampleByUid(sampleUid: string): SampleRow | undefined {
     JOIN test_versions tv ON ot.test_version_id = tv.id
     WHERE s.sample_uid = ?
   `, [sampleUid]);
+}
+
+// Get samples by Order ID
+export function getSamplesByOrderId(orderId: number): SampleRow[] {
+    return queryAll<SampleRow>(`
+    SELECT s.*, o.order_uid, p.full_name as patient_name, tv.test_name
+    FROM samples s
+    JOIN order_tests ot ON s.order_test_id = ot.id
+    JOIN orders o ON ot.order_id = o.id
+    JOIN patients p ON o.patient_id = p.id
+    JOIN test_versions tv ON ot.test_version_id = tv.id
+    WHERE o.id = ?
+    ORDER BY s.id ASC
+  `, [orderId]);
 }

@@ -219,6 +219,7 @@ export default function ParameterListPanel({
                                         <input className="input" value={newParam.formula}
                                             onChange={e => setNewParam({ ...newParam, formula: e.target.value })}
                                             placeholder="e.g. {ALBUMIN} / {GLOBULIN}" />
+                                        <small className="help-text text-muted" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.8rem' }}>Use parameter codes wrapped in curly braces. Example: {`{HB} * 3`}</small>
                                     </div>
                                 </div>
                             )}
