@@ -781,7 +781,11 @@ export default function OrdersPage() {
                                             </td>
                                             <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                 <button className="btn btn-secondary btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleViewOrder(order)}>View</button>
-                                                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/orders/${order.id}/results`)}>
+                                                <button
+                                                    className="btn btn-primary btn-sm"
+                                                    onClick={() => navigate(`/orders/${order.id}/results`)}
+                                                    disabled={order.report_status === 'PENDING'}
+                                                >
                                                     🔬 Enter Results
                                                 </button>
                                             </td>

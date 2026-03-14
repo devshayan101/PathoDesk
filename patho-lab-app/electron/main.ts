@@ -5,7 +5,7 @@ import 'dotenv/config'
 
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, closeDatabase } from './database/db'
+import { initDatabase, closeDatabase, queryAll, run } from './database/db'
 import * as authService from './services/authService'
 import * as patientService from './services/patientService'
 import * as testService from './services/testService'
@@ -57,11 +57,10 @@ function createWindow() {
 
   // Retroactive fix for already published tests missing test_prices entries
   try {
-    const { run, queryAll } = require('./database/db');
     const existingTests = queryAll('SELECT id FROM tests WHERE is_active = 1');
     const allPriceLists = queryAll('SELECT id FROM price_lists');
-    for (const test of existingTests) {
-      for (const pl of allPriceLists) {
+    for (const test of existingTests as any[]) {
+      for (const pl of allPriceLists as any[]) {
         run(`
           INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
           VALUES (?, ?, 0, 0, 0, datetime('now'))

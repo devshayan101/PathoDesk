@@ -234,7 +234,20 @@ function calculateAge(dob: string): string {
 // Format date — optionally includes time
 export function formatDate(dateStr: string | null | undefined, showTime = false): string {
     const validDateStr = dateStr || new Date().toISOString();
-    const date = new Date(validDateStr);
+
+    // SQLite returns "YYYY-MM-DD HH:MM:SS". JS parses this as local if no Z is present.
+    // Convert to ISO string explicitly to enforce UTC parsing and local offset conversion.
+    let isoStr = validDateStr;
+    if (isoStr.includes(' ') && !isoStr.includes('T')) {
+        isoStr = isoStr.replace(' ', 'T') + 'Z';
+    } else if (isoStr.length === 10) {
+        // Just a Date
+        isoStr = isoStr + 'T00:00:00Z';
+    } else if (!isoStr.endsWith('Z') && !isoStr.includes('+') && !isoStr.includes('-')) {
+        isoStr += 'Z';
+    }
+
+    const date = new Date(isoStr);
     const opts: Intl.DateTimeFormatOptions = {
         day: '2-digit',
         month: 'short',
