@@ -99,16 +99,16 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST, status),
     create: (orderTestId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_CREATE, orderTestId),
-    getByOrder: (orderId: number) =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_GET_BY_ORDER, orderId),
-    updateStatus: (sampleId: number, status: string) =>
-      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_UPDATE_STATUS, sampleId, status),
     receive: (sampleId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE, sampleId),
     reject: (sampleId: number, reason: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_REJECT, sampleId, reason),
     getPending: () =>
       ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_PENDING),
+    listByOrder: (orderId: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_LIST_BY_ORDER, orderId),
+    receiveBulk: (sampleIds: number[]) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SAMPLE_RECEIVE_BULK, sampleIds),
   },
 
   // Reference Ranges

@@ -154,15 +154,15 @@ export function addParameter(testVersionId: number, data: {
   parameterName: string;
   dataType: string;
   unit?: string;
+  formula?: string;
   isHeader?: number;
   parentId?: number | null;
-  formula?: string;
 }): number {
   const maxOrder = queryOne<{ max_o: number }>('SELECT COALESCE(MAX(display_order), 0) as max_o FROM test_parameters WHERE test_version_id = ?', [testVersionId]);
   return runWithId(`
-    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory, is_header, parent_id, formula)
+    INSERT INTO test_parameters (test_version_id, parameter_code, parameter_name, data_type, unit, decimal_precision, display_order, is_mandatory, is_header, formula, parent_id)
     VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?, ?, ?)
-  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1, data.isHeader ? 1 : 0, data.parentId || null, data.formula || null]);
+  `, [testVersionId, data.parameterCode, data.parameterName, data.dataType, data.unit || null, (maxOrder?.max_o || 0) + 1, data.isHeader ? 1 : 0, data.formula || null, data.parentId || null]);
 }
 
 export function updateParameter(parameterId: number, data: {
@@ -170,15 +170,15 @@ export function updateParameter(parameterId: number, data: {
   parameterName: string;
   dataType: string;
   unit?: string;
+  formula?: string;
   isHeader?: number;
   parentId?: number | null;
-  formula?: string;
 }): void {
   run(`
     UPDATE test_parameters 
-    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?, is_header = ?, parent_id = ?, formula = ?
+    SET parameter_code = ?, parameter_name = ?, data_type = ?, unit = ?, is_header = ?, formula = ?, parent_id = ?
     WHERE id = ?
-  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, data.isHeader ? 1 : 0, data.parentId || null, data.formula || null, parameterId]);
+  `, [data.parameterCode, data.parameterName, data.dataType, data.unit || null, data.isHeader ? 1 : 0, data.formula || null, data.parentId || null, parameterId]);
 }
 
 export function updateParameterOrder(paramAId: number, newOrderA: number, paramBId: number, newOrderB: number): void {
@@ -453,6 +453,8 @@ export interface BulkImportRow {
   criticalLow?: string;
   criticalHigh?: string;
   isHeader?: string;
+  dataType?: string;
+  formula?: string;
 }
 
 export interface BulkImportResult {
@@ -547,9 +549,18 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         }
         usedParamCodes.add(paramCode);
 
-        // Determine data type from reference range
+        // Determine data type: use explicit dataType if provided, else auto-detect
         const refRange = (row.referenceRange || '').trim();
-        const isNumeric = /^\d/.test(refRange) || /\d+-\d+/.test(refRange) || /\d*\.\d+/.test(refRange);
+        const explicitDataType = ((row as any).dataType || '').trim().toUpperCase();
+        let dataType: string;
+        if (explicitDataType === 'CALCULATED' || explicitDataType === 'TEXT' || explicitDataType === 'NUMERIC') {
+          dataType = explicitDataType;
+        } else {
+          const isNumeric = /^\d/.test(refRange) || /\d+-\d+/.test(refRange) || /\d*\.\d+/.test(refRange);
+          dataType = isNumeric ? 'NUMERIC' : 'TEXT';
+        }
+
+        const rowFormula = ((row as any).formula || '').trim() || null;
 
         const isHeaderVal = (row.isHeader || '').toLowerCase();
         const isTrueHeader = ['yes', 'y', '1', 'true'].includes(isHeaderVal);
@@ -557,16 +568,17 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         const paramId = runWithId(`
           INSERT INTO test_parameters (
             test_version_id, parameter_code, parameter_name, data_type,
-            unit, decimal_precision, display_order, is_mandatory, is_header
-          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?)
+            unit, decimal_precision, display_order, is_mandatory, is_header, formula
+          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?, ?)
         `, [
           versionId,
           paramCode,
           paramName,
-          isNumeric ? 'NUMERIC' : 'TEXT',
+          dataType,
           row.unit?.trim() || null,
           i + 1,
-          isTrueHeader ? 1 : 0
+          isTrueHeader ? 1 : 0,
+          rowFormula
         ]);
 
         createdParamIdMap.set(paramName.toLowerCase(), paramId);
@@ -656,6 +668,8 @@ export function exportTests(): any[] {
       tv.test_name as testName,
       tp.parameter_code as paramCode,
       tp.parameter_name as parameter,
+      tp.data_type as dataType,
+      tp.formula,
       rr.display_text as referenceRange,
       cv.critical_low as criticalLow,
       cv.critical_high as criticalHigh,

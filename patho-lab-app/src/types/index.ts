@@ -87,7 +87,6 @@ export interface Order {
     patient?: Patient;
     payment_status?: string;
     report_status?: string;
-    unreceived_count?: number;
 }
 
 export interface OrderTest {
@@ -148,7 +147,8 @@ export const IPC_CHANNELS = {
     SAMPLE_RECEIVE: 'sample:receive',
     SAMPLE_REJECT: 'sample:reject',
     SAMPLE_PENDING: 'sample:pending',
-    SAMPLE_GET_BY_ORDER: 'sample:getByOrder',
+    SAMPLE_LIST_BY_ORDER: 'sample:listByOrder',
+    SAMPLE_RECEIVE_BULK: 'sample:receiveBulk',
 
     // Tests
     TEST_LIST: 'test:list',

@@ -59,8 +59,8 @@ export interface ElectronAPI {
         receive: (sampleId: number) => Promise<{ success: boolean }>;
         reject: (sampleId: number, reason: string) => Promise<{ success: boolean }>;
         getPending: () => Promise<any[]>;
-        getByOrder: (orderId: number) => Promise<any[]>;
-        updateStatus: (sampleId: number, status: string) => Promise<boolean>;
+        listByOrder: (orderId: number) => Promise<any[]>;
+        receiveBulk: (sampleIds: number[]) => Promise<{ success: boolean; received: number }>;
     };
     users: {
         list: () => Promise<any[]>;

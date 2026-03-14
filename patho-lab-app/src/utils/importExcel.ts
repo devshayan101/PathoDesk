@@ -13,6 +13,8 @@ export interface ParsedTestRow {
     criticalLow: string;
     criticalHigh: string;
     isHeader: string;
+    dataType: string;
+    formula: string;
 }
 
 export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> => {
@@ -64,7 +66,9 @@ export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> =
                         sampleType: lastSampleType,
                         criticalLow: find(['critical low', 'crit_low', 'low critical']),
                         criticalHigh: find(['critical high', 'crit_high', 'high critical']),
-                        isHeader: find(['is header', 'is_header', 'header', 'group', 'isheader'])
+                        isHeader: find(['is header', 'is_header', 'header', 'group', 'isheader']),
+                        dataType: find(['data type', 'data_type', 'datatype', 'type']).toUpperCase(),
+                        formula: find(['formula'])
                     };
                 }).filter((r: any) => r.testName && r.parameter);
 

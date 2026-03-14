@@ -42,23 +42,13 @@ export function createSample(orderTestId: number): { success: boolean; sampleId?
 
         const sampleId = runWithId(`
       INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
-      VALUES (?, ?, 'REGISTERED', NULL)
+      VALUES (?, ?, 'COLLECTED', datetime('now'))
     `, [sampleUid, orderTestId]);
 
         return { success: true, sampleId, sampleUid };
     } catch (error: any) {
         console.error('Create sample error:', error);
         return { success: false, error: error.message };
-    }
-}
-
-// Mark sample as collected
-export function collectSample(sampleId: number): boolean {
-    try {
-        run(`UPDATE samples SET status = 'COLLECTED', collected_at = datetime('now') WHERE id = ? AND status = 'REGISTERED'`, [sampleId]);
-        return true;
-    } catch {
-        return false;
     }
 }
 
@@ -109,8 +99,8 @@ export function getSampleByUid(sampleUid: string): SampleRow | undefined {
   `, [sampleUid]);
 }
 
-// Get samples by Order ID
-export function getSamplesByOrderId(orderId: number): SampleRow[] {
+// Get all samples for an order (for Mark Sample Received modal)
+export function getSamplesForOrder(orderId: number): SampleRow[] {
     return queryAll<SampleRow>(`
     SELECT s.*, o.order_uid, p.full_name as patient_name, tv.test_name
     FROM samples s
@@ -118,7 +108,21 @@ export function getSamplesByOrderId(orderId: number): SampleRow[] {
     JOIN orders o ON ot.order_id = o.id
     JOIN patients p ON o.patient_id = p.id
     JOIN test_versions tv ON ot.test_version_id = tv.id
-    WHERE o.id = ?
-    ORDER BY s.id ASC
+    WHERE ot.order_id = ?
+    ORDER BY s.id
   `, [orderId]);
+}
+
+// Bulk-receive multiple samples
+export function receiveSamples(sampleIds: number[]): { success: boolean; received: number } {
+    let received = 0;
+    for (const id of sampleIds) {
+        try {
+            run(`UPDATE samples SET status = 'RECEIVED', received_at = datetime('now') WHERE id = ? AND status = 'COLLECTED'`, [id]);
+            received++;
+        } catch {
+            // skip failures
+        }
+    }
+    return { success: true, received };
 }

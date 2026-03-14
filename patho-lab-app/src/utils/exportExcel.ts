@@ -7,6 +7,8 @@ export const exportTestsToExcel = (data: any[], filename: string = 'Test_Master_
         'Test Code': item.testCode,
         'Test Name': item.testName,
         'Parameter': item.parameter,
+        'Data Type': item.dataType || 'NUMERIC',
+        'Formula': item.formula || '',
         'Reference Range': item.referenceRange || '',
         'Unit': item.unit || '',
         'Price': item.price || 0,

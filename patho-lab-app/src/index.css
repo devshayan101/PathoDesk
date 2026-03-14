@@ -16,9 +16,12 @@
   --color-accent-secondary: #0ea5e9;
 
   --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  --color-warning: #f59f0bdb;
+  --color-warning-hover: #ffa200;
   --color-error: #ef4444;
   --color-critical: #dc2626;
+  --color-critical-hover: #f95151;
+  --color-info: #3b82f6;
 
   --color-border: #e2e8f0;
   --color-border-light: #cbd5e1;
@@ -165,12 +168,28 @@ body {
   border-color: var(--color-text-secondary);
 }
 
+.btn-warning {
+  background: var(--color-warning);
+  border: 1px solid var(--color-border);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: var(--color-warning-hover);
+  border-color: var(--color-text-secondary);
+  transform: translateY(-1px);
+  color: white;
+}
+
 .btn-danger {
   background: var(--color-error);
   color: white;
 }
 
 .btn-danger:hover {
+  background: var(--color-critical-hover);
+  border-color: var(--color-text-secondary);
+  transform: translateY(-1px);
   filter: brightness(0.9);
 }
 

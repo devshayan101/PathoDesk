@@ -63,10 +63,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         existingValues[param.parameter_code] = param.result_value;
                     }
                 });
-
-                // Calculate formulas on initial load
-                const calculatedValues = calculateFormulas(existingValues, data);
-                setValues(calculatedValues);
+                setValues(existingValues);
 
                 // Also fetch QC status for this test
                 if (data.test_id && window.electronAPI?.qc?.getTestStatus) {
@@ -115,68 +112,47 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         return ((currValue - prevValue) / prevValue) * 100;
     };
 
-    function calculateFormulas(currentValues: Record<string, string>, data: ResultData): Record<string, string> {
-        const newValues = { ...currentValues };
-        let changed = true;
-        let iterations = 0;
+    const computeFormula = (formula: string, currentValues: Record<string, string>): string => {
+        // Replace {PARAM_CODE} placeholders with actual values
+        let expression = formula.replace(/\{([^}]+)\}/g, (_, paramCode) => {
+            const val = currentValues[paramCode.trim()];
+            if (val === undefined || val === '') return 'NaN';
+            return val;
+        });
 
-        while (changed && iterations < 5) {
-            changed = false;
-            iterations++;
-            for (const param of data.parameters) {
-                if (param.data_type === 'CALCULATED' && param.formula) {
-                    let formulaStr = param.formula.replace(/[{}]/g, '');
-                    let canCalculate = true;
+        try {
+            // Safe evaluation: only allow numbers, basic math operators, parentheses, and decimal points
+            if (!/^[\d\s+\-*/().NaN]+$/.test(expression)) return '';
+            const result = new Function('return ' + expression)();
+            if (typeof result === 'number' && isFinite(result)) {
+                return parseFloat(result.toFixed(2)).toString();
+            }
+            return '';
+        } catch {
+            return '';
+        }
+    };
 
-                    const paramCodes = data.parameters.map(p => p.parameter_code);
-                    paramCodes.sort((a, b) => b.length - a.length);
-
-                    for (const code of paramCodes) {
-                        const regex = new RegExp(`\\b${code}\\b`, 'g');
-                        if (regex.test(formulaStr)) {
-                            const valStr = newValues[code];
-                            const numVal = parseFloat(valStr || '');
-                            if (isNaN(numVal)) {
-                                canCalculate = false;
-                                break;
-                            }
-                            formulaStr = formulaStr.replace(regex, numVal.toString());
-                        }
-                    }
-
-                    if (canCalculate) {
-                        try {
-                            if (/^[0-9\.\+\-\*\/\(\)\s]+$/.test(formulaStr)) {
-                                // eslint-disable-next-line no-eval
-                                const result = eval(formulaStr);
-                                if (!isNaN(result) && isFinite(result)) {
-                                    const decimalPrecision = param.decimal_precision ?? 2;
-                                    const formattedResult = Number(result).toFixed(decimalPrecision);
-                                    if (newValues[param.parameter_code] !== formattedResult) {
-                                        newValues[param.parameter_code] = formattedResult;
-                                        changed = true;
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.error("Formula eval error", e);
-                        }
-                    } else {
-                        if (newValues[param.parameter_code]) {
-                            newValues[param.parameter_code] = '';
-                            changed = true;
-                        }
-                    }
+    const recalculateFormulas = (currentValues: Record<string, string>) => {
+        if (!resultData) return currentValues;
+        let updated = { ...currentValues };
+        let changed = false;
+        for (const param of resultData.parameters) {
+            if (param.data_type === 'CALCULATED' && param.formula) {
+                const computed = computeFormula(param.formula, updated);
+                if (computed !== (updated[param.parameter_code] || '')) {
+                    updated[param.parameter_code] = computed;
+                    changed = true;
                 }
             }
         }
-        return newValues;
+        return changed ? updated : currentValues;
     };
 
     const handleValueChange = (paramCode: string, value: string) => {
         setValues(prev => {
-            const nextValues = { ...prev, [paramCode]: value };
-            return resultData ? calculateFormulas(nextValues, resultData) : nextValues;
+            const next = { ...prev, [paramCode]: value };
+            return recalculateFormulas(next);
         });
         isDirtyRef.current = true;
     };
@@ -513,8 +489,9 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                                                 value={value}
                                                 onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
                                                 onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
-                                                placeholder={param.data_type === 'CALCULATED' ? "Auto" : "—"}
+                                                placeholder={param.data_type === 'CALCULATED' ? '⚙ auto' : '—'}
                                                 disabled={isReadOnly || param.data_type === 'CALCULATED'}
+                                                style={param.data_type === 'CALCULATED' ? { backgroundColor: 'var(--color-bg-tertiary)', fontStyle: 'italic' } : undefined}
                                             />
                                         </td>
                                         <td className="unit">{param.unit}</td>

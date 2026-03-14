@@ -61,10 +61,14 @@ function createWindow() {
     const allPriceLists = queryAll('SELECT id FROM price_lists');
     for (const test of existingTests as any[]) {
       for (const pl of allPriceLists as any[]) {
-        run(`
-          INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
-          VALUES (?, ?, 0, 0, 0, datetime('now'))
-        `, [pl.id, test.id]);
+        // Only insert if no active price entry exists for this test+price_list combo
+        const existing = queryAll('SELECT 1 FROM test_prices WHERE price_list_id = ? AND test_id = ? AND is_active = 1 LIMIT 1', [pl.id, test.id]) as any[];
+        if (existing.length === 0) {
+          run(`
+            INSERT INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+            VALUES (?, ?, 0, 0, 0, datetime('now'))
+          `, [pl.id, test.id]);
+        }
       }
     }
     console.log('Retroactive test prices fix applied.');
@@ -305,13 +309,6 @@ function registerIpcHandlers() {
     return sampleService.createSample(orderTestId)
   })
 
-  ipcMain.handle(IPC_CHANNELS.SAMPLE_UPDATE_STATUS, (_, sampleId: number, status: string) => {
-    if (status === 'COLLECTED') {
-      return sampleService.collectSample(sampleId)
-    }
-    return false
-  })
-
   ipcMain.handle(IPC_CHANNELS.SAMPLE_RECEIVE, (_, sampleId: number) => {
     return sampleService.receiveSample(sampleId)
   })
@@ -324,8 +321,12 @@ function registerIpcHandlers() {
     return sampleService.getPendingSamples()
   })
 
-  ipcMain.handle(IPC_CHANNELS.SAMPLE_GET_BY_ORDER, (_, orderId: number) => {
-    return sampleService.getSamplesByOrderId(orderId)
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_LIST_BY_ORDER, (_, orderId: number) => {
+    return sampleService.getSamplesForOrder(orderId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SAMPLE_RECEIVE_BULK, (_, sampleIds: number[]) => {
+    return sampleService.receiveSamples(sampleIds)
   })
 
   // Users (Admin)

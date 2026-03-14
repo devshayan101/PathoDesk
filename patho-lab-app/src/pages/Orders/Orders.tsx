@@ -37,7 +37,7 @@ interface Order {
     test_names?: string;
     doctor_name?: string;
     report_status?: string;
-    unreceived_count?: number;
+    has_collected_samples?: number;
 }
 
 interface Doctor {
@@ -97,10 +97,11 @@ export default function OrdersPage() {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
 
-    // Receive Samples Modal
+    // Mark Sample Received Modal
     const [showReceiveModal, setShowReceiveModal] = useState(false);
-    const [selectedOrderForReceive, setSelectedOrderForReceive] = useState<Order | null>(null);
-    const [unreceivedSamples, setUnreceivedSamples] = useState<any[]>([]);
+    const [orderSamples, setOrderSamples] = useState<any[]>([]);
+    const [selectedSampleIds, setSelectedSampleIds] = useState<number[]>([]);
+    const [receivingLoading, setReceivingLoading] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -164,42 +165,6 @@ export default function OrdersPage() {
             }
         } catch (e: any) {
             showToast('Failed to load order details', 'error');
-        }
-    };
-
-    const handleReceiveClick = async (order: Order) => {
-        if (!order.unreceived_count || order.unreceived_count === 0) return;
-
-        try {
-            const samples = await window.electronAPI.samples.getByOrder(order.id);
-            const pendingSamples = samples.filter((s: any) => s.status === 'REGISTERED' || s.status === 'COLLECTED');
-
-            if (pendingSamples.length === 1) {
-                // Auto-receive single sample
-                await window.electronAPI.samples.receive(pendingSamples[0].id);
-                showToast('Sample received successfully', 'success');
-                loadData();
-            } else if (pendingSamples.length > 1) {
-                // Show modal to receive multiple samples
-                setSelectedOrderForReceive(order);
-                setUnreceivedSamples(pendingSamples);
-                setShowReceiveModal(true);
-            }
-        } catch (e: any) {
-            showToast('Failed to load samples for receiving', 'error');
-        }
-    };
-
-    const handleReceiveMultiple = async (sampleIds: number[]) => {
-        try {
-            for (const id of sampleIds) {
-                await window.electronAPI.samples.receive(id);
-            }
-            showToast('Samples received successfully', 'success');
-            setShowReceiveModal(false);
-            loadData();
-        } catch (e: any) {
-            showToast('Failed to receive samples', 'error');
         }
     };
 
@@ -418,6 +383,41 @@ export default function OrdersPage() {
         setTestSearch('');
         setPatientDropdownOpen(false);
         setDoctorDropdownOpen(false);
+    };
+
+    // Mark Sample Received
+    const handleOpenReceiveModal = async (orderId: number) => {
+        setReceivingLoading(true);
+        setShowReceiveModal(true);
+        try {
+            const samples = await window.electronAPI.samples.listByOrder(orderId);
+            const collectedSamples = samples.filter((s: any) => s.status === 'COLLECTED');
+            setOrderSamples(collectedSamples);
+            setSelectedSampleIds(collectedSamples.map((s: any) => s.id));
+        } catch (e) {
+            console.error('Failed to load order samples:', e);
+            showToast('Failed to load samples', 'error');
+        }
+        setReceivingLoading(false);
+    };
+
+    const handleReceiveSamples = async () => {
+        if (selectedSampleIds.length === 0) return;
+        setReceivingLoading(true);
+        try {
+            const result = await window.electronAPI.samples.receiveBulk(selectedSampleIds);
+            if (result.success) {
+                showToast(`${result.received} sample(s) marked as received`, 'success');
+                setShowReceiveModal(false);
+                setOrderSamples([]);
+                setSelectedSampleIds([]);
+                loadData();
+            }
+        } catch (e) {
+            console.error('Failed to receive samples:', e);
+            showToast('Failed to receive samples', 'error');
+        }
+        setReceivingLoading(false);
     };
 
     // Calculate totals
@@ -823,18 +823,18 @@ export default function OrdersPage() {
                                             </td>
                                             <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                 <button className="btn btn-secondary btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleViewOrder(order)}>View</button>
-                                                {(order.unreceived_count && order.unreceived_count > 0) ? (
+                                                {(order as any).has_collected_samples > 0 ? (
                                                     <button
-                                                        className="btn btn-primary btn-sm"
-                                                        onClick={() => handleReceiveClick(order)}
-                                                        title="Mark pending samples as received"
+                                                        className="btn btn-warning btn-sm"
+                                                        onClick={() => handleOpenReceiveModal(order.id)}
                                                     >
-                                                        Mark Sample Received ({order.unreceived_count})
+                                                        📦 Mark Sample Received
                                                     </button>
                                                 ) : (
                                                     <button
                                                         className="btn btn-primary btn-sm"
                                                         onClick={() => navigate(`/orders/${order.id}/results`)}
+                                                        disabled={order.report_status === 'PENDING'}
                                                     >
                                                         🔬 Enter Results
                                                     </button>
@@ -966,70 +966,89 @@ export default function OrdersPage() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-                            {selectedOrder.unreceived_count === 0 && (
-                                <button className="btn btn-primary" onClick={() => {
+                            {(selectedOrder as any)?.has_collected_samples > 0 && (
+                                <button className="btn btn-warning" onClick={() => {
                                     setShowOrderModal(false);
-                                    navigate(`/orders/${selectedOrder.id}/results`);
+                                    handleOpenReceiveModal(selectedOrder.id);
                                 }}>
-                                    🔬 Enter Results
+                                    📦 Mark Sample Received
                                 </button>
                             )}
+                            <button className="btn btn-primary" onClick={() => {
+                                setShowOrderModal(false);
+                                navigate(`/orders/${selectedOrder.id}/results`);
+                            }}>
+                                🔬 Enter Results
+                            </button>
                             <button className="btn btn-secondary" onClick={() => setShowOrderModal(false)}>Close</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Receive Samples Modal */}
-            {showReceiveModal && selectedOrderForReceive && (
-                <div className="modal-overlay" style={{ zIndex: 1100 }}>
-                    <div className="modal" style={{ maxWidth: '500px' }}>
-                        <div className="modal-header" style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ margin: 0 }}>Receive Samples</h2>
-                            <button className="close-btn" onClick={() => setShowReceiveModal(false)} style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                        </div>
-                        <div className="modal-body" style={{ padding: '1.5rem' }}>
-                            <p style={{ marginBottom: '1rem' }}>
-                                The order for <strong>{selectedOrderForReceive.patient_name}</strong> has multiple samples pending receipt.
-                                Select which samples have been received:
-                            </p>
-                            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                                <table className="table" style={{ margin: 0 }}>
-                                    <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-tertiary)' }}>
-                                        <tr>
-                                            <th>Test Name</th>
-                                            <th>Sample UID</th>
-                                            <th style={{ textAlign: 'center' }}>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {unreceivedSamples.map(sample => (
-                                            <tr key={sample.id}>
-                                                <td>{sample.test_name}</td>
-                                                <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{sample.sample_uid}</code></td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <button
-                                                        className="btn btn-primary btn-sm"
-                                                        onClick={() => handleReceiveMultiple([sample.id])}
-                                                    >
-                                                        Mark Received
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div className="modal-footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: 'var(--color-bg-card)' }}>
-                            <button className="btn btn-secondary" onClick={() => setShowReceiveModal(false)}>
-                                Cancel
-                            </button>
+            {/* Mark Sample Received Modal */}
+            {showReceiveModal && (
+                <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={() => setShowReceiveModal(false)}>
+                    <div className="modal" style={{ maxWidth: '550px' }} onClick={e => e.stopPropagation()}>
+                        <h2>📦 Mark Samples Received</h2>
+                        <p className="text-muted" style={{ marginBottom: '1rem' }}>Select the samples to mark as received at the lab.</p>
+
+                        {receivingLoading ? (
+                            <div style={{ textAlign: 'center', padding: '2rem' }}>Loading samples...</div>
+                        ) : orderSamples.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>No samples pending reception.</div>
+                        ) : (
+                            <>
+                                <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedSampleIds.length === orderSamples.length}
+                                            onChange={(e) => setSelectedSampleIds(e.target.checked ? orderSamples.map(s => s.id) : [])}
+                                        />
+                                        Select All ({orderSamples.length})
+                                    </label>
+                                </div>
+                                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                                    {orderSamples.map(sample => (
+                                        <label
+                                            key={sample.id}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+                                                cursor: 'pointer', borderBottom: '1px solid var(--color-border)',
+                                                background: selectedSampleIds.includes(sample.id) ? 'var(--color-bg-tertiary)' : 'transparent'
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedSampleIds.includes(sample.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedSampleIds(prev => [...prev, sample.id]);
+                                                    } else {
+                                                        setSelectedSampleIds(prev => prev.filter(id => id !== sample.id));
+                                                    }
+                                                }}
+                                            />
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: 500 }}>{sample.test_name}</div>
+                                                <small style={{ color: 'var(--color-text-muted)' }}>{sample.sample_uid}</small>
+                                            </div>
+                                            <span className="badge badge-warning">COLLECTED</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowReceiveModal(false)}>Cancel</button>
                             <button
                                 className="btn btn-primary"
-                                onClick={() => handleReceiveMultiple(unreceivedSamples.map(s => s.id))}
+                                onClick={handleReceiveSamples}
+                                disabled={selectedSampleIds.length === 0 || receivingLoading}
                             >
-                                Receive All Pending
+                                ✓ Receive Selected ({selectedSampleIds.length})
                             </button>
                         </div>
                     </div>
