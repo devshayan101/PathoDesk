@@ -60,9 +60,9 @@ export default function ResultKanbanBoard({ samples, onSelectSample, searchQuery
                                 </div>
                                 <div className="card-footer">
                                     <span className="order-uid">{sample.order_uid}</span>
-                                    {sample.received_at && (
+                                    {(sample.received_at || sample.collected_at) && (
                                         <span className="sample-date" style={{ fontSize: '0.7rem' }}>
-                                            {new Date(sample.received_at).toLocaleDateString()}
+                                            {new Date(sample.received_at || sample.collected_at!).toLocaleDateString()}
                                         </span>
                                     )}
                                 </div>

@@ -322,7 +322,7 @@ export default function LabReportGreen({ data, labSettings }: Props) {
                     <Text style={s.patientValue}>:  {calcAge(patient.dob)}  |  {gender}</Text>
                     <View style={s.patientSpacer} />
                     <Text style={s.patientLabel}>Collection Date</Text>
-                    <Text style={s.patientValue}>:  {formatDate(sample.received_at, showTime)}</Text>
+                    <Text style={s.patientValue}>:  {formatDate(sample.received_at || (sample as any).collected_at, showTime)}</Text>
                 </View>
                 <View style={s.patientRow}>
                     <Text style={s.patientLabel}>Sample Type</Text>

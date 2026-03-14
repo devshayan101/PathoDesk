@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: './',
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+    },
     build: {
       commonjsOptions: {
         // Required: Transform require() in modules that mix ESM and CJS

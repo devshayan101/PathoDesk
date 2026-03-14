@@ -7,6 +7,7 @@ export interface Sample {
     status: string;
     doctor_name?: string;
     received_at?: string;
+    collected_at?: string;
 }
 
 export interface RefRange {

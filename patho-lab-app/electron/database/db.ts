@@ -19,6 +19,23 @@ export function initDatabase(): Database.Database {
   // Run migrations
   runMigrations(db);
 
+  // One-off cleanup for FAIZAN and ASD price lists
+  try {
+    const priceLists = db.prepare(`SELECT id, name FROM price_lists WHERE name IN ('FAIZAN', 'ASD')`).all() as { id: number, name: string }[];
+    for (const pl of priceLists) {
+      console.log("Cleaning up old price list:", pl.name);
+      const packages = db.prepare(`SELECT id FROM packages WHERE price_list_id = ?`).all(pl.id) as { id: number }[];
+      for (const pkg of packages) {
+        db.prepare(`DELETE FROM package_items WHERE package_id = ?`).run(pkg.id);
+      }
+      db.prepare(`DELETE FROM packages WHERE price_list_id = ?`).run(pl.id);
+      db.prepare(`DELETE FROM test_prices WHERE price_list_id = ?`).run(pl.id);
+      db.prepare(`DELETE FROM price_lists WHERE id = ?`).run(pl.id);
+    }
+  } catch (e) {
+    console.error("Cleanup error:", e);
+  }
+
   // Ensure admin password is correct (fixes hash mismatch issues)
   ensureAdminPassword(db);
 

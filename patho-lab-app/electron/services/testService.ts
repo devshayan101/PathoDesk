@@ -338,6 +338,19 @@ export function publishTest(versionId: number): void {
   // Check ref ranges?? For now, just publish.
 
   run("UPDATE test_versions SET status = 'PUBLISHED', wizard_step = 6 WHERE id = ?", [versionId]);
+
+  // Bug fix: Ensure the newly published test has an entry in test_prices across all price lists
+  // so it appears in Order Creation.
+  const version = getTestVersion(versionId);
+  if (version) {
+    const allPriceLists = queryAll<{ id: number }>('SELECT id FROM price_lists');
+    for (const pl of allPriceLists) {
+      run(`
+        INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+        VALUES (?, ?, 0, 0, 0, datetime('now'))
+      `, [pl.id, version.test_id]);
+    }
+  }
 }
 
 export function deleteTest(testId: number): void {

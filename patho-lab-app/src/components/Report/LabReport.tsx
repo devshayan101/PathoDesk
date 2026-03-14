@@ -232,8 +232,9 @@ function calculateAge(dob: string): string {
 }
 
 // Format date — optionally includes time
-export function formatDate(dateStr: string, showTime = false): string {
-    const date = new Date(dateStr);
+export function formatDate(dateStr: string | null | undefined, showTime = false): string {
+    const validDateStr = dateStr || new Date().toISOString();
+    const date = new Date(validDateStr);
     const opts: Intl.DateTimeFormatOptions = {
         day: '2-digit',
         month: 'short',

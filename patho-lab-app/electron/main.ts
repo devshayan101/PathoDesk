@@ -55,6 +55,24 @@ function createWindow() {
     console.error('License initialization error:', err)
   })
 
+  // Retroactive fix for already published tests missing test_prices entries
+  try {
+    const { run, queryAll } = require('./database/db');
+    const existingTests = queryAll('SELECT id FROM tests WHERE is_active = 1');
+    const allPriceLists = queryAll('SELECT id FROM price_lists');
+    for (const test of existingTests) {
+      for (const pl of allPriceLists) {
+        run(`
+          INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
+          VALUES (?, ?, 0, 0, 0, datetime('now'))
+        `, [pl.id, test.id]);
+      }
+    }
+    console.log('Retroactive test prices fix applied.');
+  } catch (err) {
+    console.error('Error applying retroactive test prices fix:', err);
+  }
+
   win = new BrowserWindow({
     width: 1400,
     height: 900,

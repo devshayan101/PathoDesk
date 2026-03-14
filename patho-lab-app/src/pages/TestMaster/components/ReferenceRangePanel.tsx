@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../stores/toastStore';
 import AgeInput from '../../../components/AgeInput/AgeInput';
+import { Plus, Edit, Trash2, Activity } from 'lucide-react';
 
 interface Parameter {
     id: number;
@@ -83,6 +84,8 @@ export default function ReferenceRangePanel({
     };
 
     const formatAge = (days: number): string => {
+        if (days === 0) return '0d';
+        if (days === 36500) return 'Max';
         if (days >= 365) return `${Math.floor(days / 365)}y`;
         if (days >= 30) return `${Math.floor(days / 30)}m`;
         return `${days}d`;
@@ -93,8 +96,8 @@ export default function ReferenceRangePanel({
             <div className="panel-header">
                 <h2 className="panel-title">Reference Ranges</h2>
                 {selectedParam && (
-                    <button className="btn btn-primary btn-sm" onClick={onShowAddForm}>
-                        + Add Range
+                    <button className="btn btn-primary btn-sm" onClick={onShowAddForm} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Plus size={14} /> Add
                     </button>
                 )}
             </div>
@@ -104,60 +107,73 @@ export default function ReferenceRangePanel({
                     <div className="param-info">
                         <strong>{selectedParam.parameter_name}</strong>
                         {selectedParam.unit && <span className="unit">({selectedParam.unit})</span>}
+                        <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                            {selectedParam.data_type}
+                        </span>
                     </div>
 
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Gender</th>
-                                <th>Age Range</th>
-                                {selectedParam.data_type === 'TEXT' ? (
-                                    <th>Display Text</th>
-                                ) : (
-                                    <><th>Min</th><th>Max</th></>
-                                )}
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                    {!showAddRange && (
+                        <div className="param-list" style={{ padding: '0' }}>
                             {refRanges.length === 0 ? (
-                                <tr>
-                                    <td colSpan={selectedParam.data_type === 'TEXT' ? 4 : 5} className="empty">
-                                        No reference ranges defined
-                                    </td>
-                                </tr>
+                                <div className="empty">
+                                    <Activity size={24} style={{ opacity: 0.5 }} />
+                                    No reference ranges defined
+                                </div>
                             ) : (
                                 refRanges.map(range => (
-                                    <tr key={range.id}>
-                                        <td>
+                                    <div key={range.id} className="range-item">
+                                        <div className="range-item-header">
                                             <span className={`gender-badge ${range.gender}`}>
                                                 {range.gender === 'M' ? 'Male' : range.gender === 'F' ? 'Female' : 'All'}
                                             </span>
-                                        </td>
-                                        <td>{formatAge(range.age_min_days)} - {formatAge(range.age_max_days)}</td>
-                                        {selectedParam.data_type === 'TEXT' ? (
-                                            <td>{range.display_text ?? '—'}</td>
-                                        ) : (
-                                            <><td>{range.lower_limit ?? '—'}</td><td>{range.upper_limit ?? '—'}</td></>
-                                        )}
-                                        <td>
-                                            <button className="btn-icon-sm" onClick={() => onEditRangeClick(range)} title="Edit">✎</button>
-                                            <button className="btn-delete" onClick={() => onDeleteRangeClick(range.id)} title="Delete">×</button>
-                                        </td>
-                                    </tr>
+                                            <div className="item-actions">
+                                                <button className="btn-icon-sm" title="Edit" onClick={() => onEditRangeClick(range)}>
+                                                    <Edit size={14} />
+                                                </button>
+                                                <button className="btn-delete-sm" title="Delete" onClick={() => onDeleteRangeClick(range.id)}>
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="range-item-body">
+                                            <div className="range-metric">
+                                                <span className="range-label">Age Frame</span>
+                                                <span className="range-value">{formatAge(range.age_min_days)} - {formatAge(range.age_max_days)}</span>
+                                            </div>
+
+                                            {selectedParam.data_type === 'TEXT' ? (
+                                                <div className="range-metric">
+                                                    <span className="range-label">Expected Value</span>
+                                                    <span className="range-value">{range.display_text ?? '—'}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="range-metric">
+                                                    <span className="range-label">Range Limit</span>
+                                                    <span className="range-value">
+                                                        {range.lower_limit ?? '0'}
+                                                        {' - '}
+                                                        {range.upper_limit ?? '∞'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 ))
                             )}
-                        </tbody>
-                    </table>
+                        </div>
+                    )}
 
                     {/* Critical Values */}
-                    {selectedParam.data_type === 'NUMERIC' && (
-                        <div className="add-range-form" style={{ marginTop: '1rem' }}>
-                            <h3>⚠ Critical Values</h3>
+                    {selectedParam.data_type === 'NUMERIC' && !showAddRange && (
+                        <div className="add-range-form" style={{ marginTop: 'auto', marginBottom: '0.5rem', marginLeft: '0.5rem', marginRight: '0.5rem' }}>
+                            <h3 style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Activity size={16} /> Critical Values
+                            </h3>
                             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem' }}>
                                 Results outside these thresholds will be flagged as CRITICAL.
                             </p>
-                            <div className="form-row">
+                            <div className="form-row" style={{ marginBottom: '0.5rem' }}>
                                 <div className="form-group">
                                     <label>Critical Low</label>
                                     <input className="input" type="number" step="0.1" value={criticalLow}
@@ -171,8 +187,8 @@ export default function ReferenceRangePanel({
                                         placeholder="e.g. 20.0" />
                                 </div>
                             </div>
-                            <div className="form-actions">
-                                <button className="btn btn-primary" onClick={handleSaveCriticalValues}>
+                            <div className="form-actions" style={{ marginTop: '0' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={handleSaveCriticalValues}>
                                     Save Critical Values
                                 </button>
                             </div>
@@ -180,8 +196,8 @@ export default function ReferenceRangePanel({
                     )}
 
                     {showAddRange && (
-                        <div className="add-range-form">
-                            <h3>{editingRangeId ? 'Edit Reference Range' : 'Add Reference Range'}</h3>
+                        <div className="add-range-form" style={{ marginTop: 'auto' }}>
+                            <h3>{editingRangeId ? <><Edit size={16} /> Edit Range</> : <><Plus size={16} /> Add Range</>}</h3>
                             {!editingRangeId && (
                                 <div className="form-row">
                                     <div className="form-group">

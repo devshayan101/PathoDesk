@@ -241,6 +241,9 @@ export function Header() {
                     PathoDesk <span className="lab-name">
                         ({status?.license?.lab_name || 'ABC Diagnostics'})
                     </span>
+                    <span style={{ fontSize: '0.65em', color: '#6b7280', marginLeft: '8px', fontWeight: 'normal' }}>
+                        v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'}
+                    </span>
                 </div>
             </div>
 

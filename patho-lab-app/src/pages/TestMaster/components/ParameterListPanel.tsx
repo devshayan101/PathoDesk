@@ -1,4 +1,5 @@
 import { useToastStore } from '../../../stores/toastStore';
+import { Plus, Edit, Trash2, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
 
 interface Test {
     id: number;
@@ -110,8 +111,8 @@ export default function ParameterListPanel({
             <div className="panel-header">
                 <h2 className="panel-title">Parameters</h2>
                 {selectedTest && (
-                    <button className="btn btn-primary btn-sm" onClick={onShowAddForm}>
-                        + Add
+                    <button className="btn btn-primary btn-sm" onClick={onShowAddForm} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Plus size={14} /> Add
                     </button>
                 )}
             </div>
@@ -125,25 +126,33 @@ export default function ParameterListPanel({
                                 onClick={() => onSelectParam(param)}
                             >
                                 <div className="param-info-row" style={{ paddingLeft: param.parent_id ? '1.5rem' : '0' }}>
-                                    {param.parent_id && <span style={{ color: 'var(--color-text-muted)', marginRight: '4px' }}>↳</span>}
+                                    {param.parent_id && <CornerDownRight size={14} style={{ color: 'var(--color-text-muted)', marginBottom: '2px' }} />}
                                     <strong>{param.parameter_code}</strong>
                                     <span>{param.parameter_name}</span>
                                 </div>
                                 <div className="param-meta-row" style={{ paddingLeft: param.parent_id ? '1.5rem' : '0' }}>
                                     {param.unit && <span className="unit">{param.unit}</span>}
-                                    {param.is_header === 1 && <span className="badge badge-info" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', marginLeft: '0.5rem' }}>Header</span>}
-                                    {param.parent_id && <span className="badge badge-secondary" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', marginLeft: '0.5rem' }}>Grouped</span>}
+                                    {param.is_header === 1 && <span className="badge badge-info" style={{ fontSize: '0.65rem', padding: '2px 6px', marginLeft: '0.25rem', borderRadius: '4px' }}>Header</span>}
+                                    {param.parent_id && <span className="badge badge-secondary" style={{ fontSize: '0.65rem', padding: '2px 6px', marginLeft: '0.25rem', borderRadius: '4px' }}>Child</span>}
                                     <div className="item-actions">
-                                        <button className="btn-icon-sm" title="Move Up" onClick={(e) => handleMoveUp(e, index)} disabled={index === 0}>↑</button>
-                                        <button className="btn-icon-sm" title="Move Down" onClick={(e) => handleMoveDown(e, index)} disabled={index === parameters.length - 1}>↓</button>
+                                        <button className="btn-icon-sm" title="Move Up" onClick={(e) => handleMoveUp(e, index)} disabled={index === 0}>
+                                            <ArrowUp size={14} />
+                                        </button>
+                                        <button className="btn-icon-sm" title="Move Down" onClick={(e) => handleMoveDown(e, index)} disabled={index === parameters.length - 1}>
+                                            <ArrowDown size={14} />
+                                        </button>
                                         <button className="btn-icon-sm" title="Edit" onClick={(e) => {
                                             e.stopPropagation();
                                             onEditParamClick(param);
-                                        }}>✎</button>
+                                        }}>
+                                            <Edit size={14} />
+                                        </button>
                                         <button className="btn-delete-sm" title="Delete" onClick={(e) => {
                                             e.stopPropagation();
                                             onDeleteParamClick(param.id);
-                                        }}>×</button>
+                                        }}>
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
                                 </div>
                             </li>
@@ -152,8 +161,8 @@ export default function ParameterListPanel({
 
                     {/* Add/Edit Parameter form */}
                     {showAddParam && (
-                        <div className="add-range-form" style={{ marginTop: '0.5rem' }}>
-                            <h3>{isEditingParam ? 'Edit Parameter' : 'Add Parameter'}</h3>
+                        <div className="add-range-form" style={{ marginTop: 'auto' }}>
+                            <h3>{isEditingParam ? <><Edit size={16} /> Edit Parameter</> : <><Plus size={16} /> Add Parameter</>}</h3>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Code</label>
@@ -188,7 +197,7 @@ export default function ParameterListPanel({
                             <div className="form-row">
                                 <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
                                     <input type="checkbox" id="isHeader" name="isHeader" checked={newParam.isHeader} onChange={e => setNewParam({ ...newParam, isHeader: e.target.checked, parentId: e.target.checked ? null : newParam.parentId })} />
-                                    <label htmlFor="isHeader" style={{ margin: 0, cursor: 'pointer' }}>Is Header (Group items under this)</label>
+                                    <label htmlFor="isHeader" style={{ margin: 0, cursor: 'pointer' }}>Is Header (Group items</label>
                                 </div>
                                 {!newParam.isHeader && headerParams.length > 0 && (
                                     <div className="form-group">
