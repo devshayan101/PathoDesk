@@ -61,10 +61,10 @@ export default function TestListPanel({
                             </button>
                         )}
                         <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import from Excel/CSV">
-                            <Upload size={14} />
+                            <Download size={14} />
                         </button>
                         <button className="btn btn-secondary btn-sm" onClick={onExportClick} title="Export to Excel">
-                            <Download size={14} />
+                            <Upload size={14} />
                         </button>
                         <button className="btn btn-secondary btn-sm" onClick={onRefreshClick} title="Refresh Tests List">
                             <RefreshCw size={14} />

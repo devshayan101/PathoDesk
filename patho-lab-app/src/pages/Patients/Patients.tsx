@@ -4,6 +4,25 @@ import { useToastStore } from '../../stores/toastStore';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import './Patients.css';
 
+const PREFIXES = ['Mr.', 'Mrs.', 'Miss', 'Ms.', 'Master', 'Sir'];
+
+function parsePatientName(fullName: string) {
+    let prefix = 'Mr.';
+    let name = fullName.trim();
+    for (const p of PREFIXES) {
+        if (name.startsWith(p + ' ')) {
+            prefix = p;
+            name = name.substring(p.length + 1).trim();
+            break;
+        } else if (name.startsWith(p)) {
+            prefix = p;
+            name = name.substring(p.length).trim();
+            break;
+        }
+    }
+    return { prefix, name };
+}
+
 interface Patient {
     id: number;
     patient_uid: string;
@@ -21,7 +40,7 @@ export default function PatientsPage() {
     const [showForm, setShowForm] = useState(false);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [formData, setFormData] = useState({
-        fullName: '', gender: 'M', dob: '', phone: '', address: '', age: '', ageUnit: 'Years'
+        prefix: 'Mr.', fullName: '', gender: 'M', dob: '', phone: '', address: '', age: '', ageUnit: 'Years'
     });
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
@@ -79,15 +98,17 @@ export default function PatientsPage() {
 
     const openNewForm = () => {
         setEditingPatient(null);
-        setFormData({ fullName: '', gender: 'M', dob: '', phone: '', address: '', age: '', ageUnit: 'Years' });
+        setFormData({ prefix: 'Mr.', fullName: '', gender: 'M', dob: '', phone: '', address: '', age: '', ageUnit: 'Years' });
         setShowForm(true);
     };
 
     const openEditForm = (patient: Patient) => {
         const { age, unit } = calculateAgeFromDob(patient.dob);
+        const { prefix, name } = parsePatientName(patient.full_name);
         setEditingPatient(patient);
         setFormData({
-            fullName: patient.full_name,
+            prefix,
+            fullName: name,
             gender: patient.gender,
             dob: patient.dob,
             phone: patient.phone || '',
@@ -103,6 +124,13 @@ export default function PatientsPage() {
         setFormData(prev => ({ ...prev, age: val, ageUnit: unit, dob }));
     };
 
+    const handlePrefixChange = (prefix: string) => {
+        let gender = formData.gender;
+        if (['Mr.', 'Master', 'Sir'].includes(prefix)) gender = 'M';
+        if (['Mrs.', 'Miss', 'Ms.'].includes(prefix)) gender = 'F';
+        setFormData(prev => ({ ...prev, prefix, gender }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -112,8 +140,10 @@ export default function PatientsPage() {
                 finalDob = calculateDobFromAge(formData.age, formData.ageUnit);
             }
 
+            const stitchName = `${formData.prefix} ${formData.fullName}`.trim();
+
             const submitData = {
-                fullName: formData.fullName,
+                fullName: stitchName,
                 gender: formData.gender,
                 dob: finalDob,
                 phone: formData.phone,
@@ -198,13 +228,18 @@ export default function PatientsPage() {
 
                         <form onSubmit={handleSubmit}>
                             <div className="form-row">
-                                <div className="form-group">
+                                <div className="form-group" style={{ flex: 1.5 }}>
                                     <label>Name</label>
-                                    <input className="input" value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                        required autoFocus />
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <select className="input" style={{ width: '90px' }} value={formData.prefix} onChange={e => handlePrefixChange(e.target.value)}>
+                                            {PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                        <input className="input" value={formData.fullName}
+                                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                            required autoFocus style={{ flex: 1 }} />
+                                    </div>
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ flex: 1 }}>
                                     <label>Gender</label>
                                     <select className="input" value={formData.gender}
                                         onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>

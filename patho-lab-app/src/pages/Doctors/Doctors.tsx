@@ -221,8 +221,15 @@ export default function DoctorsPage() {
         if (!window.electronAPI) return;
 
         try {
+            // Prepend "Dr. " if it doesn't already start with it
+            let finalName = formData.name.trim();
+            if (finalName && !finalName.toLowerCase().startsWith('dr.') && !finalName.toLowerCase().startsWith('dr ')) {
+                finalName = `Dr. ${finalName}`;
+            }
+
             const submitData = {
                 ...formData,
+                name: finalName,
                 priceListId: formData.priceListId ? parseInt(formData.priceListId) : undefined
             };
 

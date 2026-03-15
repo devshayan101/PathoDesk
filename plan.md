@@ -338,9 +338,38 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Results: Report pdf: Green Theme: Implement 'flag' based value reporting as in blue theme.
 - [x] Results Entry: Parameters grouped under a header parameter should be displayed under its header parameter with indentation.
 - [x] Results Entry: View Combined Report button not working. [Failed to set an indexed property [0] on 'CSSStyleDeclaration': Indexed property setter is not supported.] 
-- [ ] test master: test edit / creation wizard: Report Layout: Interpretation Template not working. [Text entered in 'interpretation template' is not displayed in report.]
-- [ ] Auto Updater: How to setup Github Personal Access token, where to enter token.
-- [ ] Auto Backup: Create a simple soultion to store lab data in cloud. Create md file for the design. Design should consider simplicity and cost effctiveness [implement solution with no or minimal cost]. Create 3 iterations of design and compare them and choose best one with performace, robustness, cost and ease of implementation.
+- [x] test master: test edit / creation wizard: Report Layout: Interpretation Template not working. [Text entered in 'interpretation template' is not displayed in report.]
+- [x] Auto Updater: How to setup Github Personal Access token, where to enter token.
+- [x] Auto Backup: Create a simple soultion to store lab data in cloud. Create md file for the design. Design should consider simplicity and cost effctiveness [implement solution with no or minimal cost]. Create 3 iterations of design and compare them and choose best one with performace, robustness, cost and ease of implementation.
+- [x] native build app:admin > tests: Tests screen giving error - window.electronAPI.tests.getCriticalValues is not a function.
+- [x] native build app:admin > pricing:  1. price-list shows deleted tests. When delete a test, it should be deleted from all price-lists. 2. Deleted price-list shown as inactive, instead deleted price-list should be removed completely. 
+- [x] pricelist: old data in pricelist data is present, remove previously deleted price-list which appears in price-list screen named [FAIZAN, ASD].
+- [x] test master: redesign test master screen [tests, parameters, reference ranges panels]
+- [x] Installation: This file does not have a valid digital signature that verifies its publisher.
+- [x] Results: Card is not showing date.
+- [x] Report pdf: Sample recieved date is set as 01-Jan-1970.
+- [x] Show software version in app.
+- [x] Tests saved manually 'test master' is not appearing during test entry in order creation.[Still not resolved]
+- [x] Result pdf: Sample collection data is shown as 14-Mar-2026, 07:05 am while right time should be 14-Mar-2026, 12:35 pm. - note: time is given for better understanding of problem cause. This is a general problem not specific to this case[Incorrect collection date-time display].
+
+- [x] Test master: Test parameter when input is selected as "calculated", formula entered is not saved. When entering results for such test, it should calculate result based on formula and result should be displayed or appear in result input field automatically. Also make appropriate changes for import and export of tests. 
+
+- [x] Orders screen: 'Enter Results' button should be replaced with 'Mark Sample Received' button. [If there are samples to be Received, then show 'Mark Sample Received' button, else show 'Enter Results' button. Use pop-up modal window to mark samples to be Received.] [As button in 'Samples' screen, to mark samples recieved at lab. 'Mark Sample Received' is extension of 'mark recieved' button in 'Samples' screen. When one is clicked other is also checked [in orders screen and samples screen]]
+
+- [x] new orders: when placing new order, tests price is zero, even when price is set in pricing section.
+
+- [x] Billing / Invioces : Print Invoice button not working, it prints blank page. [Print Invoice button is present in Invoice screen and in invoice view modal window.]
+
+- [x] Orders > Results > View Combined Report : Space left page in test-1 report should be utilised by test-2 report, simlarly any space left in any page should be utilised by next report.
+
+- [x] Patients - Doctors: Prefix Should be added to doctor name [Dr.] automatically. Prefix for patient's name [Mr., Mrs., Miss, Ms., Master, Sir], in add patient screen and modal window to add patient's name in orders screen. [When Mr. / Master / Sir is selected, patient's gender is automatically set to Male. When Mrs. / Miss / Ms. is selected, patient's gender is automatically set to Female.]
+
+- [x] Some input fiels do not have border, resulting in difficulty in distinguishing them. [This issue is present in multiple screens [add new doctor modal window, add new patient modal window, quick add new patient modal window.] ] 
+
+- [x] test master: import and export tests icons are reversed [import icon is on export button and export icon is on import button].
+
+- [ ] Add support for 'Interpretation template' of tests in import and export tests.
+
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 

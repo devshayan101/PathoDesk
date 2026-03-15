@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PDFViewer, PDFDownloadLink, pdf, Document } from '@react-pdf/renderer';
-import LabReport from '../../components/Report/LabReport';
-import LabReportGreen from '../../components/Report/LabReportGreen';
+import CombinedLabReport from './CombinedLabReport';
+import CombinedLabReportGreen from './CombinedLabReportGreen';
 
 interface CombinedReportPreviewProps {
     orderId: number;
@@ -48,13 +48,11 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
         try {
             const blob = await pdf(
                 <Document>
-                    {reportDataList.map((reportData: any, index: number) => (
-                        template === 'green' ? (
-                            <LabReportGreen key={index} data={reportData} labSettings={labSettings} />
-                        ) : (
-                            <LabReport key={index} data={reportData} labSettings={labSettings} />
-                        )
-                    ))}
+                    {template === 'green' ? (
+                        <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
+                    ) : (
+                        <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
+                    )}
                 </Document>
             ).toBlob();
             const url = URL.createObjectURL(blob);
@@ -109,13 +107,11 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
                         <PDFDownloadLink
                             document={
                                 <Document>
-                                    {reportDataList.map((reportData: any, index: number) => (
-                                        template === 'green' ? (
-                                            <LabReportGreen key={index} data={reportData} labSettings={labSettings} />
-                                        ) : (
-                                            <LabReport key={index} data={reportData} labSettings={labSettings} />
-                                        )
-                                    ))}
+                                    {template === 'green' ? (
+                                        <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
+                                    ) : (
+                                        <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
+                                    )}
                                 </Document>
                             }
                             fileName={`Combined_Report_${orderId}_${new Date().getTime()}.pdf`}
@@ -130,13 +126,11 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
                 <div className="pdf-viewer-container">
                     <PDFViewer width="100%" height="100%" showToolbar={false}>
                         <Document>
-                            {reportDataList.map((reportData: any, index: number) => (
-                                template === 'green' ? (
-                                    <LabReportGreen key={index} data={reportData} labSettings={labSettings} />
-                                ) : (
-                                    <LabReport key={index} data={reportData} labSettings={labSettings} />
-                                )
-                            ))}
+                            {template === 'green' ? (
+                                <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
+                            ) : (
+                                <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
+                            )}
                         </Document>
                     </PDFViewer>
                 </div>

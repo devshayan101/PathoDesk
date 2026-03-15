@@ -4,6 +4,8 @@ import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import './Orders.css';
 
+const PREFIXES = ['Mr.', 'Mrs.', 'Miss', 'Ms.', 'Master', 'Sir'];
+
 interface Test {
     id: number;
     test_code: string;
@@ -89,7 +91,7 @@ export default function OrdersPage() {
 
     // Quick Add Modals
     const [showAddPatient, setShowAddPatient] = useState(false);
-    const [newPatient, setNewPatient] = useState({ fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
+    const [newPatient, setNewPatient] = useState({ prefix: 'Mr.', fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
     const [showAddDoctor, setShowAddDoctor] = useState(false);
     const [newDoctor, setNewDoctor] = useState({ name: '', phone: '', email: '', specialization: '', priceListId: '' });
 
@@ -168,6 +170,13 @@ export default function OrdersPage() {
         }
     };
 
+    const handlePrefixChange = (prefix: string) => {
+        let gender = newPatient.gender;
+        if (['Mr.', 'Master', 'Sir'].includes(prefix)) gender = 'M';
+        if (['Mrs.', 'Miss', 'Ms.'].includes(prefix)) gender = 'F';
+        setNewPatient(prev => ({ ...prev, prefix, gender }));
+    };
+
     const handleQuickAddPatient = async () => {
         if (!newPatient.fullName || !newPatient.phone || !newPatient.age) {
             showToast('Please fill required fields (Name, Phone, Age)', 'warning');
@@ -182,9 +191,11 @@ export default function OrdersPage() {
         else if (newPatient.ageUnit === 'months') dob.setMonth(today.getMonth() - ageNum);
         else if (newPatient.ageUnit === 'days') dob.setDate(today.getDate() - ageNum);
 
+        const stitchName = `${newPatient.prefix} ${newPatient.fullName}`.trim();
+
         try {
             const result = await window.electronAPI.patients.create({
-                fullName: newPatient.fullName,
+                fullName: stitchName,
                 dob: dob.toISOString().split('T')[0],
                 gender: newPatient.gender,
                 phone: newPatient.phone,
@@ -195,7 +206,7 @@ export default function OrdersPage() {
             if (result > 0) {
                 showToast('Patient added successfully', 'success');
                 setShowAddPatient(false);
-                setNewPatient({ fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
+                setNewPatient({ prefix: 'Mr.', fullName: '', phone: '', age: '', ageUnit: 'years', gender: 'M' });
                 const pts = await window.electronAPI.patients.list();
                 setPatients(pts);
 
@@ -218,12 +229,15 @@ export default function OrdersPage() {
         }
 
         try {
+            let finalName = newDoctor.name.trim();
+            if (finalName && !finalName.toLowerCase().startsWith('dr.') && !finalName.toLowerCase().startsWith('dr ')) {
+                finalName = `Dr. ${finalName}`;
+            }
+
             const result = await window.electronAPI.doctors.create({
-                name: newDoctor.name,
-                phone: newDoctor.phone,
-                email: newDoctor.email,
-                specialization: newDoctor.specialization,
-                priceListId: newDoctor.priceListId ? Number(newDoctor.priceListId) : undefined
+                ...newDoctor,
+                name: finalName,
+                priceListId: newDoctor.priceListId ? parseInt(newDoctor.priceListId) : undefined
             });
 
             if (result.success && result.id) {
@@ -854,8 +868,13 @@ export default function OrdersPage() {
                     <div className="modal" style={{ maxWidth: '400px' }}>
                         <h2>Quick Add Patient</h2>
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
-                            <label>Full Name *</label>
-                            <input className="input" value={newPatient.fullName} onChange={e => setNewPatient({ ...newPatient, fullName: e.target.value })} />
+                            <label>Name *</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <select className="input" style={{ width: '90px' }} value={newPatient.prefix} onChange={e => handlePrefixChange(e.target.value)}>
+                                    {PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                                <input className="input" style={{ flex: 1 }} value={newPatient.fullName} onChange={e => setNewPatient({ ...newPatient, fullName: e.target.value })} />
+                            </div>
                         </div>
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
                             <label>Phone *</label>
