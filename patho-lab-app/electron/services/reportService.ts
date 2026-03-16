@@ -117,7 +117,7 @@ export function getReportData(sampleId: number): ReportData | null {
     SELECT 
       tp.parameter_code, tp.parameter_name, tp.is_header, tp.parent_id,
       tr.result_value, tp.unit, tr.abnormal_flag,
-      rr.lower_limit, rr.upper_limit
+      rr.lower_limit, rr.upper_limit, rr.display_text
     FROM samples s
     JOIN order_tests ot ON s.order_test_id = ot.id
     JOIN test_versions tv ON ot.test_version_id = tv.id
@@ -138,11 +138,13 @@ export function getReportData(sampleId: number): ReportData | null {
         result_value: r.result_value || '',
         unit: r.unit,
         abnormal_flag: r.abnormal_flag,
-        ref_range_text: r.lower_limit !== null && r.upper_limit !== null
-            ? `${r.lower_limit} - ${r.upper_limit}`
-            : r.lower_limit !== null ? `> ${r.lower_limit}`
-                : r.upper_limit !== null ? `< ${r.upper_limit}`
-                    : null
+        ref_range_text: r.display_text 
+            ? r.display_text
+            : r.lower_limit !== null && r.upper_limit !== null
+                ? `${r.lower_limit} - ${r.upper_limit}`
+                : r.lower_limit !== null ? `> ${r.lower_limit}`
+                    : r.upper_limit !== null ? `< ${r.upper_limit}`
+                        : null
     }));
 
     // Get Lab Technician info (from entered_by in test_results)

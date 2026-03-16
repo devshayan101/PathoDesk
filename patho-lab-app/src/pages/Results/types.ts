@@ -15,6 +15,7 @@ export interface RefRange {
     max_value: number | null;
     critical_low: number | null;
     critical_high: number | null;
+    display_text: string | null;
 }
 
 export interface ResultParameter {

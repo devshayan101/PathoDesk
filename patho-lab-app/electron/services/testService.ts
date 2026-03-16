@@ -239,7 +239,7 @@ export function createTestDraft(data: {
   if (existingTest) {
     testId = existingTest.id;
     // Check if there is already a DRAFT for this test
-    const existingDraft = queryOne<{ id: number }>('SELECT id FROM test_versions WHERE test_id = ? AND status = "DRAFT"', [testId]);
+    const existingDraft = queryOne<{ id: number }>("SELECT id FROM test_versions WHERE test_id = ? AND status = 'DRAFT'", [testId]);
     if (existingDraft) {
       throw new Error(`A draft version for test code ${data.testCode} already exists.`);
     }
@@ -460,13 +460,14 @@ export interface BulkImportRow {
 
 export interface BulkImportResult {
   created: number;
+  updated: number;
   skipped: number;
   skippedNames: string[];
   errors: string[];
 }
 
 export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
-  const result: BulkImportResult = { created: 0, skipped: 0, skippedNames: [], errors: [] };
+  const result: BulkImportResult = { created: 0, updated: 0, skipped: 0, skippedNames: [], errors: [] };
 
   // Group rows by testName
   const testMap = new Map<string, BulkImportRow[]>();
@@ -486,9 +487,8 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
     try {
       const firstRow = testRows[0];
 
-      // Use explicit test_code if provided, else generate from test name (uppercase, no spaces, max 20 chars)
+      // Use explicit test_code if provided, else generate from test name
       let testCode = firstRow.testCode;
-
       if (!testCode) {
         testCode = testName
           .toUpperCase()
@@ -496,51 +496,98 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
           .replace(/_+/g, '_')
           .substring(0, 20);
       } else {
-        // Enforce basic formatting if provided
         testCode = testCode.replace(/[^A-Z0-9_-]/gi, '').substring(0, 20).toUpperCase();
       }
 
-      // Check if test already exists (active or not, if it has the same code we don't import since code is generated from name, but if we deleted it we appended _DEL so the code is free)
-      const existingTest = queryOne<{ id: number }>('SELECT id FROM tests WHERE test_code = ?', [testCode]);
+      // Check if test already exists
+      const existingTest = queryOne<{ id: number; is_active: number; test_code: string }>('SELECT id, is_active, test_code FROM tests WHERE test_code = ?', [testCode]);
+
+      let testId: number;
+      let versionId: number;
+      let isUpdate = false;
+
       if (existingTest) {
-        result.skipped++;
-        result.skippedNames.push(testName.trim());
-        continue;
+        if (existingTest.is_active === 0) {
+          // If it's a deleted test but has the exact same code
+          const ts = Date.now();
+          run(`UPDATE tests SET test_code = test_code || '_OLD_' || ? WHERE id = ?`, [ts, existingTest.id]);
+          // Proceed to create a new one
+          testId = runWithId('INSERT INTO tests (test_code, is_active) VALUES (?, 1)', [testCode]);
+          versionId = runWithId(`
+            INSERT INTO test_versions (
+              test_id, test_name, department, method, sample_type, report_group,
+              version_no, effective_from, status, wizard_step, created_at, interpretation_template
+            ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'), ?)
+          `, [
+            testId,
+            testName.trim(),
+            firstRow.category?.trim() || 'General',
+            firstRow.sampleType?.trim() || 'Blood',
+            firstRow.category?.trim() || null,
+            firstRow.interpretationTemplate?.trim() || null
+          ]);
+        } else {
+          // ACTIVE test exists - UPDATE it
+          testId = existingTest.id;
+          isUpdate = true;
+          // Get the latest published version or any version to update
+          const latestVersion = queryOne<{ id: number }>("SELECT id FROM test_versions WHERE test_id = ? AND status = 'PUBLISHED' ORDER BY version_no DESC LIMIT 1", [testId])
+            || queryOne<{ id: number }>('SELECT id FROM test_versions WHERE test_id = ? ORDER BY version_no DESC LIMIT 1', [testId]);
+
+          if (!latestVersion) {
+            versionId = runWithId(`
+              INSERT INTO test_versions (
+                test_id, test_name, department, method, sample_type, report_group,
+                version_no, effective_from, status, wizard_step, created_at, interpretation_template
+              ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'), ?)
+            `, [testId, testName.trim(), firstRow.category?.trim() || 'General', firstRow.sampleType?.trim() || 'Blood', firstRow.category?.trim() || null, firstRow.interpretationTemplate?.trim() || null]);
+          } else {
+            versionId = latestVersion.id;
+            run(`
+              UPDATE test_versions 
+              SET test_name = ?, department = ?, method = 'Standard', sample_type = ?, report_group = ?, interpretation_template = ?
+              WHERE id = ?
+            `, [
+              testName.trim(),
+              firstRow.category?.trim() || 'General',
+              firstRow.sampleType?.trim() || 'Blood',
+              firstRow.category?.trim() || null,
+              firstRow.interpretationTemplate?.trim() || null,
+              versionId
+            ]);
+          }
+        }
+      } else {
+        // Create new
+        testId = runWithId('INSERT INTO tests (test_code, is_active) VALUES (?, 1)', [testCode]);
+        versionId = runWithId(`
+          INSERT INTO test_versions (
+            test_id, test_name, department, method, sample_type, report_group,
+            version_no, effective_from, status, wizard_step, created_at, interpretation_template
+          ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'), ?)
+        `, [
+          testId,
+          testName.trim(),
+          firstRow.category?.trim() || 'General',
+          firstRow.sampleType?.trim() || 'Blood',
+          firstRow.category?.trim() || null,
+          firstRow.interpretationTemplate?.trim() || null
+        ]);
       }
 
-      // 1. Create test
-      const testId = runWithId('INSERT INTO tests (test_code, is_active) VALUES (?, 1)', [testCode]);
-
-      // 2. Create version (directly as PUBLISHED)
-      const versionId = runWithId(`
-          version_no, effective_from, status, wizard_step, created_at, interpretation_template
-        ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'), ?)
-      `, [
-        testId,
-        testName.trim(),
-        firstRow.category?.trim() || 'General',
-        firstRow.sampleType?.trim() || 'Blood',
-        firstRow.category?.trim() || null,
-        firstRow.interpretationTemplate?.trim() || null
-      ]);
-
-      // 3. Create parameters and reference ranges
-      const createdParamIdMap = new Map<string, number>();
+      // Parameters preparation
+      const paramsToSave: any[] = [];
       const usedParamCodes = new Set<string>();
 
       for (let i = 0; i < testRows.length; i++) {
         const row = testRows[i];
         const paramName = row.parameter.trim();
-
         let paramCode = (row.paramCode || '').trim().toUpperCase();
         if (!paramCode) {
-          paramCode = paramName
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, '_')
-            .replace(/_+/g, '_')
-            .substring(0, 20);
+          paramCode = paramName.toUpperCase().replace(/[^A-Z0-9]/g, '_').replace(/_+/g, '_').substring(0, 20);
         }
 
+        // Handle duplicates within the same test
         let baseCode = paramCode;
         let suffix = 1;
         while (usedParamCodes.has(paramCode)) {
@@ -549,110 +596,106 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
         }
         usedParamCodes.add(paramCode);
 
-        // Determine data type: use explicit dataType if provided, else auto-detect
         const refRange = (row.referenceRange || '').trim();
         const explicitDataType = ((row as any).dataType || '').trim().toUpperCase();
         let dataType: string;
-        if (explicitDataType === 'CALCULATED' || explicitDataType === 'TEXT' || explicitDataType === 'NUMERIC') {
+        if (['CALCULATED', 'TEXT', 'NUMERIC'].includes(explicitDataType)) {
           dataType = explicitDataType;
         } else {
           const isNumeric = /^\d/.test(refRange) || /\d+-\d+/.test(refRange) || /\d*\.\d+/.test(refRange);
           dataType = isNumeric ? 'NUMERIC' : 'TEXT';
         }
 
-        const rowFormula = ((row as any).formula || '').trim() || null;
-
         const isHeaderVal = (row.isHeader || '').toLowerCase();
         const isTrueHeader = ['yes', 'y', '1', 'true'].includes(isHeaderVal);
 
-        const paramId = runWithId(`
-          INSERT INTO test_parameters (
-            test_version_id, parameter_code, parameter_name, data_type,
-            unit, decimal_precision, display_order, is_mandatory, is_header, formula
-          ) VALUES (?, ?, ?, ?, ?, 2, ?, 1, ?, ?)
-        `, [
-          versionId,
-          paramCode,
-          paramName,
-          dataType,
-          row.unit?.trim() || null,
-          i + 1,
-          isTrueHeader ? 1 : 0,
-          rowFormula
-        ]);
+        paramsToSave.push({
+          parameter_code: paramCode,
+          parameter_name: paramName,
+          data_type: dataType,
+          unit: row.unit?.trim() || null,
+          decimal_precision: 2,
+          display_order: i + 1,
+          is_mandatory: 1,
+          is_header: isTrueHeader ? 1 : 0,
+          formula: ((row as any).formula || '').trim() || null,
+          parent_id: null
+        });
+      }
 
-        createdParamIdMap.set(paramName.toLowerCase(), paramId);
+      // Smart update parameters
+      saveTestParameters(versionId, paramsToSave);
 
-        // 4. Create reference range (parse "min-max" format)
-        if (refRange) {
+      // Link parents
+      const updatedParams = getTestParameters(versionId);
+      const paramCodeToId = new Map(updatedParams.map(p => [p.parameter_code, p.id]));
+      const paramNameToId = new Map(updatedParams.map(p => [p.parameter_name.toLowerCase().trim(), p.id]));
+
+      for (const row of testRows) {
+        const isHeaderVal = (row.isHeader || '').trim().toLowerCase();
+        if (!['yes', 'y', '1', 'true', 'no', 'n', '0', 'false', ''].includes(isHeaderVal)) {
+          const parentId = paramNameToId.get(isHeaderVal);
+          const currentId = paramNameToId.get(row.parameter.trim().toLowerCase());
+          if (parentId && currentId) {
+            run('UPDATE test_parameters SET parent_id = ? WHERE id = ?', [parentId, currentId]);
+          }
+        }
+      }
+
+      // Ref ranges and critical values
+      for (let i = 0; i < testRows.length; i++) {
+        const row = testRows[i];
+        const paramCode = paramsToSave[i].parameter_code;
+        const paramId = paramCodeToId.get(paramCode);
+        if (!paramId) continue;
+
+        const refRangeStr = (row.referenceRange || '').trim();
+        if (refRangeStr) {
           let lowerLimit: number | null = null;
           let upperLimit: number | null = null;
-          let displayText: string | null = refRange;
+          let displayText: string | null = refRangeStr;
 
-          // Parse numeric ranges like "12.0-16.0", "4000-11000", "< 5.0", "> 10"
-          const rangeMatch = refRange.match(/^(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)$/);
+          const rangeMatch = refRangeStr.match(/^(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)$/);
           if (rangeMatch) {
             lowerLimit = parseFloat(rangeMatch[1]);
             upperLimit = parseFloat(rangeMatch[2]);
           } else {
-            const lessThanMatch = refRange.match(/^[<≤]\s*(\d+\.?\d*)$/);
-            if (lessThanMatch) {
-              upperLimit = parseFloat(lessThanMatch[1]);
-            }
-            const greaterThanMatch = refRange.match(/^[>≥]\s*(\d+\.?\d*)$/);
-            if (greaterThanMatch) {
-              lowerLimit = parseFloat(greaterThanMatch[1]);
-            }
+            const lessThanMatch = refRangeStr.match(/^[<≤]\s*(\d+\.?\d*)$/);
+            if (lessThanMatch) upperLimit = parseFloat(lessThanMatch[1]);
+            const greaterThanMatch = refRangeStr.match(/^[>≥]\s*(\d+\.?\d*)$/);
+            if (greaterThanMatch) lowerLimit = parseFloat(greaterThanMatch[1]);
           }
 
-          run(`
-            INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, display_text, effective_from)
-            VALUES (?, 'A', 0, 36500, ?, ?, ?, datetime('now'))
-          `, [paramId, lowerLimit, upperLimit, displayText]);
+          const existingRange = queryOne<{ id: number }>("SELECT id FROM reference_ranges WHERE parameter_id = ? AND gender = 'A' AND age_min_days = 0 AND age_max_days = 36500", [paramId]);
+          if (existingRange) {
+            run(`UPDATE reference_ranges SET lower_limit = ?, upper_limit = ?, display_text = ? WHERE id = ?`, [lowerLimit, upperLimit, displayText, existingRange.id]);
+          } else {
+            run(`INSERT INTO reference_ranges (parameter_id, gender, age_min_days, age_max_days, lower_limit, upper_limit, display_text, effective_from) VALUES (?, 'A', 0, 36500, ?, ?, ?, datetime('now'))`, [paramId, lowerLimit, upperLimit, displayText]);
+          }
         }
 
-        // 5. Create critical values if present
         if (row.criticalLow || row.criticalHigh) {
-          run(`
-            INSERT INTO critical_values (parameter_id, critical_low, critical_high)
-            VALUES (?, ?, ?)
-          `, [
-            paramId,
-            parseFloat(row.criticalLow || '') || null,
-            parseFloat(row.criticalHigh || '') || null
-          ]);
+          setCriticalValues(paramId, parseFloat(row.criticalLow || '') || null, parseFloat(row.criticalHigh || '') || null);
         }
       }
 
-      // 4.5. Second pass for parent_ids based on isHeader group assignments
-      for (const row of testRows) {
-        const isHeaderVal = (row.isHeader || '').toLowerCase();
-        const isTrueHeader = ['yes', 'y', '1', 'true'].includes(isHeaderVal);
-        const isFalseHeader = ['no', 'n', '0', 'false', ''].includes(isHeaderVal);
-
-        if (!isTrueHeader && !isFalseHeader) {
-          // The isHeader value is a string, assume it's the parent parameter's name
-          const parentId = createdParamIdMap.get(isHeaderVal);
-          const childId = createdParamIdMap.get(row.parameter.trim().toLowerCase());
-
-          if (parentId && childId) {
-            run('UPDATE test_parameters SET parent_id = ? WHERE id = ?', [parentId, childId]);
+      // Prices
+      for (const pl of allPriceLists) {
+        if (firstRow.price >= 0) {
+          const existingPrice = queryOne<{ id: number }>('SELECT id FROM test_prices WHERE price_list_id = ? AND test_id = ?', [pl.id, testId]);
+          if (existingPrice) {
+            run(`UPDATE test_prices SET base_price = ?, is_active = 1 WHERE id = ?`, [firstRow.price, existingPrice.id]);
+          } else {
+            run(`INSERT INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from) VALUES (?, ?, ?, 0, 0, datetime('now'))`, [pl.id, testId, firstRow.price]);
           }
         }
       }
 
-      // 5. Set price in all price lists
-      for (const pl of allPriceLists) {
-        if (firstRow.price >= 0) { // Allow 0 price
-          run(`
-            INSERT OR IGNORE INTO test_prices (price_list_id, test_id, base_price, gst_applicable, gst_rate, effective_from)
-            VALUES (?, ?, ?, 0, 0, datetime('now'))
-          `, [pl.id, testId, firstRow.price]);
-        }
-      }
+      if (isUpdate) result.updated++;
+      else result.created++;
 
-      result.created++;
     } catch (err: any) {
+      console.error(`Import error for test ${testName}:`, err);
       result.errors.push(`${testName}: ${err.message}`);
     }
   }

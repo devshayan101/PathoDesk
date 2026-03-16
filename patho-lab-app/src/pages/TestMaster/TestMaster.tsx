@@ -214,12 +214,18 @@ export default function TestMasterPage() {
             const result = await window.electronAPI.tests.bulkImport(importPreview);
             const msgs = [];
             if (result.created > 0) msgs.push(`${result.created} tests created`);
+            if (result.updated > 0) msgs.push(`${result.updated} tests updated`);
             if (result.skipped > 0) msgs.push(`${result.skipped} skipped(already exist)`);
             if (result.errors.length > 0) msgs.push(`${result.errors.length} errors`);
-            if (result.skipped > 0 && result.skippedNames && result.skippedNames.length > 0) {
+
+            if ((result.skipped > 0 && result.skippedNames && result.skippedNames.length > 0) || result.updated > 0) {
+                let message = `${result.created} tests created.`;
+                if (result.updated > 0) message += `\n${result.updated} tests updated.`;
+                if (result.skipped > 0) message += `\n\n${result.skipped} tests were skipped: \n${result.skippedNames.join(', ')} `;
+
                 setConfirmDialog({
-                    title: 'Import Partial Success',
-                    message: `${result.created} tests created.\n\n${result.skipped} tests were skipped because they already exist: \n${result.skippedNames.join(', ')} `,
+                    title: 'Import Results',
+                    message: message,
                     confirmLabel: 'OK',
                     variant: 'default',
                     onConfirm: () => setConfirmDialog(null)

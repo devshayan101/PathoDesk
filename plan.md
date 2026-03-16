@@ -368,9 +368,17 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] test master: import and export tests icons are reversed [import icon is on export button and export icon is on import button].
 
-- [ ] Add support for 'Interpretation template', 'parameter code' of tests in import and export tests.
+- [x] Add support for 'Interpretation template', 'parameter code' of tests in import and export tests.
 
-- [ ] Hide empty parameter in report pdf. [If a parameter is not having any value, it should not be displayed in report pdf.]
+- [x] Hide empty parameter in report pdf. [If a parameter is not having any value, it should not be displayed in report pdf.]
+
+- [ ] test master: I have deleted some tests, but when i try to import tests, it shows all tests are already present [even deleted tests], skipping import of already present tests. [This issue is present in import tests wizard.]
+
+- [ ] test master > import test: [new feature] When importing tests, if a test is already present, it is not imported, but if there are some changes in the test, it should be updated.
+
+- [ ] test master > import test: during import of tests, is giving warning tost error and not importing.
+
+- [ ] test master > Result Entry and Report pdf: Range is only displaying numbers it should also show text.
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*

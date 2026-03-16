@@ -332,6 +332,8 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         if (param.ref_ranges.length === 0) return '—';
         const range = param.ref_ranges[0];
 
+        if (range.display_text) return range.display_text;
+
         if (range.min_value !== null && range.max_value !== null) {
             return `${range.min_value} - ${range.max_value}`;
         }

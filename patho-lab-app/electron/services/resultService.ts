@@ -54,6 +54,7 @@ interface RefRange {
   age_min_days: number;
   age_max_days: number | null;
   gender: string;
+  display_text: string | null;
 }
 
 interface PreviousResult {
@@ -148,7 +149,8 @@ export function getSampleResults(sampleId: number): ResultData | null {
         cr.critical_high, 
         rr.age_min_days, 
         rr.age_max_days, 
-        rr.gender
+        rr.gender,
+        rr.display_text
       FROM reference_ranges rr
       LEFT JOIN critical_values cr ON cr.parameter_id = rr.parameter_id
       WHERE rr.parameter_id = ?

@@ -25,7 +25,7 @@ export interface ElectronAPI {
         deleteParameter: (parameterId: number) => Promise<{ success: boolean; error?: string }>;
         delete: (testId: number) => Promise<void>;
         bulkDelete: (ids: number[]) => Promise<{ success: boolean; error?: string }>;
-        bulkImport: (rows: any[]) => Promise<{ created: number; skipped: number; skippedNames: string[]; errors: string[] }>;
+        bulkImport: (rows: any[]) => Promise<{ created: number; updated: number; skipped: number; skippedNames: string[]; errors: string[] }>;
         export: () => Promise<any[]>;
         getCriticalValues: (parameterId: number) => Promise<{ critical_low: number | null; critical_high: number | null } | null>;
         setCriticalValues: (parameterId: number, criticalLow: number | null, criticalHigh: number | null) => Promise<{ success: boolean; error?: string }>;
