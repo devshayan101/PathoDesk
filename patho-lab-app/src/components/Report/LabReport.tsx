@@ -288,8 +288,11 @@ function formatFlag(flag: string | null): string {
 
 
 export default function LabReport({ data, labSettings }: Props) {
-    const { sample, patient, test, results, referringDoctor } = data;
+    const { sample, patient, test, results: rawResults, referringDoctor } = data;
     const showTime = labSettings.show_time_in_report === 'true';
+
+    // Filter out parameters with no result value, but keep headers
+    const results = rawResults.filter(r => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
     return (
         <Page size="A4" style={[styles.page, { display: 'flex', flexDirection: 'column' }]}>

@@ -270,9 +270,12 @@ function flagStyle(flag: string | null) {
 }
 
 export default function LabReportGreen({ data, labSettings }: Props) {
-    const { sample, patient, test, results, referringDoctor } = data;
+    const { sample, patient, test, results: rawResults, referringDoctor } = data;
     const showTime = labSettings.show_time_in_report === 'true';
     const gender = patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other';
+
+    // Filter out parameters with no result value, but keep headers
+    const results = rawResults.filter(r => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
     return (
         <Page size="A4" style={s.page}>

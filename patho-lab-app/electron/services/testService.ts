@@ -455,6 +455,7 @@ export interface BulkImportRow {
   isHeader?: string;
   dataType?: string;
   formula?: string;
+  interpretationTemplate?: string;
 }
 
 export interface BulkImportResult {
@@ -512,16 +513,15 @@ export function bulkImportTests(rows: BulkImportRow[]): BulkImportResult {
 
       // 2. Create version (directly as PUBLISHED)
       const versionId = runWithId(`
-        INSERT INTO test_versions(
-          test_id, test_name, department, method, sample_type, report_group,
-          version_no, effective_from, status, wizard_step, created_at
-        ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'))
+          version_no, effective_from, status, wizard_step, created_at, interpretation_template
+        ) VALUES(?, ?, ?, 'Standard', ?, ?, 1, datetime('now'), 'PUBLISHED', 6, datetime('now'), ?)
       `, [
         testId,
         testName.trim(),
         firstRow.category?.trim() || 'General',
         firstRow.sampleType?.trim() || 'Blood',
-        firstRow.category?.trim() || null
+        firstRow.category?.trim() || null,
+        firstRow.interpretationTemplate?.trim() || null
       ]);
 
       // 3. Create parameters and reference ranges
@@ -680,7 +680,8 @@ export function exportTests(): any[] {
       (SELECT base_price FROM test_prices tp2 
        JOIN price_lists pl ON tp2.price_list_id = pl.id 
        WHERE tp2.test_id = t.id AND pl.is_default = 1 
-       LIMIT 1) as price
+       LIMIT 1) as price,
+      tv.interpretation_template
     FROM tests t
     JOIN test_versions tv ON t.id = tv.test_id AND tv.status = 'PUBLISHED'
     JOIN test_parameters tp ON tv.id = tp.test_version_id

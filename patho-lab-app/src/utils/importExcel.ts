@@ -15,6 +15,7 @@ export interface ParsedTestRow {
     isHeader: string;
     dataType: string;
     formula: string;
+    interpretationTemplate: string;
 }
 
 export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> => {
@@ -48,6 +49,7 @@ export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> =
                     const rawTestCode = find(['test code', 'test_code', 'code']).toUpperCase();
                     const rawCategory = find(['category', 'department', 'dept']);
                     const rawSampleType = find(['sample', 'specimen', 'sample type', 'sample_type']);
+                    const rawInterpretation = find(['interpretation', 'template', 'note', 'test_note', 'test note']);
 
                     if (rawTestName) lastTestName = rawTestName;
                     if (rawTestCode) lastTestCode = rawTestCode;
@@ -68,7 +70,8 @@ export const parseExcelForTests = async (file: File): Promise<ParsedTestRow[]> =
                         criticalHigh: find(['critical high', 'crit_high', 'high critical']),
                         isHeader: find(['is header', 'is_header', 'header', 'group', 'isheader']),
                         dataType: find(['data type', 'data_type', 'datatype', 'type']).toUpperCase(),
-                        formula: find(['formula'])
+                        formula: find(['formula']),
+                        interpretationTemplate: rawInterpretation
                     };
                 }).filter((r: any) => r.testName && r.parameter);
 

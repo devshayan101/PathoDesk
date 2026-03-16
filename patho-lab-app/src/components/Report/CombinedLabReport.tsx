@@ -286,7 +286,10 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
             {/* Render all Tests and Results Continously */}
             <View wrap={true}>
                 {dataList.map((data: any, testIndex: number) => {
-                    const { test, results } = data;
+                    const { test, results: rawResults } = data;
+                    // Filter out parameters with no result value, but keep headers
+                    const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
+                    
                     return (
                         <View key={testIndex} style={{ marginBottom: 15 }} wrap={false}>
                             {/* Test Name */}

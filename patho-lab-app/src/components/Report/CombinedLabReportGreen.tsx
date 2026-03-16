@@ -320,7 +320,10 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
             {/* Results Mapping */}
             <View wrap={true}>
                 {dataList.map((data: any, testIndex: number) => {
-                    const { test, results } = data;
+                    const { test, results: rawResults } = data;
+                    // Filter out parameters with no result value, but keep headers
+                    const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
+
                     return (
                         <View key={testIndex} style={s.tableContainer} wrap={false}>
                             {/* Department */}

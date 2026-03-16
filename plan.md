@@ -368,7 +368,9 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] test master: import and export tests icons are reversed [import icon is on export button and export icon is on import button].
 
-- [ ] Add support for 'Interpretation template' of tests in import and export tests.
+- [ ] Add support for 'Interpretation template', 'parameter code' of tests in import and export tests.
+
+- [ ] Hide empty parameter in report pdf. [If a parameter is not having any value, it should not be displayed in report pdf.]
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
