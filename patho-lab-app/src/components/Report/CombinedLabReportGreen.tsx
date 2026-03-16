@@ -326,22 +326,30 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
 
                     return (
                         <View key={testIndex} style={s.tableContainer} wrap={true}>
-                            {/* Department */}
-                            <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
-                            {/* Test Name */}
-                            <Text style={s.testNameHeader}>{test.test_name}</Text>
-
                             {/* Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
-                                <WidalTable testName={test.test_name} results={results} />
+                                <>
+                                    <View wrap={false}>
+                                        <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
+                                        <Text style={s.testNameHeader}>{test.test_name}</Text>
+                                    </View>
+                                    <WidalTable testName={test.test_name} results={results} />
+                                </>
                             ) : (
                                 <>
-                                    <View style={s.tableHeader}>
-                                        <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
-                                        <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
-                                        <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
-                                        <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
-                                        <Text style={[s.colFlag, { fontWeight: 'bold' }]}>Flag</Text>
+                                    <View wrap={false}>
+                                        {/* Department */}
+                                        <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
+                                        {/* Test Name */}
+                                        <Text style={s.testNameHeader}>{test.test_name}</Text>
+
+                                        <View style={s.tableHeader}>
+                                            <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
+                                            <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
+                                            <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
+                                            <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
+                                            <Text style={[s.colFlag, { fontWeight: 'bold' }]}>Flag</Text>
+                                        </View>
                                     </View>
 
                                     {/* Rows */}

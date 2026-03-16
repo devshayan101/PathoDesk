@@ -292,20 +292,25 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                     
                     return (
                         <View key={testIndex} style={{ marginBottom: 15 }} wrap={true}>
-                            {/* Test Name */}
-                            <Text style={styles.testHeader}>{test.test_name}</Text>
-
                             {/* Results — Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
-                                <WidalTable testName={test.test_name} results={results} />
+                                <>
+                                    <View wrap={false}>
+                                        <Text style={styles.testHeader}>{test.test_name}</Text>
+                                    </View>
+                                    <WidalTable testName={test.test_name} results={results} />
+                                </>
                             ) : (
                                 <View style={styles.table}>
-                                    <View style={styles.tableHeader}>
-                                        <Text style={styles.colParameter}>Parameter</Text>
-                                        <Text style={styles.colResult}>Result</Text>
-                                        <Text style={styles.colUnit}>Unit</Text>
-                                        <Text style={styles.colRange}>Reference Range</Text>
-                                        <Text style={styles.colFlag}>Flag</Text>
+                                    <View wrap={false}>
+                                        <Text style={styles.testHeader}>{test.test_name}</Text>
+                                        <View style={styles.tableHeader}>
+                                            <Text style={styles.colParameter}>Parameter</Text>
+                                            <Text style={styles.colResult}>Result</Text>
+                                            <Text style={styles.colUnit}>Unit</Text>
+                                            <Text style={styles.colRange}>Reference Range</Text>
+                                            <Text style={styles.colFlag}>Flag</Text>
+                                        </View>
                                     </View>
                                     {results.map((result: any, idx: number) => (
                                         result.is_header === 1 ? (
