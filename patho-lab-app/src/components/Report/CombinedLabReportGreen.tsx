@@ -325,7 +325,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
                     return (
-                        <View key={testIndex} style={s.tableContainer} wrap={false}>
+                        <View key={testIndex} style={s.tableContainer} wrap={true}>
                             {/* Department */}
                             <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
                             {/* Test Name */}

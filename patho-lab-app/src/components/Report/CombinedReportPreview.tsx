@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PDFViewer, PDFDownloadLink, pdf, Document } from '@react-pdf/renderer';
 import CombinedLabReport from './CombinedLabReport';
 import CombinedLabReportGreen from './CombinedLabReportGreen';
@@ -42,19 +42,25 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
         loadAllData();
     }, [orderId]);
 
+    const combinedDocument = useMemo(() => {
+        if (!reportDataList || reportDataList.length === 0) return null;
+        
+        return (
+            <Document>
+                {template === 'green' ? (
+                    <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
+                ) : (
+                    <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
+                )}
+            </Document>
+        );
+    }, [reportDataList, template, labSettings]);
+
     const handlePrint = async () => {
-        if (!reportDataList || reportDataList.length === 0) return;
+        if (!combinedDocument) return;
         setPrinting(true);
         try {
-            const blob = await pdf(
-                <Document>
-                    {template === 'green' ? (
-                        <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
-                    ) : (
-                        <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
-                    )}
-                </Document>
-            ).toBlob();
+            const blob = await pdf(combinedDocument).toBlob();
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url);
             if (printWindow) {
@@ -72,14 +78,14 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
     if (loading) {
         return (
             <div className="modal-overlay">
-                <div className="modal.report-modal" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                <div className="modal report-modal" style={{ maxWidth: '400px', textAlign: 'center' }}>
                     <div className="loading" style={{ margin: '2rem 0' }}>Generating Combined Report...</div>
                 </div>
             </div>
         );
     }
 
-    if (!reportDataList || reportDataList.length === 0) {
+    if (!reportDataList || reportDataList.length === 0 || !combinedDocument) {
         return (
             <div className="modal-overlay">
                 <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
@@ -105,15 +111,7 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
                             {printing ? 'Preparing...' : '🖨 Print Combined'}
                         </button>
                         <PDFDownloadLink
-                            document={
-                                <Document>
-                                    {template === 'green' ? (
-                                        <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
-                                    ) : (
-                                        <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
-                                    )}
-                                </Document>
-                            }
+                            document={combinedDocument}
                             fileName={`Combined_Report_${orderId}_${new Date().getTime()}.pdf`}
                             className="btn btn-primary"
                         >
@@ -125,13 +123,7 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
 
                 <div className="pdf-viewer-container">
                     <PDFViewer width="100%" height="100%" showToolbar={false}>
-                        <Document>
-                            {template === 'green' ? (
-                                <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
-                            ) : (
-                                <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
-                            )}
-                        </Document>
+                        {combinedDocument}
                     </PDFViewer>
                 </div>
             </div>

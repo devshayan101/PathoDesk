@@ -291,7 +291,7 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
                     
                     return (
-                        <View key={testIndex} style={{ marginBottom: 15 }} wrap={false}>
+                        <View key={testIndex} style={{ marginBottom: 15 }} wrap={true}>
                             {/* Test Name */}
                             <Text style={styles.testHeader}>{test.test_name}</Text>
 
