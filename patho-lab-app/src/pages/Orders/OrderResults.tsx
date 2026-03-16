@@ -52,6 +52,70 @@ export default function OrderResultsPage() {
         setLoading(false);
     };
 
+    const handleSampleUpdate = async (updatedSampleId?: number) => {
+        if (!id) return;
+        const orderId = parseInt(id);
+        
+        try {
+            if (window.electronAPI) {
+                // 1. Get the order summary
+                const orderData = await window.electronAPI.orders.get(orderId);
+                if (orderData) {
+                    setOrderInfo(orderData);
+                }
+
+                // 2. Get samples associated with this order's tests. 
+                const allSamples = await window.electronAPI.samples.list();
+                const updatedSamples = allSamples.filter(s => s.order_uid === orderData?.order_uid);
+                
+                // If a sample was just verified, find the next one
+                if (updatedSampleId) {
+                    const currentIndex = updatedSamples.findIndex(s => s.id === updatedSampleId);
+                    
+                    // Collapse current and find next unverified
+                    let nextSampleToExpand: any = null;
+                    
+                    // Look for the next unverified sample after the current one
+                    for (let i = currentIndex + 1; i < updatedSamples.length; i++) {
+                        if (updatedSamples[i].status !== 'VERIFIED' && updatedSamples[i].status !== 'FINALIZED') {
+                            nextSampleToExpand = updatedSamples[i];
+                            break;
+                        }
+                    }
+
+                    // If not found after, look from the beginning
+                    if (!nextSampleToExpand) {
+                        for (let i = 0; i < currentIndex; i++) {
+                            if (updatedSamples[i].status !== 'VERIFIED' && updatedSamples[i].status !== 'FINALIZED') {
+                                nextSampleToExpand = updatedSamples[i];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (nextSampleToExpand) {
+                        setExpandedSampleIds([nextSampleToExpand.id]);
+                        
+                        // Scroll to the next sample after a short delay for expansion animation
+                        setTimeout(() => {
+                            const element = document.getElementById(`sample-accordion-${nextSampleToExpand.id}`);
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 100);
+                    } else {
+                        // All verified? Just keep current or collapse
+                        setExpandedSampleIds([]);
+                    }
+                }
+
+                setSamples(updatedSamples);
+            }
+        } catch (e: any) {
+            showToast('Failed to update results: ' + e.message, 'error');
+        }
+    };
+
     if (loading) return <div className="page-container"><div className="loading">Loading Order Results...</div></div>;
     if (!orderInfo) return <div className="page-container"><div className="empty">Order not found.</div></div>;
 
@@ -88,7 +152,7 @@ export default function OrderResultsPage() {
                             const isExpanded = expandedSampleIds.includes(sample.id);
 
                             return (
-                                <div key={sample.id} className={`accordion-item ${isExpanded ? 'expanded' : ''}`} style={{ marginBottom: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--color-bg-card)' }}>
+                                <div key={sample.id} id={`sample-accordion-${sample.id}`} className={`accordion-item ${isExpanded ? 'expanded' : ''}`} style={{ marginBottom: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--color-bg-card)' }}>
                                     <div
                                         className="accordion-header"
                                         onClick={() => setExpandedSampleIds(isExpanded ? expandedSampleIds.filter(id => id !== sample.id) : [...expandedSampleIds, sample.id])}
@@ -118,7 +182,7 @@ export default function OrderResultsPage() {
                                                 <ResultEntryForm
                                                     sampleId={sample.id}
                                                     onClose={() => setExpandedSampleIds(expandedSampleIds.filter(id => id !== sample.id))}
-                                                    onSampleUpdate={() => loadOrderData(parseInt(id || '0'))}
+                                                    onSampleUpdate={(updatedSampleId) => handleSampleUpdate(updatedSampleId)}
                                                 />
                                             </div>
                                         </div>

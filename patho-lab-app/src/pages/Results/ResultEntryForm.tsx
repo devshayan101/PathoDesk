@@ -8,7 +8,7 @@ import { ResultData, ResultParameter } from './types';
 interface ResultEntryFormProps {
     sampleId: number;
     onClose: () => void;
-    onSampleUpdate: () => void;
+    onSampleUpdate: (sampleId?: number) => void;
 }
 
 interface QCStatus {
@@ -247,7 +247,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
             if (result.success) {
                 showToast('Results verified', 'success');
                 await loadResultData(true); // Silent reload
-                onSampleUpdate();
+                onSampleUpdate(resultData.sample_id);
             } else {
                 showToast('Failed to verify: ' + result.error, 'error');
             }
