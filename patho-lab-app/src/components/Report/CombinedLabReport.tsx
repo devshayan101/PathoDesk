@@ -27,12 +27,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 10,
-        borderBottomWidth: 2,
-        borderBottomColor: '#004488',
+        borderBottomWidth: 3,
+        borderBottomColor: '#0055cc',
         paddingBottom: 8,
-        backgroundColor: '#f0f8ff',
+        backgroundColor: '#ffffff',
         padding: 10,
-        borderRadius: 4,
     },
     logo: {
         width: 60,
@@ -46,7 +45,7 @@ const styles = StyleSheet.create({
     labName: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#004488',
+        color: '#004080',
         marginBottom: 2,
     },
     labInfoRow: {
@@ -56,50 +55,50 @@ const styles = StyleSheet.create({
     },
     labInfo: {
         fontSize: 8,
-        color: '#336699',
+        color: '#555555',
         marginRight: 10,
     },
     patientSectionContainer: {
         borderWidth: 1,
-        borderColor: '#b3d4ff',
+        borderColor: '#d1e0ec',
         borderRadius: 4,
         marginBottom: 10,
-        backgroundColor: '#e6f2ff',
+        backgroundColor: '#f0f4f8',
     },
     patientSectionRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#b3d4ff',
+        borderBottomColor: '#d1e0ec',
     },
     patientSectionRowLast: {
         flexDirection: 'row',
     },
     patientCol: {
         flex: 1,
-        padding: 5,
-        paddingHorizontal: 8,
+        padding: 6,
+        paddingHorizontal: 10,
         borderRightWidth: 1,
-        borderRightColor: '#b3d4ff',
+        borderRightColor: '#d1e0ec',
     },
     patientColLast: {
         flex: 1,
-        padding: 5,
-        paddingHorizontal: 8,
+        padding: 6,
+        paddingHorizontal: 10,
     },
     label: {
         fontSize: 7,
-        color: '#336699',
+        color: '#607d8b',
         textTransform: 'uppercase',
         marginBottom: 2,
     },
     value: {
         fontSize: 9,
         fontWeight: 'bold',
-        color: '#222',
+        color: '#102a43',
     },
     testHeader: {
-        backgroundColor: '#0055aa',
-        color: 'white',
+        backgroundColor: '#0066cc',
+        color: '#ffffff',
         paddingVertical: 6,
         paddingHorizontal: 8,
         marginBottom: 0,
@@ -116,30 +115,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingVertical: 6,
         paddingHorizontal: 4,
-        backgroundColor: '#cce0ff',
+        backgroundColor: '#e1f0fa',
         borderBottomWidth: 2,
-        borderBottomColor: '#0055aa',
+        borderBottomColor: '#0066cc',
     },
     tableHeaderCell: {
         fontSize: 8,
-        color: '#003366',
+        color: '#004080',
         fontWeight: 'bold',
         textTransform: 'uppercase',
     },
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#e6f2ff',
+        borderBottomColor: '#ebf4fa',
         paddingVertical: 4,
         paddingHorizontal: 4,
         minHeight: 18,
         alignItems: 'center',
     },
     tableRowEven: {
-        backgroundColor: '#f9fbff',
+        backgroundColor: '#ffffff',
     },
     tableRowOdd: {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#f6fafe',
     },
     colParameter: { flex: 3 },
     colResult: { flex: 2, textAlign: 'center' },
@@ -390,16 +389,16 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                                         const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
                                         return result.is_header === 1 ? (
                                             <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
-                                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#003366' }]}>{result.parameter_name}</Text>
+                                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#004080' }]}>{result.parameter_name}</Text>
                                             </View>
                                         ) : (
                                             <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
-                                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0 }]}>{result.parameter_name}</Text>
-                                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold' }, getFlagStyle(result.abnormal_flag)]}>
+                                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
+                                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
                                                     {result.result_value || '-'}
                                                 </Text>
-                                                <Text style={[styles.colUnit]}>{result.unit || ''}</Text>
-                                                <Text style={[styles.colRange, { fontSize: 8, color: '#555' }]}>{result.ref_range_text || '-'}</Text>
+                                                <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
+                                                <Text style={[styles.colRange, { fontSize: 8, color: '#607d8b' }]}>{result.ref_range_text || '-'}</Text>
                                                 <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
                                                     {formatFlag(result.abnormal_flag)}
                                                 </Text>
