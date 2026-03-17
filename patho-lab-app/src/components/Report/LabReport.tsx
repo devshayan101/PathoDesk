@@ -13,76 +13,133 @@ Font.register({
 });
 
 // PDF Styles
-const FOOTER_HEIGHT = 110;
+const FOOTER_HEIGHT = 130;
 const styles = StyleSheet.create({
     page: {
-        paddingTop: 54, // 30 + 1.5rem (24px)
+        paddingTop: 24, // 30 + 1.5rem (24px)
         paddingLeft: 30,
         paddingRight: 30,
-        paddingBottom: FOOTER_HEIGHT + 30,
+        paddingBottom: FOOTER_HEIGHT + 20,
         fontSize: 10,
         fontFamily: 'Helvetica',
     },
     header: {
-        marginBottom: 20,
-        borderBottomWidth: 2,
-        borderBottomColor: '#0066cc',
-        paddingBottom: 10,
-    },
-    labName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#0066cc',
-        marginBottom: 4,
-    },
-    labInfo: {
-        fontSize: 9,
-        color: '#666',
-        marginBottom: 2,
-    },
-    patientSection: {
         flexDirection: 'row',
-        marginBottom: 5,
-        backgroundColor: '#f5f5f5',
+        alignItems: 'center',
+        marginBottom: 10,
+        borderBottomWidth: 2,
+        borderBottomColor: '#004488',
+        paddingBottom: 8,
+        backgroundColor: '#f0f8ff',
         padding: 10,
         borderRadius: 4,
     },
-    patientCol: {
+    logo: {
+        width: 60,
+        height: 60,
+        marginRight: 15,
+        objectFit: 'contain',
+    },
+    labInfoContainer: {
         flex: 1,
     },
-    label: {
+    labName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#004488',
+        marginBottom: 2,
+    },
+    labInfoRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 2,
+    },
+    labInfo: {
         fontSize: 8,
-        color: '#666',
+        color: '#336699',
+        marginRight: 10,
+    },
+    patientSectionContainer: {
+        borderWidth: 1,
+        borderColor: '#b3d4ff',
+        borderRadius: 4,
+        marginBottom: 10,
+        backgroundColor: '#e6f2ff',
+    },
+    patientSectionRow: {
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderBottomColor: '#b3d4ff',
+    },
+    patientSectionRowLast: {
+        flexDirection: 'row',
+    },
+    patientCol: {
+        flex: 1,
+        padding: 5,
+        paddingHorizontal: 8,
+        borderRightWidth: 1,
+        borderRightColor: '#b3d4ff',
+    },
+    patientColLast: {
+        flex: 1,
+        padding: 5,
+        paddingHorizontal: 8,
+    },
+    label: {
+        fontSize: 7,
+        color: '#336699',
+        textTransform: 'uppercase',
         marginBottom: 2,
     },
     value: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: 'bold',
+        color: '#222',
     },
     testHeader: {
-        backgroundColor: '#0066cc',
+        backgroundColor: '#0055aa',
         color: 'white',
-        padding: 8,
-        marginBottom: 5,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        marginBottom: 0,
         fontSize: 12,
         fontWeight: 'bold',
+        textTransform: 'uppercase',
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
     },
     table: {
-        marginBottom: 20,
+        marginBottom: 15,
     },
     tableHeader: {
         flexDirection: 'row',
-        backgroundColor: '#e0e0e0',
-        padding: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        backgroundColor: '#cce0ff',
+        borderBottomWidth: 2,
+        borderBottomColor: '#0055aa',
+    },
+    tableHeaderCell: {
+        fontSize: 8,
+        color: '#003366',
         fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        padding: 6,
-        minHeight: 25,
+        borderBottomColor: '#e6f2ff',
+        paddingVertical: 4,
+        paddingHorizontal: 4,
+        minHeight: 18,
         alignItems: 'center',
+    },
+    tableRowEven: {
+        backgroundColor: '#f9fbff',
+    },
+    tableRowOdd: {
+        backgroundColor: '#ffffff',
     },
     colParameter: { flex: 3 },
     colResult: { flex: 2, textAlign: 'center' },
@@ -308,73 +365,91 @@ export default function LabReport({ data, labSettings }: Props) {
 
             {/* Header - Lab Info - fixed on every page */}
             <View style={styles.header} fixed>
-                <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
-                <Text style={styles.labInfo}>{labSettings.address_line1}</Text>
-                <Text style={styles.labInfo}>{labSettings.address_line2}</Text>
-                <Text style={styles.labInfo}>
-                    Phone: {labSettings.phone}  |  Email: {labSettings.email}
-                </Text>
-                {labSettings.nabl_accreditation && (
-                    <Text style={styles.labInfo}>NABL: {labSettings.nabl_accreditation}</Text>
-                )}
+                <Image src={logoUrl} style={styles.logo} />
+                <View style={styles.labInfoContainer}>
+                    <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+
+                    <View style={styles.labInfoRow}>
+                        {labSettings.address_line1 && <Text style={styles.labInfo}>{labSettings.address_line1},</Text>}
+                        {labSettings.address_line2 && <Text style={styles.labInfo}>{labSettings.address_line2}</Text>}
+                    </View>
+
+                    <View style={styles.labInfoRow}>
+                        {labSettings.phone && <Text style={styles.labInfo}>Phone: {labSettings.phone}</Text>}
+                        {labSettings.email && <Text style={styles.labInfo}>Email: {labSettings.email}</Text>}
+                        {labSettings.nabl_accreditation && (
+                            <Text style={styles.labInfo}>NABL: {labSettings.nabl_accreditation}</Text>
+                        )}
+                    </View>
+                </View>
             </View>
 
             {/* Patient Info */}
-            <View style={styles.patientSection}>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Patient Name</Text>
-                    <Text style={styles.value}>{patient.full_name}</Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Patient ID</Text>
-                    <Text style={styles.value}>{patient.patient_uid}</Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Age / Gender</Text>
-                    <Text style={styles.value}>
-                        {calculateAge(patient.dob)} / {patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other'}
-                    </Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Sample ID</Text>
-                    <Text style={styles.value}>{sample.sample_uid}</Text>
-                </View>
-            </View>
-
-            <View style={styles.patientSection}>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Sample Received</Text>
-                    <Text style={styles.value}>{formatDate(sample.received_at, showTime)}</Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Report Date</Text>
-                    <Text style={styles.value}>{formatDate(new Date().toISOString(), showTime)}</Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Sample Type</Text>
-                    <Text style={styles.value}>{test.sample_type}</Text>
-                </View>
-                <View style={styles.patientCol}>
-                    <Text style={styles.label}>Method</Text>
-                    <Text style={styles.value}>{test.method}</Text>
-                </View>
-            </View>
-
-            {/* Referred By */}
-            {referringDoctor && (
-                <View style={[styles.patientSection, { marginBottom: 10 }]}>
+            <View style={styles.patientSectionContainer}>
+                {/* Row 1 */}
+                <View style={styles.patientSectionRow}>
                     <View style={styles.patientCol}>
-                        <Text style={styles.label}>Referred By</Text>
-                        <Text style={styles.value}>{referringDoctor.name}</Text>
+                        <Text style={styles.label}>Patient Name</Text>
+                        <Text style={styles.value}>{patient.full_name}</Text>
                     </View>
-                    {referringDoctor.specialty && (
+                    <View style={styles.patientCol}>
+                        <Text style={styles.label}>Age / Gender</Text>
+                        <Text style={styles.value}>
+                            {calculateAge(patient.dob)} / {patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other'}
+                        </Text>
+                    </View>
+                    <View style={styles.patientCol}>
+                        <Text style={styles.label}>Patient ID</Text>
+                        <Text style={styles.value}>{patient.patient_uid}</Text>
+                    </View>
+                    <View style={styles.patientColLast}>
+                        <Text style={styles.label}>Sample ID</Text>
+                        <Text style={styles.value}>{sample.sample_uid}</Text>
+                    </View>
+                </View>
+
+                {/* Row 2 */}
+                <View style={!referringDoctor ? styles.patientSectionRowLast : styles.patientSectionRow}>
+                    <View style={styles.patientCol}>
+                        <Text style={styles.label}>Sample Received</Text>
+                        <Text style={styles.value}>{formatDate(sample.received_at, showTime)}</Text>
+                    </View>
+                    <View style={styles.patientCol}>
+                        <Text style={styles.label}>Report Date</Text>
+                        <Text style={styles.value}>{formatDate(new Date().toISOString(), showTime)}</Text>
+                    </View>
+                    <View style={styles.patientCol}>
+                        <Text style={styles.label}>Sample Type</Text>
+                        <Text style={styles.value}>{test.sample_type}</Text>
+                    </View>
+                    <View style={styles.patientColLast}>
+                        <Text style={styles.label}>Method</Text>
+                        <Text style={styles.value}>{test.method}</Text>
+                    </View>
+                </View>
+
+                {/* Row 3 (Referred By - Optional) */}
+                {referringDoctor && (
+                    <View style={styles.patientSectionRowLast}>
+                        <View style={styles.patientCol}>
+                            <Text style={styles.label}>Referred By</Text>
+                            <Text style={styles.value}>{referringDoctor.name}</Text>
+                        </View>
                         <View style={styles.patientCol}>
                             <Text style={styles.label}>Specialty</Text>
-                            <Text style={styles.value}>{referringDoctor.specialty}</Text>
+                            <Text style={styles.value}>{referringDoctor.specialty || '-'}</Text>
                         </View>
-                    )}
-                </View>
-            )}
+                        <View style={styles.patientCol}>
+                            <Text style={styles.label}></Text>
+                            <Text style={styles.value}></Text>
+                        </View>
+                        <View style={styles.patientColLast}>
+                            <Text style={styles.label}></Text>
+                            <Text style={styles.value}></Text>
+                        </View>
+                    </View>
+                )}
+            </View>
 
             {/* Test Name */}
             <Text style={styles.testHeader}>{test.test_name}</Text>
@@ -385,31 +460,32 @@ export default function LabReport({ data, labSettings }: Props) {
             ) : (
                 <View style={styles.table}>
                     <View style={styles.tableHeader}>
-                        <Text style={styles.colParameter}>Parameter</Text>
-                        <Text style={styles.colResult}>Result</Text>
-                        <Text style={styles.colUnit}>Unit</Text>
-                        <Text style={styles.colRange}>Reference Range</Text>
-                        <Text style={styles.colFlag}>Flag</Text>
+                        <Text style={[styles.colParameter, styles.tableHeaderCell]}>Parameter</Text>
+                        <Text style={[styles.colResult, styles.tableHeaderCell]}>Result</Text>
+                        <Text style={[styles.colUnit, styles.tableHeaderCell]}>Unit</Text>
+                        <Text style={[styles.colRange, styles.tableHeaderCell]}>Reference Range</Text>
+                        <Text style={[styles.colFlag, styles.tableHeaderCell]}>Flag</Text>
                     </View>
-                    {results.map((result, idx) => (
-                        result.is_header === 1 ? (
-                            <View key={idx} style={[styles.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
-                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{result.parameter_name}</Text>
+                    {results.map((result, idx) => {
+                        const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
+                        return result.is_header === 1 ? (
+                            <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
+                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#003366' }]}>{result.parameter_name}</Text>
                             </View>
                         ) : (
-                            <View key={idx} style={styles.tableRow} wrap={false}>
-                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 20 : 0 }]}>{result.parameter_name}</Text>
-                                <Text style={[styles.colResult, { paddingLeft: result.parent_id ? -10 : 0 }, getFlagStyle(result.abnormal_flag)]}>
+                            <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
+                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0 }]}>{result.parameter_name}</Text>
+                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold' }, getFlagStyle(result.abnormal_flag)]}>
                                     {result.result_value || '-'}
                                 </Text>
-                                <Text style={[styles.colUnit, { paddingLeft: result.parent_id ? -6 : 0 }]}>{result.unit || ''}</Text>
-                                <Text style={[styles.colRange, { paddingLeft: result.parent_id ? -5 : 0 }]}>{result.ref_range_text || '-'}</Text>
+                                <Text style={[styles.colUnit]}>{result.unit || ''}</Text>
+                                <Text style={[styles.colRange, { fontSize: 8, color: '#555' }]}>{result.ref_range_text || '-'}</Text>
                                 <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
                                     {formatFlag(result.abnormal_flag)}
                                 </Text>
                             </View>
-                        )
-                    ))}
+                        );
+                    })}
                 </View>
             )}
 

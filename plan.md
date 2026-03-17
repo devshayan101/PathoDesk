@@ -391,6 +391,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [ ] ai integration.
 - [ ] daily work report generation.
 
+- [x] report pdf > view combined report: mark end of report by ---end of report---- at end of last report pdf only.
+- [x] report pdf: add 1.5rem padding to top of both report styles. 
+- [x] widal test : 'ah' and 'bh' results input not appering in report pdf.
+- [ ] Report pdf > Blue theme: Redesign top section of blue theme report, make it professional, clean, minimalist, add logo.
+
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 
