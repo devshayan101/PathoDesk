@@ -16,7 +16,7 @@ Font.register({
 const FOOTER_HEIGHT = 110;
 const styles = StyleSheet.create({
     page: {
-        paddingTop: 30,
+        paddingTop: 54, // 30 + 1.5rem (24px)
         paddingLeft: 30,
         paddingRight: 30,
         paddingBottom: FOOTER_HEIGHT + 30,

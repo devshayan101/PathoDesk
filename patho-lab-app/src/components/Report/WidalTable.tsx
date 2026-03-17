@@ -153,7 +153,8 @@ function parseWidalResults(results: ResultItem[]) {
         // Try to parse antigen and dilution from parameter name or code
         // Pattern: "O 1/20" or "AH 1/160" or "S. Typhi O 1/20" etc.
         let matched = false;
-        for (const ag of ANTIGEN_ORDER) {
+        const MATCH_ORDER = ['AH', 'BH', 'O', 'H'];
+        for (const ag of MATCH_ORDER) {
             for (const dil of DILUTIONS) {
                 // Match patterns like "O 1/20", "O_1/20", "O-1/20",
                 // or full name like "Salmonella Typhi O 1/20"

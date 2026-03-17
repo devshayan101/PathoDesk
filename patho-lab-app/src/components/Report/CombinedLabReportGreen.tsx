@@ -9,7 +9,7 @@ const ACCENT = '#1a8a3f';
 
 const s = StyleSheet.create({
     page: {
-        paddingTop: 0,
+        paddingTop: 12, //
         paddingLeft: 0,
         paddingRight: 0,
         paddingBottom: FOOTER_HEIGHT + 20,
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
     },
     nablBadge: {
         position: 'absolute',
-        top: 0,
+        top: 12,
         right: 0,
         backgroundColor: ACCENT,
         color: '#fff',
@@ -242,7 +242,7 @@ function flagStyle(flag: string | null) {
 
 export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
     if (!dataList || dataList.length === 0) return null;
-    
+
     // Extracted global patient and sample info from the first report
     const { sample, patient, referringDoctor } = dataList[0];
     const showTime = labSettings.show_time_in_report === 'true';
@@ -387,6 +387,11 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                         </View>
                     );
                 })}
+            </View>
+
+            {/* End of Report Marker */}
+            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }} wrap={false}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---end of report----</Text>
             </View>
 
             {/* Footer - fixed at bottom of every page */}

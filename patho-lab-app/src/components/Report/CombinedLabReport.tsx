@@ -16,7 +16,7 @@ Font.register({
 const FOOTER_HEIGHT = 110;
 const styles = StyleSheet.create({
     page: {
-        paddingTop: 30,
+        paddingTop: 20, // 30 + 1.5rem (24px)
         paddingLeft: 30,
         paddingRight: 30,
         paddingBottom: FOOTER_HEIGHT + 30,
@@ -191,7 +191,7 @@ function formatFlag(flag: string | null): string {
 
 export default function CombinedLabReport({ dataList, labSettings }: any) {
     if (!dataList || dataList.length === 0) return null;
-    
+
     // Extracted global patient and sample info from the first report
     const { sample, patient, referringDoctor } = dataList[0];
     const showTime = labSettings.show_time_in_report === 'true';
@@ -289,7 +289,7 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                     const { test, results: rawResults } = data;
                     // Filter out parameters with no result value, but keep headers
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
-                    
+
                     return (
                         <View key={testIndex} style={{ marginBottom: 15 }} wrap={true}>
                             {/* Results — Widal matrix or normal table */}
@@ -346,6 +346,11 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                         </View>
                     );
                 })}
+            </View>
+
+            {/* End of Report Marker */}
+            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }} wrap={false}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---end of report----</Text>
             </View>
 
             {/* Footer - fixed at bottom of every page */}

@@ -10,7 +10,7 @@ const ACCENT = '#1a8a3f';
 
 const s = StyleSheet.create({
     page: {
-        paddingTop: 0,
+        paddingTop: 24, // 1.5rem (24px)
         paddingLeft: 0,
         paddingRight: 0,
         paddingBottom: FOOTER_HEIGHT + 20,
