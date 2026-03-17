@@ -372,13 +372,24 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] Hide empty parameter in report pdf. [If a parameter is not having any value, it should not be displayed in report pdf.]
 
-- [ ] test master: I have deleted some tests, but when i try to import tests, it shows all tests are already present [even deleted tests], skipping import of already present tests. [This issue is present in import tests wizard.]
+- [x] test master: I have deleted some tests, but when i try to import tests, it shows all tests are already present [even deleted tests], skipping import of already present tests. [This issue is present in import tests wizard.]
 
-- [ ] test master > import test: [new feature] When importing tests, if a test is already present, it is not imported, but if there are some changes in the test, it should be updated.
+- [x] test master > import test: [new feature] When importing tests, if a test is already present, it is not imported, but if there are some changes in the test, it should be updated.
 
-- [ ] test master > import test: during import of tests, is giving warning tost error and not importing.
+- [x] test master > import test: during import of tests, is giving warning tost error and not importing.
 
-- [ ] test master > Result Entry and Report pdf: Range is only displaying numbers it should also show text.
+- [x] test master > Result Entry and Report pdf: Range is only displaying numbers it should also show text.
+
+- [x] result entry: 'verify results' button when clicked, screen focus moves to test 1. Screen focus should move to next test which is not verified.
+
+- [x] Result Entry > View Combined Report: If an order has many large tests, app hangs if clicked. 
+
+- [x] Report pdf: Multiple tests in single report pdf are not properly formatted. [Test heading and parameters are split in two pages. Test and some parameters should be displayed one page and remaining parameters are on next page. ]
+
+- [ ] auto-backup: Cloud. Use md file.
+- [ ] anlyser integration.
+- [ ] ai integration.
+- [ ] daily work report generation.
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
