@@ -190,7 +190,7 @@ export default function WidalTable({ results }: WidalTableProps) {
 
     return (
         <View style={ws.container}>
-            <View style={ws.bordered}>
+            <View style={ws.bordered} wrap={false}>
                 {/* Title */}
                 {/* <Text style={ws.titleRow}>{testName}</Text> */}
 

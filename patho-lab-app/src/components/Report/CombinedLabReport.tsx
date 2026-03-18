@@ -380,16 +380,35 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                     // Filter out parameters with no result value, but keep headers
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
+                    const renderRow = (result: any, idx: number) => {
+                        const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
+                        return result.is_header === 1 ? (
+                            <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
+                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#004080' }]}>{result.parameter_name}</Text>
+                            </View>
+                        ) : (
+                            <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
+                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
+                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
+                                    {result.result_value || '-'}
+                                </Text>
+                                <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
+                                <Text style={[styles.colRange, { fontSize: 8, color: '#607d8b' }]}>{result.ref_range_text || '-'}</Text>
+                                <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
+                                    {formatFlag(result.abnormal_flag)}
+                                </Text>
+                            </View>
+                        );
+                    };
+
                     return (
                         <View key={testIndex} style={{ marginBottom: 15 }} wrap={true} minPresenceAhead={450}>
                             {/* Results — Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
-                                <>
-                                    <View wrap={false}>
-                                        <Text style={styles.testHeader}>{test.test_name}</Text>
-                                    </View>
+                                <View wrap={false}>
+                                    <Text style={styles.testHeader}>{test.test_name}</Text>
                                     <WidalTable testName={test.test_name} results={results} />
-                                </>
+                                </View>
                             ) : (
                                 <View style={styles.table}>
                                     <View wrap={false}>
@@ -401,27 +420,11 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                                             <Text style={[styles.colRange, styles.tableHeaderCell]}>Reference Range</Text>
                                             <Text style={[styles.colFlag, styles.tableHeaderCell]}>Flag</Text>
                                         </View>
+                                        {/* Render first row with header to prevent orphans */}
+                                        {results.length > 0 && renderRow(results[0], 0)}
                                     </View>
-                                    {results.map((result: any, idx: number) => {
-                                        const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
-                                        return result.is_header === 1 ? (
-                                            <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
-                                                <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#004080' }]}>{result.parameter_name}</Text>
-                                            </View>
-                                        ) : (
-                                            <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
-                                                <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
-                                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
-                                                    {result.result_value || '-'}
-                                                </Text>
-                                                <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
-                                                <Text style={[styles.colRange, { fontSize: 8, color: '#607d8b' }]}>{result.ref_range_text || '-'}</Text>
-                                                <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
-                                                    {formatFlag(result.abnormal_flag)}
-                                                </Text>
-                                            </View>
-                                        );
-                                    })}
+                                    {/* Remaining Rows */}
+                                    {results.slice(1).map((result: any, idx: number) => renderRow(result, idx + 1))}
                                 </View>
                             )}
 

@@ -330,17 +330,35 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     // Filter out parameters with no result value, but keep headers
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
+                    const renderRow = (r: any, i: number) => (
+                        r.is_header === 1 ? (
+                            <View key={i} style={[s.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
+                                <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{r.parameter_name}</Text>
+                            </View>
+                        ) : (
+                            <View key={i} style={s.tableRow} wrap={false}>
+                                <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
+                                <Text style={[s.colResult, { paddingLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
+                                    {r.result_value || '-'}
+                                </Text>
+                                <Text style={[s.colUnit, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
+                                <Text style={[s.colRange, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
+                                <Text style={[s.colFlag, flagStyle(r.abnormal_flag)]}>
+                                    {formatFlag(r.abnormal_flag)}
+                                </Text>
+                            </View>
+                        )
+                    );
+
                     return (
                         <View key={testIndex} style={s.tableContainer} wrap={true} minPresenceAhead={450}>
                             {/* Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
-                                <>
-                                    <View wrap={false}>
-                                        <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
-                                        <Text style={s.testNameHeader}>{test.test_name}</Text>
-                                    </View>
+                                <View wrap={false}>
+                                    <Text style={s.departmentHeader}>{test.department || 'PATHOLOGY'}</Text>
+                                    <Text style={s.testNameHeader}>{test.test_name}</Text>
                                     <WidalTable testName={test.test_name} results={results} />
-                                </>
+                                </View>
                             ) : (
                                 <>
                                     <View wrap={false}>
@@ -356,28 +374,12 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                                             <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
                                             <Text style={[s.colFlag, { fontWeight: 'bold' }]}>Flag</Text>
                                         </View>
+                                        {/* Render first row with header to prevent orphans */}
+                                        {results.length > 0 && renderRow(results[0], 0)}
                                     </View>
 
-                                    {/* Rows */}
-                                    {results.map((r: any, i: number) => (
-                                        r.is_header === 1 ? (
-                                            <View key={i} style={[s.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
-                                                <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{r.parameter_name}</Text>
-                                            </View>
-                                        ) : (
-                                            <View key={i} style={s.tableRow} wrap={false}>
-                                                <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
-                                                <Text style={[s.colResult, { paddingLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
-                                                    {r.result_value || '-'}
-                                                </Text>
-                                                <Text style={[s.colUnit, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
-                                                <Text style={[s.colRange, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
-                                                <Text style={[s.colFlag, flagStyle(r.abnormal_flag)]}>
-                                                    {formatFlag(r.abnormal_flag)}
-                                                </Text>
-                                            </View>
-                                        )
-                                    ))}
+                                    {/* Remaining Rows */}
+                                    {results.slice(1).map((r: any, i: number) => renderRow(r, i + 1))}
                                 </>
                             )}
 
