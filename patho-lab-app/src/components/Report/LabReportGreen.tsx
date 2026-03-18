@@ -123,7 +123,7 @@ const s = StyleSheet.create({
     },
     tableRow: {
         flexDirection: 'row',
-        borderBottomWidth: 0.5,
+        borderBottomWidth: 0,
         borderBottomColor: '#ddd',
         paddingVertical: 4,
         minHeight: 20,
@@ -301,8 +301,9 @@ export default function LabReportGreen({ data, labSettings }: Props) {
             <View style={s.headerRow} fixed>
                 <View style={s.logoCol}>
                     <Image src={logoUrl} style={s.logo} />
-                    <Text style={s.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+                    <Text style={[s.labName, { flex: 1, flexWrap: 'wrap', paddingRight: 10 }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                 </View>
+                <Image src="/24_7.png" style={{ width: 36, height: 36, marginHorizontal: 10 }} />
                 <View style={s.addressCol}>
                     <Text style={s.addressText}>{labSettings.address_line1}</Text>
                     <Text style={s.addressText}>{labSettings.address_line2}</Text>

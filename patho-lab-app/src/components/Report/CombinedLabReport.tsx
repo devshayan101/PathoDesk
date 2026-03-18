@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     },
     tableRow: {
         flexDirection: 'row',
-        borderBottomWidth: 1,
+        borderBottomWidth: 0,
         borderBottomColor: '#ebf4fa',
         paddingVertical: 4,
         paddingHorizontal: 4,
@@ -271,20 +271,24 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
             {/* Header - Lab Info - fixed on every page */}
             <View style={styles.header} fixed>
                 <Image src={logoUrl} style={styles.logo} />
-                <View style={styles.labInfoContainer}>
-                    <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+                <View style={[styles.labInfoContainer, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <Text style={[styles.labName, { flex: 1, flexWrap: 'wrap', paddingRight: 10 }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
 
-                    <View style={styles.labInfoRow}>
-                        {labSettings.address_line1 && <Text style={styles.labInfo}>{labSettings.address_line1},</Text>}
-                        {labSettings.address_line2 && <Text style={styles.labInfo}>{labSettings.address_line2}</Text>}
-                    </View>
+                    <Image src="/24_7.png" style={{ width: 44, height: 44, marginRight: 5 }} />
 
-                    <View style={styles.labInfoRow}>
-                        {labSettings.phone && <Text style={styles.labInfo}>Phone: {labSettings.phone}</Text>}
-                        {labSettings.email && <Text style={styles.labInfo}>Email: {labSettings.email}</Text>}
-                        {labSettings.nabl_accreditation && (
-                            <Text style={styles.labInfo}>NABL: {labSettings.nabl_accreditation}</Text>
-                        )}
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <View style={styles.labInfoRow}>
+                            {labSettings.address_line1 && <Text style={styles.labInfo}>{labSettings.address_line1},</Text>}
+                            {labSettings.address_line2 && <Text style={styles.labInfo}>{labSettings.address_line2}</Text>}
+                        </View>
+
+                        <View style={styles.labInfoRow}>
+                            {labSettings.phone && <Text style={styles.labInfo}>Phone: {labSettings.phone}</Text>}
+                            {labSettings.email && <Text style={styles.labInfo}>Email: {labSettings.email}</Text>}
+                            {labSettings.nabl_accreditation && (
+                                <Text style={styles.labInfo}>NABL: {labSettings.nabl_accreditation}</Text>
+                            )}
+                        </View>
                     </View>
                 </View>
             </View>
@@ -364,7 +368,7 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
                     return (
-                        <View key={testIndex} style={{ marginBottom: 15 }} wrap={true}>
+                        <View key={testIndex} style={{ marginBottom: 15 }} wrap={true} minPresenceAhead={250}>
                             {/* Results — Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
                                 <>
