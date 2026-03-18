@@ -423,8 +423,8 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
             </View>
 
             {/* End of Report Marker */}
-            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }} wrap={false}>
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---end of report----</Text>
+            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }} wrap={true}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---End of Report----</Text>
             </View>
 
             {/* Footer - fixed at bottom of every page */}
