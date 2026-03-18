@@ -274,7 +274,9 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                 <View style={{ flex: 1.8, flexDirection: 'row', alignItems: 'center' }}>
                     <Image src={logoUrl} style={styles.logo} />
                     <View style={{ flex: 1, paddingRight: 5 }}>
-                        <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+                        {labSettings.lab_name ? labSettings.lab_name.split('\n').map((line: string, i: number) => (
+                            <Text key={i} style={styles.labName}>{line}</Text>
+                        )) : <Text style={styles.labName}>Pathology Laboratory</Text>}
                     </View>
                 </View>
 

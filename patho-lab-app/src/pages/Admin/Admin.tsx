@@ -250,7 +250,7 @@ export default function AdminPage() {
     };
 
     const labSettingsFields = [
-        { key: 'lab_name', label: 'Lab Name', type: 'text', placeholder: 'PathoCare Diagnostics' },
+        { key: 'lab_name', label: 'Lab Name', type: 'textarea', placeholder: 'PathoCare Diagnostics' },
         { key: 'address_line1', label: 'Address Line 1', type: 'text', placeholder: '123 Medical Complex, Main Road' },
         { key: 'address_line2', label: 'Address Line 2', type: 'text', placeholder: 'City - 400001' },
         { key: 'phone', label: 'Phone', type: 'text', placeholder: '+91 98765 43210' },
@@ -511,13 +511,23 @@ export default function AdminPage() {
                                     {labSettingsFields.slice(0, 7).map(field => (
                                         <div key={field.key} className={`form-group ${field.key === 'lab_name' ? 'full-width' : ''}`}>
                                             <label>{field.label}</label>
-                                            <input
-                                                className="input"
-                                                type={field.type}
-                                                value={labSettings[field.key] || ''}
-                                                onChange={(e) => updateLabSetting(field.key, e.target.value)}
-                                                placeholder={field.placeholder}
-                                            />
+                                            {field.type === 'textarea' ? (
+                                                <textarea
+                                                    className="input"
+                                                    value={labSettings[field.key] || ''}
+                                                    onChange={(e) => updateLabSetting(field.key, e.target.value)}
+                                                    placeholder={field.placeholder}
+                                                    rows={2}
+                                                />
+                                            ) : (
+                                                <input
+                                                    className="input"
+                                                    type={field.type}
+                                                    value={labSettings[field.key] || ''}
+                                                    onChange={(e) => updateLabSetting(field.key, e.target.value)}
+                                                    placeholder={field.placeholder}
+                                                />
+                                            )}
                                         </div>
                                     ))}
                                 </div>
