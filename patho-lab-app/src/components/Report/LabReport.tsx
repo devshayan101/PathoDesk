@@ -265,6 +265,7 @@ interface LabSettings {
     phone?: string;
     email?: string;
     nabl_accreditation?: string;
+    lab_incharge?: string;
     disclaimer?: string;
     show_time_in_report?: string;
     report_theme?: string;
@@ -364,26 +365,37 @@ export default function LabReport({ data, labSettings }: Props) {
 
             {/* Header - Lab Info - fixed on every page */}
             <View style={styles.header} fixed>
-                <Image src={logoUrl} style={styles.logo} />
-                <View style={[styles.labInfoContainer, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                    <Text style={[styles.labName, { flex: 1, flexWrap: 'wrap', paddingRight: 10 }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
-                    
-                    <Image src="/24_7.png" style={{ width: 44, height: 44, marginRight: 15 }} />
-
-                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                        <View style={styles.labInfoRow}>
-                            {labSettings.address_line1 && <Text style={styles.labInfo}>{labSettings.address_line1},</Text>}
-                            {labSettings.address_line2 && <Text style={styles.labInfo}>{labSettings.address_line2}</Text>}
-                        </View>
-
-                        <View style={styles.labInfoRow}>
-                            {labSettings.phone && <Text style={styles.labInfo}>Phone: {labSettings.phone}</Text>}
-                            {labSettings.email && <Text style={styles.labInfo}>Email: {labSettings.email}</Text>}
-                            {labSettings.nabl_accreditation && (
-                                <Text style={styles.labInfo}>NABL: {labSettings.nabl_accreditation}</Text>
-                            )}
-                        </View>
+                {/* Left side: Lab Logo and Name */}
+                <View style={{ flex: 1.8, flexDirection: 'row', alignItems: 'center' }}>
+                    <Image src={logoUrl} style={styles.logo} />
+                    <View style={{ flex: 1, paddingRight: 5 }}>
+                        <Text style={styles.labName}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                     </View>
+                </View>
+
+                {/* Center: 24_7 logo */}
+                <View style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}>
+                    <Image src="/24_7.png" style={{ width: 44, height: 44 }} />
+                </View>
+
+                {/* Right side: Lab Details and Incharge */}
+                <View style={{ flex: 1.8, alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                        {labSettings.address_line1 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line1},</Text>}
+                        {labSettings.address_line2 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line2}</Text>}
+                    </View>
+                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                        {labSettings.phone && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Phone: {labSettings.phone}</Text>}
+                        {labSettings.email && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Email: {labSettings.email}</Text>}
+                    </View>
+                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                        {labSettings.nabl_accreditation && (
+                            <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>NABL: {labSettings.nabl_accreditation}</Text>
+                        )}
+                    </View>
+                    {labSettings.lab_incharge && (
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#004080', marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
+                    )}
                 </View>
             </View>
 

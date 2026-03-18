@@ -394,7 +394,29 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] report pdf > view combined report: mark end of report by ---end of report---- at end of last report pdf only.
 - [x] report pdf: add 1.5rem padding to top of both report styles. 
 - [x] widal test : 'ah' and 'bh' results input not appering in report pdf.
-- [ ] Report pdf > Blue theme: Redesign top section of blue theme report, make it professional, clean, minimalist, add logo.
+- [x] Report pdf > Blue theme: Redesign top section of blue theme report, make it professional, clean, minimalist, space saving, add logo. Make similar change in combinedlabreport file to mentain consistency.
+- [ ] Report pdf > Blue theme: Redesign test parameter result section of blue theme report, make it professional, clean, minimalist, space saving. Make similar change in combinedlabreport file to mentain consistency.
+
+- [ ] Report pdf > Blue theme: Remove minimalist design approach. Add some colors. Make report more lively. Make similar change in combinedlabreport file to mentain consistency.
+
+- [ ] Report pdf > Blue theme: In test report parameters spills to footer[test report parameters and footer overlaps], in some case.
+
+- [ ] Report pdf > Blue theme: Redesign report pdf. Make similar change in combinedlabreport file to mentain consistency.
+-----
+- [ ] Result entry: all numeric values should only have single decimal point [e.g. 12.20 not 12..20 such mistak should not be allowed, format should be xxxx.xx or xxxx.x or xxxx ] - implement this later.
+
+- [x] Report pdf : In Comined report pdf, if after first report space for atleast 10 lines is available [excluding footer space or before footer space.], then print next report in same page. Else print next report in next page. [Do this for both blue and green theme reports]
+
+- [x] Report pdf: Remove lines under test parameters.[Do this for both blue and green theme reports, and both combined and single report pdfs]
+
+
+- [x] Report pdf: report header: Pathology lab name should split in two lines if it is too long. add 24/7 Emergency service logo from public folder [public/24_7.png] to header.
+
+- [x] admin >settings > lab settings: add option to Lab Incharge name.[Display only name[lab incharge's name only, do not display lab incharge label in header] in report pdf.]
+
+-[x] Report pdf: blue theme: shift 24_7 logo and lab details to right side of header [3rem].
+-[x] Report pdf : In Comined report pdf, if after first report space for atleast 25 lines is available [excluding footer space or before footer space.], then print next report in same page. Else print next report in next page. [Do this for both blue and green theme reports]
+- [x] report pdf > blue theme > header > left side: lab logo and lab name, center: 24_7 logo, right side: lab details with lab incharge name.
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*

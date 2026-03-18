@@ -276,7 +276,12 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
             <View style={s.headerRow} fixed>
                 <View style={s.logoCol}>
                     <Image src={logoUrl} style={s.logo} />
-                    <Text style={[s.labName, { flex: 1, flexWrap: 'wrap', paddingRight: 10 }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Text style={[s.labName, { flexWrap: 'wrap' }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
+                        {labSettings.lab_incharge && (
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: ACCENT, marginTop: 2 }}>{labSettings.lab_incharge}</Text>
+                        )}
+                    </View>
                 </View>
                 <Image src="/24_7.png" style={{ width: 36, height: 36, marginHorizontal: 10 }} />
                 <View style={s.addressCol}>
@@ -326,7 +331,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     const results = rawResults.filter((r: any) => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
                     return (
-                        <View key={testIndex} style={s.tableContainer} wrap={true} minPresenceAhead={250}>
+                        <View key={testIndex} style={s.tableContainer} wrap={true} minPresenceAhead={450}>
                             {/* Widal matrix or normal table */}
                             {isWidalTest(test.test_name) ? (
                                 <>

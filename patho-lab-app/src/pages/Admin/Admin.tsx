@@ -256,6 +256,7 @@ export default function AdminPage() {
         { key: 'phone', label: 'Phone', type: 'text', placeholder: '+91 98765 43210' },
         { key: 'email', label: 'Email', type: 'email', placeholder: 'reports@pathocare.com' },
         { key: 'nabl_accreditation', label: 'NABL Accreditation', type: 'text', placeholder: 'NABL-MC-XXXX' },
+        { key: 'lab_incharge', label: 'Lab Incharge Name', type: 'text', placeholder: 'Dr. John Doe' },
         { key: 'report_footer', label: 'Report Footer', type: 'textarea', placeholder: 'This report is electronically generated...' },
         { key: 'disclaimer', label: 'Disclaimer', type: 'textarea', placeholder: 'Results should be correlated with clinical findings...' },
     ];
@@ -507,7 +508,7 @@ export default function AdminPage() {
                             <div className="lab-settings-card">
                                 <h3 className="card-section-title">Lab Information</h3>
                                 <div className="settings-grid">
-                                    {labSettingsFields.slice(0, 6).map(field => (
+                                    {labSettingsFields.slice(0, 7).map(field => (
                                         <div key={field.key} className={`form-group ${field.key === 'lab_name' ? 'full-width' : ''}`}>
                                             <label>{field.label}</label>
                                             <input
@@ -548,7 +549,7 @@ export default function AdminPage() {
                                         />
                                         <label htmlFor="show_time_in_report" style={{ cursor: 'pointer', margin: 0 }}>Show time in report dates</label>
                                     </div>
-                                    {labSettingsFields.slice(6).map(field => (
+                                    {labSettingsFields.slice(7).map(field => (
                                         <div key={field.key} className="form-group full-width">
                                             <label>{field.label}</label>
                                             <textarea
