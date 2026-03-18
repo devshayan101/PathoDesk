@@ -278,9 +278,6 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     <Image src={logoUrl} style={s.logo} />
                     <View style={{ flex: 1, paddingRight: 10 }}>
                         <Text style={[s.labName, { flexWrap: 'wrap' }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
-                        {labSettings.lab_incharge && (
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: ACCENT, marginTop: 2 }}>{labSettings.lab_incharge}</Text>
-                        )}
                     </View>
                 </View>
                 <Image src="/24_7.png" style={{ width: 36, height: 36, marginHorizontal: 10 }} />
@@ -289,6 +286,9 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     <Text style={s.addressText}>{labSettings.address_line2}</Text>
                     {labSettings.phone && <Text style={s.addressText}>{labSettings.phone}</Text>}
                     {labSettings.email && <Text style={s.addressText}>{labSettings.email}</Text>}
+                    {labSettings.lab_incharge && (
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: ACCENT, marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
+                    )}
                 </View>
             </View>
 
