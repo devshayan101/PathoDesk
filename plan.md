@@ -250,7 +250,11 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] Auto-updater (optional)
 - [ ] Documentation (user manual, admin guide)
 
+---
+### Feature Requests:
 
+- [ ] Qr code on report pdf
+- [ ] Cloud backup.
 ---
 ## Bugs
 - [x] Order tabs: Orders are not showing referring doctor name.
@@ -417,6 +421,13 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 -[x] Report pdf: blue theme: shift 24_7 logo and lab details to right side of header [3rem].
 -[x] Report pdf : In Comined report pdf, if after first report space for atleast 25 lines is available [excluding footer space or before footer space.], then print next report in same page. Else print next report in next page. [Do this for both blue and green theme reports]
 - [x] report pdf > blue theme > header > left side: lab logo and lab name, center: 24_7 logo, right side: lab details with lab incharge name.
+- [x]  admin >settings > lab settings > lab name: lab name should have two lines input field. [Lab name is split into two lines in report pdf.]
+
+- [x] Report pdf > green theme > combined report pdf : second test report on page is split in two pages [test header is on first page and parameters are on second page]
+
+- [x] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
+
+- [ ] 
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*

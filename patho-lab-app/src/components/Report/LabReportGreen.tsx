@@ -197,7 +197,7 @@ const s = StyleSheet.create({
         left: 0,
         right: 0,
         alignItems: 'center',
-        opacity: 0.04,
+        opacity: 1,
     },
     branding: {
         position: 'absolute',

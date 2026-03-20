@@ -16,7 +16,7 @@ Font.register({
 const FOOTER_HEIGHT = 130;
 const styles = StyleSheet.create({
     page: {
-        paddingTop: 30, // 30 + 1.5rem (24px)
+        paddingTop: 30,
         paddingLeft: 30,
         paddingRight: 30,
         paddingBottom: FOOTER_HEIGHT + 20,
@@ -31,12 +31,29 @@ const styles = StyleSheet.create({
         borderBottomColor: '#0055cc',
         paddingBottom: 8,
         backgroundColor: '#ffffff',
-        padding: 10,
+        padding: 5,
+    },
+    topBar: {
+        backgroundColor: '#0055cce3',
+        height: 6,
+        paddingBottom: 5
+    },
+
+    nablBadge: {
+        position: 'absolute',
+        top: 22,
+        right: 30,
+        backgroundColor: '#0055cc',
+        color: '#fff',
+        fontSize: 7,
+        fontWeight: 'bold',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
     },
     logo: {
-        width: 60,
-        height: 60,
-        marginRight: 15,
+        width: 40,
+        height: 40,
+        marginRight: 12,
         objectFit: 'contain',
     },
     labInfoContainer: {
@@ -135,10 +152,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     tableRowEven: {
-        backgroundColor: '#ffffff',
+
     },
     tableRowOdd: {
-        backgroundColor: '#f6fafe',
+
     },
     colParameter: { flex: 3 },
     colResult: { flex: 2, textAlign: 'center' },
@@ -192,7 +209,7 @@ const styles = StyleSheet.create({
         right: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: 0.05,
+        opacity: 1,
     },
     brandingContainer: {
         position: 'absolute',
@@ -268,6 +285,15 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                 )}
             </View>
 
+            {/* Top green bar */}
+            <View style={styles.topBar} fixed />
+
+            {/* NABL badge */}
+            {labSettings.nabl_accreditation && (
+                <Text style={styles.nablBadge} fixed>{labSettings.nabl_accreditation}</Text>
+            )}
+
+
             {/* Header - Lab Info - fixed on every page */}
             <View style={styles.header} fixed>
                 {/* Left side: Lab Logo and Name */}
@@ -295,11 +321,11 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                         {labSettings.phone && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Phone: {labSettings.phone}</Text>}
                         {labSettings.email && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Email: {labSettings.email}</Text>}
                     </View>
-                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                    {/* <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
                         {labSettings.nabl_accreditation && (
                             <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>NABL: {labSettings.nabl_accreditation}</Text>
                         )}
-                    </View>
+                    </View> */}
                     {labSettings.lab_incharge && (
                         <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#004080', marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
                     )}

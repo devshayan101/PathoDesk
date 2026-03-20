@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
     },
     tableRowOdd: {
-        backgroundColor: '#f6fafe',
+        backgroundColor: '#ffffff',
     },
     colParameter: { flex: 3 },
     colResult: { flex: 2, textAlign: 'center' },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
         right: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: 0.05,
+        opacity: 1,
     },
     brandingContainer: {
         position: 'absolute',
