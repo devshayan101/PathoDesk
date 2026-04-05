@@ -17,7 +17,8 @@
     "provider": "github",
     "owner": "devshayan101",
     "repo": "PathoDesk",
-    "private": true
+    "private": true,
+    "releaseType": "release"
   }],
   "mac": {
     "target": [
