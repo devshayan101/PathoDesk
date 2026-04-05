@@ -1,6 +1,7 @@
 
 import { Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
+import logo247Url from '/24_7.png';
 import { formatDate } from './LabReport';
 import WidalTable, { isWidalTest } from './WidalTable';
 
@@ -306,7 +307,7 @@ export default function LabReportGreen({ data, labSettings }: Props) {
                         <Text style={[s.labName, { flexWrap: 'wrap' }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                     </View>
                 </View>
-                <Image src="/24_7.png" style={{ width: 36, height: 36, marginHorizontal: 10 }} />
+                <Image src={logo247Url} style={{ width: 36, height: 36, marginHorizontal: 10 }} />
                 <View style={s.addressCol}>
                     <Text style={s.addressText}>{labSettings.address_line1}</Text>
                     <Text style={s.addressText}>{labSettings.address_line2}</Text>

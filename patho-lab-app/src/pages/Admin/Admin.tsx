@@ -91,10 +91,11 @@ export default function AdminPage() {
         setLabSaving(true);
         try {
             if (window.electronAPI) {
-                const keys = Object.keys(labSettings);
-                for (const key of keys) {
-                    await window.electronAPI.labSettings.update(key, labSettings[key]);
-                }
+                await Promise.all(
+                    Object.entries(labSettings).map(([key, value]) =>
+                        window.electronAPI.labSettings.update(key, value)
+                    )
+                );
                 showToast('Lab settings saved successfully', 'success');
             }
         } catch (e) {
@@ -103,7 +104,6 @@ export default function AdminPage() {
         }
         setLabSaving(false);
     };
-
     const updateLabSetting = (key: string, value: string) => {
         setLabSettings(prev => ({ ...prev, [key]: value }));
     };

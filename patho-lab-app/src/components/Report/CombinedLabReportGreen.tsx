@@ -1,5 +1,6 @@
 import { Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
+import logo247Url from '/24_7.png';
 import { formatDate } from './LabReport';
 import WidalTable, { isWidalTest } from './WidalTable';
 
@@ -188,6 +189,7 @@ const s = StyleSheet.create({
         textAlign: 'center',
         color: '#666',
         marginTop: 4,
+        marginBottom: 3
     },
     // Watermark
     watermark: {
@@ -206,8 +208,9 @@ const s = StyleSheet.create({
         alignItems: 'center',
     },
     brandingText: {
-        fontSize: 7,
+        fontSize: 8,
         color: '#bbb',
+        paddingBottom: 4
     },
 });
 
@@ -280,7 +283,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                         <Text style={[s.labName, { flexWrap: 'wrap' }]}>{labSettings.lab_name || 'Pathology Laboratory'}</Text>
                     </View>
                 </View>
-                <Image src="/24_7.png" style={{ width: 36, height: 36, marginHorizontal: 10 }} />
+                <Image src={logo247Url} style={{ width: 36, height: 36, marginHorizontal: 10 }} />
                 <View style={s.addressCol}>
                     <Text style={s.addressText}>{labSettings.address_line1}</Text>
                     <Text style={s.addressText}>{labSettings.address_line2}</Text>
@@ -338,11 +341,11 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                         ) : (
                             <View key={i} style={s.tableRow} wrap={false}>
                                 <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
-                                <Text style={[s.colResult, { paddingLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
+                                <Text style={[s.colResult, { marginLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
                                     {r.result_value || '-'}
                                 </Text>
-                                <Text style={[s.colUnit, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
-                                <Text style={[s.colRange, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
+                                <Text style={[s.colUnit, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
+                                <Text style={[s.colRange, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
                                 <Text style={[s.colFlag, flagStyle(r.abnormal_flag)]}>
                                     {formatFlag(r.abnormal_flag)}
                                 </Text>

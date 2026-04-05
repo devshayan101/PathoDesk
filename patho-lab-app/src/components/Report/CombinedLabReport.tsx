@@ -1,5 +1,6 @@
 import { Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
+import logo247Url from '/24_7.png';
 import WidalTable, { isWidalTest } from './WidalTable';
 import { formatDate } from './LabReport';
 
@@ -308,7 +309,7 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
 
                 {/* Center: 24_7 logo */}
                 <View style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}>
-                    <Image src="/24_7.png" style={{ width: 44, height: 44 }} />
+                    <Image src={logo247Url} style={{ width: 44, height: 44 }} />
                 </View>
 
                 {/* Right side: Lab Details and Incharge */}
@@ -469,7 +470,7 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
             </View>
 
             {/* End of Report Marker */}
-            <View style={{ marginTop: 20, alignItems: 'center', width: '100%' }} wrap={true}>
+            <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }} wrap={true}>
                 <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---End of Report----</Text>
             </View>
 

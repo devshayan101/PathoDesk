@@ -27,3 +27,5 @@ pathoDesk_assets/
 *.njsproj
 *.sln
 *.sw?
++# Vite cache files
++*.timestamp-*.mjs

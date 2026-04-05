@@ -1,6 +1,7 @@
 
 import { Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
+import logo247Url from '/24_7.png';
 import WidalTable, { isWidalTest } from './WidalTable';
 
 // Register a standard font for better rendering
@@ -377,7 +378,7 @@ export default function LabReport({ data, labSettings }: Props) {
 
                 {/* Center: 24_7 logo */}
                 <View style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}>
-                    <Image src="/24_7.png" style={{ width: 44, height: 44 }} />
+                    <Image src={logo247Url} style={{ width: 44, height: 44 }} />
                 </View>
 
                 {/* Right side: Lab Details and Incharge */}
