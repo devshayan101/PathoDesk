@@ -1,19 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { obfuscate, deobfuscate } from '../../utils/cryptoUtils';
 import logoUrl from '../../assets/pathoDesk_logo.png';
 import './Login.css';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const { login, isLoading, error, clearError } = useAuthStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const init = async () => {
+            // Load saved credentials if present
+            const savedUser = localStorage.getItem('remembered_username');
+            const savedPass = localStorage.getItem('remembered_password');
+            
+            if (savedUser && savedPass) {
+                setUsername(savedUser);
+                setPassword(deobfuscate(savedPass));
+                setRememberMe(true);
+            }
+        };
+        init();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const success = await login(username, password);
         if (success) {
+            if (rememberMe) {
+                localStorage.setItem('remembered_username', username);
+                localStorage.setItem('remembered_password', obfuscate(password));
+            } else {
+                localStorage.removeItem('remembered_username');
+                localStorage.removeItem('remembered_password');
+            }
             navigate('/');
         }
     };
@@ -60,6 +84,18 @@ export default function LoginPage() {
                             placeholder="Enter password"
                             required
                         />
+                    </div>
+
+                    <div className="form-group remember-me-group">
+                        <label className="checkbox-container">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
+                            <span className="checkmark"></span>
+                            Remember Me
+                        </label>
                     </div>
 
                     <button type="submit" className="btn btn-primary login-btn" disabled={isLoading}>

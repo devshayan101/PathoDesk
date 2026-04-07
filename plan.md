@@ -399,13 +399,13 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 - [x] report pdf: add 1.5rem padding to top of both report styles. 
 - [x] widal test : 'ah' and 'bh' results input not appering in report pdf.
 - [x] Report pdf > Blue theme: Redesign top section of blue theme report, make it professional, clean, minimalist, space saving, add logo. Make similar change in combinedlabreport file to mentain consistency.
-- [ ] Report pdf > Blue theme: Redesign test parameter result section of blue theme report, make it professional, clean, minimalist, space saving. Make similar change in combinedlabreport file to mentain consistency.
+- [x] Report pdf > Blue theme: Redesign test parameter result section of blue theme report, make it professional, clean, minimalist, space saving. Make similar change in combinedlabreport file to mentain consistency.
 
-- [ ] Report pdf > Blue theme: Remove minimalist design approach. Add some colors. Make report more lively. Make similar change in combinedlabreport file to mentain consistency.
+- [x] Report pdf > Blue theme: Remove minimalist design approach. Add some colors. Make report more lively. Make similar change in combinedlabreport file to mentain consistency.
 
-- [ ] Report pdf > Blue theme: In test report parameters spills to footer[test report parameters and footer overlaps], in some case.
+- [x] Report pdf > Blue theme: In test report parameters spills to footer[test report parameters and footer overlaps], in some case.
 
-- [ ] Report pdf > Blue theme: Redesign report pdf. Make similar change in combinedlabreport file to mentain consistency.
+- [x] Report pdf > Blue theme: Redesign report pdf. Make similar change in combinedlabreport file to mentain consistency.
 -----
 - [ ] Result entry: all numeric values should only have single decimal point [e.g. 12.20 not 12..20 such mistak should not be allowed, format should be xxxx.xx or xxxx.x or xxxx ] - implement this later.
 
@@ -425,18 +425,23 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] Report pdf > green theme > combined report pdf : second test report on page is split in two pages [test header is on first page and parameters are on second page]
 
-- [x] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
 
 
 - [x] bug: Report pdf : Center of report pdf has 24/ logo, this is visible in npm run dev, but not with npm run build. [Do this for both blue and green theme reports, and both combined and single report pdfs]
 
 - [x] Report pdf > blue theme > Change patient's details section to this format[attached image]
 
+- [ ] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
+
 - [ ] Order update feature [user should be able to update order after it is created. Add new tests to order.]
 
 - [ ] Sample > barcode: barcode generated for sample is invalid.[simple lines are generated instead of barcode]
 
 - [ ] User Login: login screen should be able to save user credentials, to prefill it next time. [Do this for both admin and user login][ask user before saving credentials][in admin setting add option to enable/disable this feature and clear saved credentials]
+
+- [ ] report pdf > green theme : redesign
+
+- [ ] test master > test creation / edit wizard: unable to enter formula in test parameters section.
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*

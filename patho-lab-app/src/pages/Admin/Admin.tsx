@@ -108,6 +108,20 @@ export default function AdminPage() {
         setLabSettings(prev => ({ ...prev, [key]: value }));
     };
 
+    const handleClearCredentials = () => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Clear Saved Credentials',
+            message: 'This will remove all saved login credentials from this device. Users will need to enter their passwords again next time. Proceed?',
+            onConfirm: () => {
+                localStorage.removeItem('remembered_username');
+                localStorage.removeItem('remembered_password');
+                setConfirmDialog(null);
+                showToast('Saved credentials cleared from this device', 'success');
+            }
+        });
+    };
+
     const resetForm = () => {
         setFormData({ username: '', password: '', fullName: '', roleId: 2, qualification: '', signature: '' });
         setEditingUser(null);
@@ -209,14 +223,18 @@ export default function AdminPage() {
     const handleToggleActive = async (userId: number) => {
         try {
             if (window.electronAPI) {
-                await window.electronAPI.users.toggleActive(userId);
-                await loadData();
+                const result = await window.electronAPI.users.toggleActive(userId);
+                if (result?.success !== false) {
+                    await loadData();
+                } else {
+                    showToast(result.error || 'Failed to update user status', 'error');
+                }
             }
         } catch (e) {
             console.error('Failed to toggle user:', e);
+            showToast('Failed to update user status', 'error');
         }
     };
-
     const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -571,6 +589,25 @@ export default function AdminPage() {
                                             />
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+
+                            <div className="lab-settings-card">
+                                <h3 className="card-section-title">Security & Storage</h3>
+                                <div className="settings-grid">
+                                    <div className="form-group full-width" style={{ marginTop: '0.5rem' }}>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={handleClearCredentials}
+                                            style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                                        >
+                                            🗑️ Clear All Saved Credentials on this Device
+                                        </button>
+                                        <p className="field-help" style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.5rem' }}>
+                                            Use this to force all users to re-enter their credentials on the next login.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -384,10 +384,9 @@ export default function LabReport({ data, labSettings }: Props) {
                 {/* Right side: Lab Details and Incharge */}
                 <View style={{ flex: 1.8, alignItems: 'flex-end', justifyContent: 'center' }}>
                     <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
-                        {labSettings.address_line1 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line1},</Text>}
+                        {labSettings.address_line1 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line1}{labSettings.address_line2 ? ',' : ''}</Text>}
                         {labSettings.address_line2 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line2}</Text>}
-                    </View>
-                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                    </View>                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
                         {labSettings.phone && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Phone: {labSettings.phone}</Text>}
                         {labSettings.email && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Email: {labSettings.email}</Text>}
                     </View>
@@ -497,7 +496,7 @@ export default function LabReport({ data, labSettings }: Props) {
                             ) : (
                                 <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
                                     <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
-                                    <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43'}, getFlagStyle(result.abnormal_flag)]}>
+                                    <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
                                         {result.result_value || '-'}
                                     </Text>
                                     <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
@@ -519,7 +518,7 @@ export default function LabReport({ data, labSettings }: Props) {
                         ) : (
                             <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
                                 <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
-                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43'}, getFlagStyle(result.abnormal_flag)]}>
+                                <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
                                     {result.result_value || '-'}
                                 </Text>
                                 <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
