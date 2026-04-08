@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useToastStore } from '../../stores/toastStore';
 import ReportPreview from '../../components/Report/ReportPreview';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
+import WidalEntryGrid from './components/WidalEntryGrid';
 import { ResultData, ResultParameter } from './types';
 
 interface ResultEntryFormProps {
@@ -446,77 +447,87 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
 
                 {/* CENTER PANEL - Entry Grid */}
                 <div className="panel panel-center">
-                    <table className="table result-table">
-                        <thead>
-                            <tr>
-                                <th>Parameter</th>
-                                <th>Value</th>
-                                <th>Unit</th>
-                                <th>Range</th>
-                                <th>Flag</th>
-                                <th>Δ%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {resultData.parameters.map(param => {
-                                if (param.is_header === 1) {
+                    {resultData.test_name.toUpperCase().includes('WIDAL') ? (
+                        <WidalEntryGrid
+                            parameters={resultData.parameters}
+                            values={values}
+                            onValueChange={handleValueChange}
+                            onInputBlur={handleInputBlur}
+                            disabled={((resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && !(session?.role === 'admin' || session?.role === 'pathologist'))}
+                        />
+                    ) : (
+                        <table className="table result-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                    <th>Range</th>
+                                    <th>Flag</th>
+                                    <th>Δ%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {resultData.parameters.map(param => {
+                                    if (param.is_header === 1) {
+                                        return (
+                                            <tr key={param.parameter_id} className="header-row">
+                                                <td colSpan={6} style={{
+                                                    backgroundColor: '',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--color-text-primary)'
+                                                }}>
+                                                    {param.parameter_name}
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+
+                                    const isAuthorized = session?.role === 'admin' || session?.role === 'pathologist';
+                                    const isReadOnly = (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && !isAuthorized;
+
+                                    const value = values[param.parameter_code] || '';
+                                    const flag = value ? calculateAbnormalFlag(param.parameter_code, value) : '';
+                                    const deltaChange = getDeltaChange(param.parameter_code, value);
+
                                     return (
-                                        <tr key={param.parameter_id} className="header-row">
-                                            <td colSpan={6} style={{
-                                                backgroundColor: '',
-                                                fontWeight: 'bold',
-                                                fontSize: '0.9rem',
-                                                color: 'var(--color-text-primary)'
-                                            }}>
-                                                {param.parameter_name}
+                                        <tr key={param.parameter_id} className={flag ? `row-${flag.toLowerCase()}` : ''}>
+                                            <td style={{ paddingLeft: param.parent_id ? '1.5rem' : '0.5rem' }}>{param.parameter_name}</td>
+                                            <td>
+                                                <input
+                                                    className="input result-input"
+                                                    type="text"
+                                                    value={value}
+                                                    onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
+                                                    onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
+                                                    placeholder={param.data_type === 'CALCULATED' ? '⚙ auto' : '—'}
+                                                    disabled={isReadOnly || param.data_type === 'CALCULATED'}
+                                                    style={param.data_type === 'CALCULATED' ? { backgroundColor: 'var(--color-bg-tertiary)', fontStyle: 'italic' } : undefined}
+                                                />
+                                            </td>
+                                            <td className="unit">{param.unit}</td>
+                                            <td className="range">{getRefRangeText(param)}</td>
+                                            <td>
+                                                {flag && flag !== 'NORMAL' && (
+                                                    <span className={`flag flag-${flag.toLowerCase()}`}>
+                                                        {flag.replace('_', ' ')}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {deltaChange !== null && Math.abs(deltaChange) > 20 && (
+                                                    <span className="delta-warning" title={`Previous: ${getPreviousValue(param.parameter_code)}`}>
+                                                        {deltaChange > 0 ? '+' : ''}{deltaChange.toFixed(1)}%
+                                                    </span>
+                                                )}
                                             </td>
                                         </tr>
                                     );
-                                }
-
-                                const isAuthorized = session?.role === 'admin' || session?.role === 'pathologist';
-                                const isReadOnly = (resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && !isAuthorized;
-
-                                const value = values[param.parameter_code] || '';
-                                const flag = value ? calculateAbnormalFlag(param.parameter_code, value) : '';
-                                const deltaChange = getDeltaChange(param.parameter_code, value);
-
-                                return (
-                                    <tr key={param.parameter_id} className={flag ? `row-${flag.toLowerCase()}` : ''}>
-                                        <td style={{ paddingLeft: param.parent_id ? '1.5rem' : '0.5rem' }}>{param.parameter_name}</td>
-                                        <td>
-                                            <input
-                                                className="input result-input"
-                                                type="text"
-                                                value={value}
-                                                onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
-                                                onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
-                                                placeholder={param.data_type === 'CALCULATED' ? '⚙ auto' : '—'}
-                                                disabled={isReadOnly || param.data_type === 'CALCULATED'}
-                                                style={param.data_type === 'CALCULATED' ? { backgroundColor: 'var(--color-bg-tertiary)', fontStyle: 'italic' } : undefined}
-                                            />
-                                        </td>
-                                        <td className="unit">{param.unit}</td>
-                                        <td className="range">{getRefRangeText(param)}</td>
-                                        <td>
-                                            {flag && flag !== 'NORMAL' && (
-                                                <span className={`flag flag-${flag.toLowerCase()}`}>
-                                                    {flag.replace('_', ' ')}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {deltaChange !== null && Math.abs(deltaChange) > 20 && (
-                                                <span className="delta-warning" title={`Previous: ${getPreviousValue(param.parameter_code)}`}>
-                                                    {deltaChange > 0 ? '+' : ''}{deltaChange.toFixed(1)}%
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                })}
+                            </tbody>
+                        </table>
+                    )}
 
                     <div className="result-actions">
                         {(resultData.status === 'RECEIVED' || resultData.status === 'DRAFT' || resultData.status === 'COLLECTED') ? (
