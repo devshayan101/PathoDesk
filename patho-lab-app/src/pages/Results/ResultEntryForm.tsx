@@ -529,23 +529,62 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         </table>
                     )}
 
+                    <div className="result-actions">
+                        {(resultData.status === 'RECEIVED' || resultData.status === 'DRAFT' || resultData.status === 'COLLECTED') ? (
+                            <>
+                                <button className="btn btn-secondary" onClick={handleSave}>
+                                    <span className="kbd">F5</span> Save Draft
+                                </button>
+                                {autoSaveStatus && (
+                                    <span style={{ color: 'var(--color-success, #22c55e)', fontSize: '12px', opacity: 0.8 }}>
+                                        ✓ {autoSaveStatus}
+                                    </span>
+                                )}
+                                <button className="btn btn-primary" onClick={handleSubmit}>
+                                    <span className="kbd">F9</span> Submit for Verification
+                                </button>
+                            </>
+                        ) : null}
+
+                        {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (session?.role === 'pathologist' || session?.role === 'admin') && (
+                            <button className="btn btn-secondary" onClick={handleSave}>
+                                💾 Update Results
+                            </button>
+                        )}
+
+                        {resultData.status === 'SUBMITTED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
+                            <button className="btn btn-primary" onClick={handleVerify}>
+                                Verify Results
+                            </button>
+                        )}
+
+                        {resultData.status === 'VERIFIED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
+                            <button className="btn btn-success" onClick={handleFinalize}>
+                                Finalize
+                            </button>
+                        )}
+
+                        {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (
+                            <button className="btn btn-secondary" onClick={() => setShowReport(true)}>
+                                📄 View Report
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* RIGHT PANEL - Previous Results & Comments */}
                 <div className="panel panel-right">
                     <div className="panel-section">
                         <h3>Previous Results</h3>
-                        <div className="previous-results-list">
-                            {resultData.parameters.map(param => {
-                                const prevValue = getPreviousValue(param.parameter_code);
-                                return (
-                                    <div key={param.parameter_code} className="previous-result">
-                                        <span className="param-name">{param.parameter_code}:</span>
-                                        <span className="param-value">{prevValue}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        {resultData.parameters.map(param => {
+                            const prevValue = getPreviousValue(param.parameter_code);
+                            return (
+                                <div key={param.parameter_code} className="previous-result">
+                                    <span className="param-name">{param.parameter_code}:</span>
+                                    <span className="param-value">{prevValue}</span>
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="panel-section">
@@ -583,48 +622,6 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                         ></textarea>
                     </div>
                 </div>
-            </div>
-
-            <div className="result-actions">
-                {(resultData.status === 'RECEIVED' || resultData.status === 'DRAFT' || resultData.status === 'COLLECTED') ? (
-                    <>
-                        <button className="btn btn-secondary" onClick={handleSave}>
-                            <span className="kbd">F5</span> Save Draft
-                        </button>
-                        {autoSaveStatus && (
-                            <span style={{ color: 'var(--color-success, #22c55e)', fontSize: '12px', opacity: 0.8 }}>
-                                ✓ {autoSaveStatus}
-                            </span>
-                        )}
-                        <button className="btn btn-primary" onClick={handleSubmit}>
-                            <span className="kbd">F9</span> Submit for Verification
-                        </button>
-                    </>
-                ) : null}
-
-                {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (session?.role === 'pathologist' || session?.role === 'admin') && (
-                    <button className="btn btn-secondary" onClick={handleSave}>
-                        💾 Update Results
-                    </button>
-                )}
-
-                {resultData.status === 'SUBMITTED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
-                    <button className="btn btn-primary" onClick={handleVerify}>
-                        Verify Results
-                    </button>
-                )}
-
-                {resultData.status === 'VERIFIED' && (session?.role === 'pathologist' || session?.role === 'admin') && (
-                    <button className="btn btn-success" onClick={handleFinalize}>
-                        Finalize
-                    </button>
-                )}
-
-                {(resultData.status === 'VERIFIED' || resultData.status === 'FINALIZED') && (
-                    <button className="btn btn-secondary" onClick={() => setShowReport(true)}>
-                        📄 View Report
-                    </button>
-                )}
             </div>
 
             {/* QC Override Modal */}
