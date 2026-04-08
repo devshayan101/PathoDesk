@@ -80,6 +80,8 @@ export default function OrdersPage() {
     const [discountReason, setDiscountReason] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
+    const [initialTestIds, setInitialTestIds] = useState<number[]>([]);
 
     // Search state for dropdowns
     const [patientSearch, setPatientSearch] = useState('');
@@ -167,6 +169,47 @@ export default function OrdersPage() {
             }
         } catch (e: any) {
             showToast('Failed to load order details', 'error');
+        }
+    };
+
+    const handleEditOrder = async (order: Order) => {
+        try {
+            setLoading(true);
+            const data = await window.electronAPI.orders.get(order.id);
+            if (!data) {
+                showToast('Order not found', 'error');
+                return;
+            }
+
+            // Fetch invoice to get discount info
+            const invoice = await window.electronAPI.invoices.getByOrder(order.id);
+
+            setSelectedPatientId(data.patient_id);
+            setPatientSearch(`${data.patient_name} (${data.patient_uid})`);
+            
+            handleDoctorChange(data.referring_doctor_id || '');
+            if (data.referring_doctor_id) {
+                setDoctorSearch(`${data.doctor_name} (${data.doctor_code || ''})`);
+            } else {
+                setDoctorSearch('');
+            }
+
+            setSelectedPriceListId(data.price_list_id || defaultPriceListId);
+            const initialIds = data.tests.map((t: any) => t.test_version_id);
+            setSelectedTestIds(initialIds);
+            setInitialTestIds(initialIds);
+            
+            if (invoice) {
+                setDiscountPercent(invoice.discount_percent?.toString() || '');
+                setDiscountReason(invoice.discount_reason || '');
+            }
+
+            setEditingOrderId(order.id);
+            setShowForm(true);
+        } catch (e: any) {
+            showToast('Failed to load order for editing', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -297,9 +340,15 @@ export default function OrdersPage() {
     };
 
     const toggleTest = (testVersionId: number) => {
-        setSelectedTestIds(prev =>
-            prev.includes(testVersionId) ? prev.filter(id => id !== testVersionId) : [...prev, testVersionId]
-        );
+        if (selectedTestIds.includes(testVersionId)) {
+            if (editingOrderId && initialTestIds.includes(testVersionId)) {
+                showToast('Existing tests cannot be removed from this order', 'warning');
+                return;
+            }
+            setSelectedTestIds(prev => prev.filter(id => id !== testVersionId));
+        } else {
+            setSelectedTestIds(prev => [...prev, testVersionId]);
+        }
     };
 
     // Handle doctor selection - auto-select doctor's price list if available
@@ -331,55 +380,75 @@ export default function OrdersPage() {
 
         setSubmitting(true);
         try {
-            // 1. Create order
-            const orderResult = await window.electronAPI.orders.create({
-                patientId: Number(selectedPatientId),
-                testVersionIds: selectedTestIds,
-                priceListId: selectedPriceListId,
-                discount: 0, // Will be handled in invoice
-                referringDoctorId: selectedDoctorId ? Number(selectedDoctorId) : null
-            });
+            if (editingOrderId) {
+                // Update existing order
+                const result = await window.electronAPI.orders.update(editingOrderId, {
+                    testVersionIds: selectedTestIds,
+                    priceListId: selectedPriceListId,
+                    discountPercent: parseFloat(discountPercent) || 0,
+                    discountReason: discountReason || undefined,
+                    referringDoctorId: selectedDoctorId ? Number(selectedDoctorId) : null
+                });
 
-            if (!orderResult.success) {
-                showToast('Failed to create order: ' + orderResult.error, 'error');
-                setSubmitting(false);
-                return;
-            }
+                if (result.success) {
+                    showToast('Order updated successfully', 'success');
+                    setShowForm(false);
+                    resetForm();
+                    loadData();
+                } else {
+                    showToast('Failed to update order: ' + result.error, 'error');
+                }
+            } else {
+                // 1. Create order
+                const orderResult = await window.electronAPI.orders.create({
+                    patientId: Number(selectedPatientId),
+                    testVersionIds: selectedTestIds,
+                    priceListId: selectedPriceListId,
+                    discount: 0, // Will be handled in invoice
+                    referringDoctorId: selectedDoctorId ? Number(selectedDoctorId) : null
+                });
 
-            // 2. Create invoice
-            const testIds = selectedTestIds.map(vId => {
-                const test = tests.find(t => t.version_id === vId);
-                return test?.id;
-            }).filter(Boolean) as number[];
-
-            const invoiceResult = await window.electronAPI.invoices.create({
-                orderId: orderResult.orderId,
-                patientId: Number(selectedPatientId),
-                priceListId: selectedPriceListId,
-                testIds,
-                discountPercent: parseFloat(discountPercent) || 0,
-                discountReason: discountReason || undefined,
-                createdBy: session?.userId
-            });
-
-            if (invoiceResult.success) {
-                // Finalize immediately if no discount or low discount
-                const discPct = parseFloat(discountPercent) || 0;
-                if (discPct <= 20) {
-                    await window.electronAPI.invoices.finalize(invoiceResult.invoiceId, session?.userId);
+                if (!orderResult.success) {
+                    showToast('Failed to create order: ' + orderResult.orderId, 'error');
+                    setSubmitting(false);
+                    return;
                 }
 
-                setShowForm(false);
-                resetForm();
-                loadData();
+                // 2. Create invoice
+                const testIds = selectedTestIds.map(vId => {
+                    const test = tests.find(t => t.version_id === vId);
+                    return test?.id;
+                }).filter(Boolean) as number[];
 
-                // Navigate to invoice
-                navigate('/billing/invoices');
-            } else {
-                showToast('Order created but invoice failed: ' + invoiceResult.error, 'error');
+                const invoiceResult = await window.electronAPI.invoices.create({
+                    orderId: orderResult.orderId,
+                    patientId: Number(selectedPatientId),
+                    priceListId: selectedPriceListId,
+                    testIds,
+                    discountPercent: parseFloat(discountPercent) || 0,
+                    discountReason: discountReason || undefined,
+                    createdBy: session?.userId
+                });
+
+                if (invoiceResult.success) {
+                    // Finalize immediately if no discount or low discount
+                    const discPct = parseFloat(discountPercent) || 0;
+                    if (discPct <= 20) {
+                        await window.electronAPI.invoices.finalize(invoiceResult.invoiceId, session?.userId);
+                    }
+
+                    setShowForm(false);
+                    resetForm();
+                    loadData();
+
+                    // Navigate to invoice
+                    navigate('/billing/invoices');
+                } else {
+                    showToast('Order created but invoice failed: ' + invoiceResult.error, 'error');
+                }
             }
         } catch (e) {
-            console.error('Create order error:', e);
+            console.error('Submit order error:', e);
             showToast('An error occurred', 'error');
         }
         setSubmitting(false);
@@ -397,6 +466,8 @@ export default function OrdersPage() {
         setTestSearch('');
         setPatientDropdownOpen(false);
         setDoctorDropdownOpen(false);
+        setEditingOrderId(null);
+        setInitialTestIds([]);
     };
 
     // Mark Sample Received
@@ -485,7 +556,7 @@ export default function OrdersPage() {
                 <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div className="modal order-form-modal" style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
                         <div className="modal-header" style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ margin: 0 }}>Create New Order</h2>
+                            <h2 style={{ margin: 0 }}>{editingOrderId ? 'Edit Order' : 'Create New Order'}</h2>
                             <button className="close-btn" onClick={() => { setShowForm(false); resetForm(); }} style={{ fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                         </div>
 
@@ -668,21 +739,32 @@ export default function OrdersPage() {
                                                     className={`test-card-btn ${selectedTestIds.includes(test.version_id) ? 'selected' : ''}`}
                                                     onClick={() => toggleTest(test.version_id)}
                                                     style={{
-                                                        background: selectedTestIds.includes(test.version_id) ? 'var(--color-accent)' : 'var(--color-bg-card)',
-                                                        color: selectedTestIds.includes(test.version_id) ? 'white' : 'var(--color-text-primary)',
+                                                        background: selectedTestIds.includes(test.version_id) 
+                                                            ? (editingOrderId && initialTestIds.includes(test.version_id) ? 'var(--color-bg-tertiary)' : 'var(--color-accent)') 
+                                                            : 'var(--color-bg-card)',
+                                                        color: selectedTestIds.includes(test.version_id) 
+                                                            ? (editingOrderId && initialTestIds.includes(test.version_id) ? 'var(--color-text-primary)' : 'white') 
+                                                            : 'var(--color-text-primary)',
                                                         border: `1px solid ${selectedTestIds.includes(test.version_id) ? 'var(--color-accent)' : 'var(--color-border)'}`,
                                                         padding: '0.75rem',
                                                         borderRadius: 'var(--radius-md)',
-                                                        cursor: 'pointer',
+                                                        cursor: (editingOrderId && initialTestIds.includes(test.version_id)) ? 'not-allowed' : 'pointer',
                                                         textAlign: 'left',
                                                         transition: 'all 0.2s',
                                                         display: 'flex',
                                                         flexDirection: 'column',
                                                         justifyContent: 'space-between',
-                                                        minHeight: '80px'
+                                                        minHeight: '80px',
+                                                        opacity: (editingOrderId && initialTestIds.includes(test.version_id)) ? 0.7 : 1,
+                                                        boxShadow: (editingOrderId && initialTestIds.includes(test.version_id)) ? 'none' : undefined
                                                     }}
                                                 >
-                                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem', display: 'block' }}>{test.test_code}</span>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <span style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem' }}>{test.test_code}</span>
+                                                        {editingOrderId && initialTestIds.includes(test.version_id) && (
+                                                            <span title="Required (Existing Test)" style={{ fontSize: '0.8rem' }}>🔒</span>
+                                                        )}
+                                                    </div>
                                                     <span style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.2 }}>{test.test_name}</span>
                                                 </button>
                                             ))}
@@ -763,13 +845,13 @@ export default function OrdersPage() {
                             <button className="btn btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>
                                 Cancel
                             </button>
-                            <button
+                                <button
                                 className="btn btn-primary"
                                 onClick={handleSubmit}
                                 disabled={selectedTestIds.length === 0 || submitting || (discountPct > 20 && !discountReason)}
                                 style={{ minWidth: '150px' }}
                             >
-                                {submitting ? 'Creating...' : 'Create Order'}
+                                {submitting ? (editingOrderId ? 'Updating...' : 'Creating...') : (editingOrderId ? 'Update Order' : 'Create Order')}
                             </button>
                         </div>
                     </div>
@@ -837,6 +919,7 @@ export default function OrdersPage() {
                                             </td>
                                             <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                 <button className="btn btn-secondary btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleViewOrder(order)}>View</button>
+                                                <button className="btn btn-info btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleEditOrder(order)}>Edit</button>
                                                 {(order as any).has_collected_samples > 0 ? (
                                                     <button
                                                         className="btn btn-warning btn-sm"

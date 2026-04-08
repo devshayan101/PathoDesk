@@ -5,7 +5,7 @@ import 'dotenv/config'
 
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, closeDatabase, queryAll, run } from './database/db'
+import { initDatabase, closeDatabase, queryAll, queryOne, run } from './database/db'
 import * as authService from './services/authService'
 import * as patientService from './services/patientService'
 import * as testService from './services/testService'
@@ -290,6 +290,26 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.ORDER_CREATE, (_, data) => {
     return orderService.createOrder(data)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORDER_UPDATE, async (_, id: number, data) => {
+    const orderResult = orderService.updateOrder(id, data);
+    if (orderResult.success) {
+      // Also update the invoice
+      const testIds: number[] = [];
+      for (const vId of data.testVersionIds) {
+        const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
+        if (tv) testIds.push(tv.test_id);
+      }
+      
+      invoiceService.updateInvoiceByOrder(id, {
+        testIds,
+        priceListId: data.priceListId,
+        discountPercent: data.discountPercent, // Frontend should pass these if changed
+        discountAmount: data.discountAmount
+      });
+    }
+    return orderResult;
   })
 
   ipcMain.handle(IPC_CHANNELS.ORDER_PENDING, () => {

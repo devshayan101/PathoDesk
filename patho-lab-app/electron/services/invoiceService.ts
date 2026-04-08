@@ -458,6 +458,117 @@ export function getInvoiceSummary(fromDate?: string, toDate?: string) {
 
     return {
         ...summary,
-        total_pending: (summary?.total_amount || 0) - (summary?.total_collected || 0)
-    };
+        total_pending: (summary?.total_amount || 0) - (summary?.total_collected || 0),
+    } as any;
+}
+
+export function updateInvoiceByOrder(orderId: number, data: {
+    testIds: number[];
+    priceListId: number;
+    discountPercent?: number;
+    discountAmount?: number;
+    discountReason?: string;
+    discountApprovedBy?: number;
+}): { success: boolean; error?: string } {
+    try {
+        const invoice = queryOne<InvoiceRow>(`SELECT * FROM invoices WHERE order_id = ? AND status != 'CANCELLED'`, [orderId]);
+        if (!invoice) {
+            return { success: false, error: 'Invoice not found' };
+        }
+
+        // Get test prices
+        const testPrices = getTestPricesForTests(data.testIds, data.priceListId);
+
+        // Calculate totals
+        let subtotal = 0;
+        const items: Array<{
+            testId: number;
+            description: string;
+            unitPrice: number;
+            gstRate: number;
+            gstAmount: number;
+            lineTotal: number;
+        }> = [];
+
+        for (const testId of data.testIds) {
+            const price = testPrices.get(testId);
+            if (price) {
+                const unitPrice = price.base_price;
+                const gstRate = price.gst_applicable ? price.gst_rate : 0;
+                const gstAmount = (unitPrice * gstRate) / 100;
+                const lineTotal = unitPrice + gstAmount;
+
+                subtotal += unitPrice;
+                items.push({
+                    testId,
+                    description: `${price.test_code} - ${price.test_name}`,
+                    unitPrice,
+                    gstRate,
+                    gstAmount,
+                    lineTotal
+                });
+            }
+        }
+
+        // Apply discount (use new values if provided, otherwise keep old ones)
+        let discountPercent = data.discountPercent !== undefined ? data.discountPercent : invoice.discount_percent;
+        let discountAmount = data.discountAmount !== undefined ? data.discountAmount : invoice.discount_amount;
+        
+        if (data.discountPercent !== undefined) {
+             discountAmount = (subtotal * discountPercent) / 100;
+        }
+
+        const discountedSubtotal = subtotal - discountAmount;
+        let totalGst = 0;
+        for (const item of items) {
+            if (item.gstRate > 0) {
+                const proportion = subtotal > 0 ? (item.unitPrice / subtotal) : 0;
+                const itemDiscountedPrice = discountedSubtotal * proportion;
+                item.gstAmount = (itemDiscountedPrice * item.gstRate) / 100;
+                totalGst += item.gstAmount;
+            } else {
+                item.gstAmount = 0;
+            }
+        }
+
+        const totalAmount = discountedSubtotal + totalGst;
+
+        // 1. Delete old items
+        run(`DELETE FROM invoice_items WHERE invoice_id = ?`, [invoice.id]);
+
+        // 2. Insert new items
+        for (const item of items) {
+            run(`
+                INSERT INTO invoice_items (
+                    invoice_id, test_id, description, unit_price, quantity,
+                    discount_amount, gst_rate, gst_amount, line_total
+                ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+            `, [
+                invoice.id,
+                item.testId,
+                item.description,
+                item.unitPrice,
+                item.gstRate,
+                item.gstAmount,
+                item.lineTotal
+            ]);
+        }
+
+        // 3. Update invoice 
+        run(`
+            UPDATE invoices SET 
+                subtotal = ?, discount_amount = ?, discount_percent = ?, 
+                gst_amount = ?, total_amount = ?, price_list_id = ?
+            WHERE id = ?
+        `, [
+            subtotal, discountAmount, discountPercent, 
+            totalGst, totalAmount, data.priceListId,
+            invoice.id
+        ]);
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Update invoice error:', error);
+        return { success: false, error: error.message };
+    }
 }

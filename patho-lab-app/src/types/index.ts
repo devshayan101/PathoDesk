@@ -135,6 +135,7 @@ export const IPC_CHANNELS = {
 
     // Orders
     ORDER_CREATE: 'order:create',
+    ORDER_UPDATE: 'order:update',
     ORDER_GET: 'order:get',
     ORDER_LIST: 'order:list',
     ORDER_PENDING: 'order:pending',

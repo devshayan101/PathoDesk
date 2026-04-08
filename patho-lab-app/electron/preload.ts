@@ -87,6 +87,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.ORDER_GET, orderId),
     create: (data: any) =>
       ipcRenderer.invoke(IPC_CHANNELS.ORDER_CREATE, data),
+    update: (id: number, data: any) =>
+      ipcRenderer.invoke(IPC_CHANNELS.ORDER_UPDATE, id, data),
     getPending: () =>
       ipcRenderer.invoke(IPC_CHANNELS.ORDER_PENDING),
     getByPatient: (patientId: number) =>

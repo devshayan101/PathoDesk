@@ -52,6 +52,7 @@ export interface ElectronAPI {
         create: (data: any) => Promise<{ success: boolean; orderId?: number; orderUid?: string; error?: string }>;
         getPending: () => Promise<any[]>;
         getByPatient: (patientId: number) => Promise<any[]>;
+        update: (orderId: number, data: any) => Promise<{ success: boolean; error?: string }>;
     };
     samples: {
         list: (status?: string) => Promise<any[]>;

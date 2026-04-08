@@ -150,6 +150,92 @@ export function createOrder(data: {
   }
 }
 
+// Update existing order
+export function updateOrder(orderId: number, data: {
+  testVersionIds: number[];
+  priceListId: number;
+  discount?: number;
+  referringDoctorId?: number | null;
+}): { success: boolean; error?: string } {
+  try {
+    const existingOrder = getOrder(orderId);
+    if (!existingOrder) {
+      return { success: false, error: 'Order not found' };
+    }
+
+    // 1. Re-calculate totals based on new tests
+    const testIds: number[] = [];
+    const versionToTestMap = new Map<number, number>();
+
+    for (const vId of data.testVersionIds) {
+      const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
+      if (tv) {
+        testIds.push(tv.test_id);
+        versionToTestMap.set(vId, tv.test_id);
+      }
+    }
+
+    const pricesMap = getTestPricesForTests(testIds, data.priceListId);
+
+    let totalAmount = 0;
+    for (const tId of testIds) {
+      totalAmount += pricesMap.get(tId)?.base_price || 0;
+    }
+
+    const discount = data.discount || 0;
+    const netAmount = totalAmount - discount;
+
+    // 2. Update order row
+    run(`
+      UPDATE orders 
+      SET total_amount = ?, discount = ?, net_amount = ?, referring_doctor_id = ?
+      WHERE id = ?
+    `, [totalAmount, discount, netAmount, data.referringDoctorId || null, orderId]);
+
+    // 3. Reconcile tests - ONLY ALLOW ADDING
+    const existingTests = queryAll<{ id: number; test_version_id: number; test_name: string }>(`
+      SELECT ot.id, ot.test_version_id, tv.test_name 
+      FROM order_tests ot
+      JOIN test_versions tv ON ot.test_version_id = tv.id
+      WHERE ot.order_id = ?
+    `, [orderId]);
+ 
+    const existingRefIds = existingTests.map(t => t.test_version_id);
+    const newRefIds = data.testVersionIds;
+ 
+    // Check if any existing test is missing from the updated list
+    for (const et of existingTests) {
+      if (!newRefIds.includes(et.test_version_id)) {
+        return { success: false, error: `Removal of already added tests is not allowed (Missing: ${et.test_name})` };
+      }
+    }
+ 
+    // Add new tests
+    for (const vId of newRefIds) {
+      if (!existingRefIds.includes(vId)) {
+        const tId = versionToTestMap.get(vId);
+        const testPrice = tId ? (pricesMap.get(tId)?.base_price || 0) : 0;
+ 
+        const orderTestId = runWithId(`
+          INSERT INTO order_tests (order_id, test_version_id, status, price)
+          VALUES (?, ?, 'ORDERED', ?)
+        `, [orderId, vId, testPrice]);
+ 
+        const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+        run(`
+          INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
+          VALUES (?, ?, 'COLLECTED', datetime('now'))
+        `, [sampleUid, orderTestId]);
+      }
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Update order error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Get orders for a patient
 export function getPatientOrders(patientId: number): OrderRow[] {
   return queryAll<OrderRow>(`
