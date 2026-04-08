@@ -4,32 +4,38 @@ import logo247Url from '/24_7.png';
 import { formatDate } from './LabReport';
 import WidalTable, { isWidalTest } from './WidalTable';
 
-// Green Clinical Theme Styles
-const FOOTER_HEIGHT = 110;
-const ACCENT = '#1a8a3f';
+// Modern Green Clinical Theme Styles
+const FOOTER_HEIGHT = 80;
+const PRIMARY_GREEN = '#1a5d38';
+const LIGHT_GREEN = '#edf7f0';
+const ACCENT_GREEN = '#228b22';
+const TEXT_DARK = '#202124';
+const TEXT_MUTED = '#5f6368';
+const BORDER_COLOR = '#e0e0e0';
 
 const s = StyleSheet.create({
     page: {
-        paddingTop: 12, //
+        paddingTop: 12, // slightly less for combined to fit more
         paddingLeft: 0,
         paddingRight: 0,
         paddingBottom: FOOTER_HEIGHT + 20,
         fontSize: 9,
         fontFamily: 'Helvetica',
+        color: TEXT_DARK,
     },
     // --- Header ---
     topBar: {
-        backgroundColor: ACCENT,
-        height: 8,
+        backgroundColor: PRIMARY_GREEN,
+        height: 6,
     },
     headerRow: {
         flexDirection: 'row',
         padding: 12,
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: 5,
+        paddingBottom: 10,
         alignItems: 'center',
-        borderBottomWidth: 2,
-        borderBottomColor: ACCENT,
+        borderBottomWidth: 1,
+        borderBottomColor: BORDER_COLOR,
     },
     logoCol: {
         flexDirection: 'row',
@@ -37,14 +43,14 @@ const s = StyleSheet.create({
         flex: 1,
     },
     logo: {
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         marginRight: 10,
     },
     labName: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: ACCENT,
+        color: PRIMARY_GREEN,
     },
     addressCol: {
         flex: 1,
@@ -52,42 +58,47 @@ const s = StyleSheet.create({
     },
     addressText: {
         fontSize: 8,
-        color: '#333',
+        color: TEXT_MUTED,
         textAlign: 'right',
         marginBottom: 1,
     },
     nablBadge: {
         position: 'absolute',
         top: 12,
-        right: 0,
-        backgroundColor: ACCENT,
+        right: 12,
+        backgroundColor: ACCENT_GREEN,
         color: '#fff',
         fontSize: 7,
         fontWeight: 'bold',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderBottomLeftRadius: 4,
+        borderBottomRightRadius: 4,
     },
-    // --- Patient Info ---
+    // --- Patient Info Card ---
     patientBox: {
         margin: 12,
-        marginTop: 8,
-        marginBottom: 8,
+        marginTop: 10,
+        marginBottom: 10,
+        borderRadius: 6,
+        backgroundColor: LIGHT_GREEN,
         borderWidth: 1,
-        borderColor: '#ccc',
-        padding: 8,
+        borderColor: '#cce5d6',
+        padding: 10,
     },
     patientRow: {
         flexDirection: 'row',
-        marginBottom: 3,
+        marginBottom: 4,
     },
     patientLabel: {
-        width: 110,
+        width: 100,
         fontSize: 9,
-        color: '#333',
+        color: TEXT_MUTED,
     },
     patientValue: {
         fontSize: 9,
         fontWeight: 'bold',
+        color: TEXT_DARK,
         flex: 1,
     },
     patientSpacer: {
@@ -100,53 +111,88 @@ const s = StyleSheet.create({
     },
     departmentHeader: {
         textAlign: 'center',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 6,
-        color: '#333',
-        textDecoration: 'underline',
+        color: PRIMARY_GREEN,
     },
     testNameHeader: {
         textAlign: 'center',
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 'bold',
-        marginBottom: 6,
+        marginBottom: 10,
+        color: TEXT_DARK,
     },
     tableHeader: {
         flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: '#000',
-        borderTopWidth: 1,
-        borderTopColor: '#000',
-        paddingVertical: 4,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: PRIMARY_GREEN,
+        color: '#ffffff',
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        marginBottom: 2,
     },
     tableRow: {
         flexDirection: 'row',
-        borderBottomWidth: 0,
-        borderBottomColor: '#ddd',
-        paddingVertical: 4,
-        minHeight: 20,
+        paddingVertical: 5,
+        paddingHorizontal: 4,
+        minHeight: 22,
         alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
     },
     colTest: { flex: 3, paddingLeft: 4 },
     colResult: { flex: 1.5, textAlign: 'center' },
-    colUnit: { flex: 1.2, textAlign: 'center' },
-    colRange: { flex: 2, textAlign: 'right', paddingRight: 4 },
-    colFlag: { flex: 0.5, textAlign: 'center', paddingRight: 4 },
-    flagHigh: { color: '#dc3545', fontWeight: 'bold' },
-    flagLow: { color: '#007bff', fontWeight: 'bold' },
-    flagCritical: { color: '#dc3545', fontWeight: 'bold', textDecoration: 'underline' },
-    flagNormal: { color: '#000' },
+    colUnit: { flex: 1.2, textAlign: 'center', color: TEXT_MUTED },
+    colRange: { flex: 2, textAlign: 'right', paddingRight: 4, color: TEXT_MUTED },
+    colFlag: { flex: 0.8, alignItems: 'center', justifyContent: 'center' },
+    
+    // Flag Badges
+    badge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        fontSize: 8,
+        fontWeight: 'bold',
+        minWidth: 24,
+        textAlign: 'center',
+    },
+    badgeHigh: { backgroundColor: '#fce8e6', color: '#d93025' },
+    badgeLow: { backgroundColor: '#e8f0fe', color: '#1a73e8' },
+    badgeCritical: { backgroundColor: '#d93025', color: '#fff' },
+    badgeNormal: { backgroundColor: 'transparent', color: TEXT_DARK },
+
+    // --- Interpretation ---
+    interpBox: {
+        marginTop: 5,
+        padding: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: ACCENT_GREEN,
+        backgroundColor: '#f9fdf9',
+        borderRadius: 4,
+    },
+    interpHeading: { 
+        fontSize: 10, 
+        fontWeight: 'bold', 
+        color: ACCENT_GREEN, 
+        marginBottom: 5 
+    },
+    interpText: { 
+        fontSize: 9, 
+        color: TEXT_DARK, 
+        lineHeight: 1.4 
+    },
+
     // --- Footer ---
     footer: {
         position: 'absolute',
-        bottom: 15,
+        bottom: 10,
         left: 12,
         right: 12,
         borderTopWidth: 1,
-        borderTopColor: '#ccc',
-        paddingTop: 8,
+        borderTopColor: BORDER_COLOR,
+        paddingTop: 5,
     },
     sigRow: {
         flexDirection: 'row',
@@ -159,8 +205,8 @@ const s = StyleSheet.create({
     },
     sigLine: {
         borderTopWidth: 1,
-        borderTopColor: '#000',
-        width: '100%',
+        borderTopColor: TEXT_MUTED,
+        width: '80%',
         marginBottom: 4,
     },
     sigImage: {
@@ -170,35 +216,36 @@ const s = StyleSheet.create({
         marginBottom: 3,
     },
     sigLabel: {
-        fontSize: 7,
-        color: '#333',
-        marginBottom: 1,
+        fontSize: 8,
+        color: TEXT_MUTED,
+        marginBottom: 2,
     },
     sigTitle: {
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: 'bold',
-        color: '#000',
+        color: TEXT_DARK,
     },
     disclaimer: {
-        fontSize: 6,
-        color: '#888',
-        marginTop: 6,
+        fontSize: 7,
+        color: TEXT_MUTED,
+        marginTop: 8,
+        textAlign: 'center',
     },
     pageNum: {
-        fontSize: 7,
+        fontSize: 8,
         textAlign: 'center',
-        color: '#666',
-        marginTop: 4,
+        color: TEXT_MUTED,
+        marginTop: 6,
         marginBottom: 3
     },
     // Watermark
     watermark: {
         position: 'absolute',
-        top: 350,
+        top: 320,
         left: 0,
         right: 0,
         alignItems: 'center',
-        opacity: 1,
+        opacity: 0.03,
     },
     branding: {
         position: 'absolute',
@@ -208,8 +255,8 @@ const s = StyleSheet.create({
         alignItems: 'center',
     },
     brandingText: {
-        fontSize: 8,
-        color: '#bbb',
+        fontSize: 7,
+        color: '#c0c0c0',
         paddingBottom: 4
     },
 });
@@ -234,12 +281,12 @@ function formatFlag(flag: string | null): string {
     }
 }
 
-function flagStyle(flag: string | null) {
+function flagBadgeStyle(flag: string | null) {
     switch (flag) {
-        case 'HIGH': return s.flagHigh;
-        case 'LOW': return s.flagLow;
-        case 'CRITICAL': case 'CRITICAL_HIGH': case 'CRITICAL_LOW': return s.flagCritical;
-        default: return s.flagNormal;
+        case 'HIGH': return s.badgeHigh;
+        case 'LOW': return s.badgeLow;
+        case 'CRITICAL': case 'CRITICAL_HIGH': case 'CRITICAL_LOW': return s.badgeCritical;
+        default: return s.badgeNormal;
     }
 }
 
@@ -259,9 +306,9 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
         <Page size="A4" style={s.page}>
             {/* Watermark */}
             <View style={s.watermark} fixed>
-                <Image src={logoUrl} style={{ width: 200, opacity: 0.1 }} />
+                <Image src={logoUrl} style={{ width: 250 }} />
                 {labSettings.lab_name && (
-                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#000', opacity: 0.1, marginTop: 8 }}>
+                    <Text style={{ fontSize: 28, fontWeight: 'bold', color: PRIMARY_GREEN, marginTop: 12 }}>
                         {labSettings.lab_name}
                     </Text>
                 )}
@@ -290,7 +337,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                     {labSettings.phone && <Text style={s.addressText}>{labSettings.phone}</Text>}
                     {labSettings.email && <Text style={s.addressText}>{labSettings.email}</Text>}
                     {labSettings.lab_incharge && (
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: ACCENT, marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: 'bold', color: ACCENT_GREEN, marginTop: 3, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
                     )}
                 </View>
             </View>
@@ -335,20 +382,26 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
 
                     const renderRow = (r: any, i: number) => (
                         r.is_header === 1 ? (
-                            <View key={i} style={[s.tableRow, { paddingVertical: 4, minHeight: 20 }]} wrap={false}>
-                                <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10 }]}>{r.parameter_name}</Text>
+                            <View key={i} style={[s.tableRow, { paddingVertical: 6, minHeight: 24, backgroundColor: 'rgba(0,0,0,0.02)' }]} wrap={false}>
+                                <Text style={[s.colTest, { fontWeight: 'bold', width: '100%', fontSize: 10, color: PRIMARY_GREEN }]}>{r.parameter_name}</Text>
                             </View>
                         ) : (
-                            <View key={i} style={s.tableRow} wrap={false}>
+                            <View key={i} style={[s.tableRow, { backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.03)' }]} wrap={false}>
                                 <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
-                                <Text style={[s.colResult, { marginLeft: r.parent_id ? -10 : 0 }, flagStyle(r.abnormal_flag)]}>
-                                    {r.result_value || '-'}
+                                <Text style={[s.colResult, { marginLeft: r.parent_id ? -10 : 0 }]}>
+                                    <Text style={{ fontWeight: r.abnormal_flag && r.abnormal_flag !== 'NORMAL' ? 'bold' : 'normal' }}>
+                                        {r.result_value || '-'}
+                                    </Text>
                                 </Text>
                                 <Text style={[s.colUnit, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
                                 <Text style={[s.colRange, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
-                                <Text style={[s.colFlag, flagStyle(r.abnormal_flag)]}>
-                                    {formatFlag(r.abnormal_flag)}
-                                </Text>
+                                <View style={s.colFlag}>
+                                    {formatFlag(r.abnormal_flag) !== '' ? (
+                                        <Text style={[s.badge, flagBadgeStyle(r.abnormal_flag)]}>
+                                            {formatFlag(r.abnormal_flag)}
+                                        </Text>
+                                    ) : null}
+                                </View>
                             </View>
                         )
                     );
@@ -373,9 +426,9 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                                         <View style={s.tableHeader}>
                                             <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
                                             <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
-                                            <Text style={[s.colUnit, { fontWeight: 'bold' }]}>Units</Text>
-                                            <Text style={[s.colRange, { fontWeight: 'bold' }]}>Reference range</Text>
-                                            <Text style={[s.colFlag, { fontWeight: 'bold' }]}>Flag</Text>
+                                            <Text style={[s.colUnit, { fontWeight: 'bold', color: '#ffffff' }]}>Units</Text>
+                                            <Text style={[s.colRange, { fontWeight: 'bold', color: '#ffffff' }]}>Reference range</Text>
+                                            <Text style={[s.colFlag, { fontWeight: 'bold', textAlign: 'center' }]}>Flag</Text>
                                         </View>
                                         {/* Render first row with header to prevent orphans */}
                                         {results.length > 0 && renderRow(results[0], 0)}
@@ -388,9 +441,9 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
 
                             {/* Interpretation Template */}
                             {test.interpretation_template && (
-                                <View style={{ marginTop: 10, padding: 10, borderLeft: '3px solid #2e7d32', backgroundColor: '#f9fdf9' }}>
-                                    <Text style={{ fontSize: 10, fontWeight: 'normal', color: '#2e7d32', marginBottom: 5 }}>Interpretation:</Text>
-                                    <Text style={{ fontSize: 9, color: '#333', lineHeight: 1.4 }}>
+                                <View style={s.interpBox}>
+                                    <Text style={s.interpHeading}>Interpretation:</Text>
+                                    <Text style={s.interpText}>
                                         {test.interpretation_template}
                                     </Text>
                                 </View>
@@ -401,9 +454,11 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
             </View>
 
             {/* End of Report Marker */}
-            <View style={{ alignItems: 'center', width: '100%' }} wrap={false}>
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>---End of Report----</Text>
-            </View>            {/* Footer - fixed at bottom of every page */}
+            <View style={{ alignItems: 'center', width: '100%', marginTop: 20 }} wrap={false}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: TEXT_MUTED }}>--- End of Report ---</Text>
+            </View>
+
+            {/* Footer - fixed at bottom of every page */}
             <View style={s.footer} fixed>
                 <View style={s.sigRow}>
                     <View style={s.sigBox}>
@@ -420,7 +475,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
 
                     {/* Middle - Report Status */}
                     <View style={{ alignItems: 'center', marginBottom: 4 }}>
-                        <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: {sample.status}</Text>
+                        <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: <Text style={{ fontWeight: 'bold' }}>{sample.status}</Text></Text>
                         {sample.verified_at && (
                             <Text style={[s.sigLabel, { fontSize: 8 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
                         )}

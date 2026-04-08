@@ -431,17 +431,21 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] Report pdf > blue theme > Change patient's details section to this format[attached image]
 
-- [ ] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
+- [x] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
 
-- [ ] Order update feature [user should be able to update order after it is created. Add new tests to order.]
+- [x] Order update feature [user should be able to update order after it is created. Add new tests to order.]
 
-- [ ] Sample > barcode: barcode generated for sample is invalid.[simple lines are generated instead of barcode]
+- [x] Sample > barcode: barcode generated for sample is invalid.[simple lines are generated instead of barcode]
 
-- [ ] User Login: login screen should be able to save user credentials, to prefill it next time. [Do this for both admin and user login][ask user before saving credentials][in admin setting add option to enable/disable this feature and clear saved credentials]
+- [x] widal test > result entry : Result entry ui for widal test should be like its ui for report pdf. [table format]
 
-- [ ] report pdf > green theme : redesign
+- [x] Result entry screen : Save and Submit buttons should be below result entry table. Add scroll to previous test's result section.
 
-- [ ] test master > test creation / edit wizard: unable to enter formula in test parameters section.
+- [x] report pdf > green theme : redesign
+
+- [x] test master > test creation / edit wizard: unable to enter formula in test parameters section. parameter value calculation via formula is working through excel import.
+
+- [x] User Login: login screen should be able to save user credentials, to prefill it next time. [Do this for both admin and user login][ask user before saving credentials][in admin setting add option to enable/disable this feature and clear saved credentials]
 
 ## Verification Plan
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
