@@ -367,6 +367,8 @@ export default function AdminPage() {
                                                 className="input"
                                                 value={formData.roleId}
                                                 onChange={(e) => setFormData({ ...formData, roleId: Number(e.target.value) })}
+                                                disabled={editingUser?.username === 'admin'}
+                                                style={editingUser?.username === 'admin' ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                                             >
                                                 {roles.map(role => (
                                                     <option key={role.id} value={role.id}>{getRoleLabel(role.name)}</option>
@@ -472,15 +474,15 @@ export default function AdminPage() {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        {user.username !== 'admin' ? (
+                                                        <button
+                                                            className="btn btn-secondary btn-sm"
+                                                            onClick={() => openEditForm(user)}
+                                                            title="Edit user"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        {user.username !== 'admin' && (
                                                             <>
-                                                                <button
-                                                                    className="btn btn-secondary btn-sm"
-                                                                    onClick={() => openEditForm(user)}
-                                                                    title="Edit user"
-                                                                >
-                                                                    ✏️
-                                                                </button>
                                                                 <button
                                                                     className="btn btn-secondary btn-sm"
                                                                     onClick={() => handleToggleActive(user.id)}
@@ -496,8 +498,9 @@ export default function AdminPage() {
                                                                     🗑️
                                                                 </button>
                                                             </>
-                                                        ) : (
-                                                            <span style={{ color: '#888', fontStyle: 'italic', fontSize: '0.85em' }}>System Admin</span>
+                                                        )}
+                                                        {user.username === 'admin' && (
+                                                            <span style={{ color: '#888', fontStyle: 'italic', fontSize: '0.85em', alignSelf: 'center', marginLeft: '4px' }}>System Admin</span>
                                                         )}
                                                     </div>
                                                 </td>

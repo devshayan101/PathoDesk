@@ -77,7 +77,16 @@ export function updateUser(id: number, data: {
         const params: any[] = [];
 
         if (data.fullName) { sets.push('full_name = ?'); params.push(data.fullName); }
-        if (data.roleId) { sets.push('role_id = ?'); params.push(data.roleId); }
+        if (data.roleId) {
+            // Safety: Don't allow changing role of the admin user
+            const user = queryOne<{ username: string }>('SELECT username FROM users WHERE id = ?', [id]);
+            if (user?.username === 'admin') {
+                // Skip role update for admin
+            } else {
+                sets.push('role_id = ?');
+                params.push(data.roleId);
+            }
+        }
         if (data.password) {
             sets.push('password_hash = ?');
             params.push(bcrypt.hashSync(data.password, 10));
@@ -99,6 +108,11 @@ export function updateUser(id: number, data: {
 // Toggle user active status
 export function toggleUserActive(id: number): { success: boolean; error?: string } {
     try {
+        const user = queryOne<{ username: string }>('SELECT username FROM users WHERE id = ?', [id]);
+        if (user?.username === 'admin') {
+            return { success: false, error: 'Cannot deactivate admin user' };
+        }
+
         run('UPDATE users SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = ?', [id]);
         return { success: true };
     } catch (error: any) {
