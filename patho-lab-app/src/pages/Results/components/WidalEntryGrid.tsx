@@ -26,17 +26,20 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
     };
 
     const handleKeyDown = (e: React.KeyboardEvent, param: ResultParameter) => {
+        const target = e.target as HTMLInputElement;
+        const isModifierPressed = e.ctrlKey || e.metaKey;
+        const isInputEmpty = !target.value || target.value.trim() === '';
+
         const rangeText = getRefRangeText(param).toLowerCase();
         const isQualitative = rangeText.includes('positive') || rangeText.includes('negative');
 
         if (!isQualitative) return;
 
-        if (e.key.toLowerCase() === 'n') {
+        // Trigger if: (Input is empty AND key is 'n'/'p') OR (Modifier is pressed AND key is 'n'/'p')
+        const key = e.key.toLowerCase();
+        if ((isInputEmpty || isModifierPressed) && (key === 'n' || key === 'p')) {
             e.preventDefault();
-            onValueChange(param.parameter_code, 'Negative');
-        } else if (e.key.toLowerCase() === 'p') {
-            e.preventDefault();
-            onValueChange(param.parameter_code, 'Positive');
+            onValueChange(param.parameter_code, key === 'n' ? 'Negative' : 'Positive');
         }
     };
 

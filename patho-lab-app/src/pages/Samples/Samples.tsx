@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
+import { useToastStore } from '../../stores/toastStore';
 import './Samples.css';
 
 interface Sample {
@@ -25,6 +26,7 @@ const escapeHtml = (unsafe: any) => {
 
 export default function SamplesPage() {
     const navigate = useNavigate();
+    const showToast = useToastStore(s => s.showToast);
     const [samples, setSamples] = useState<Sample[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -89,6 +91,8 @@ export default function SamplesPage() {
             });
         } catch (e) {
             console.error("Barcode generation for print failed:", e);
+            showToast('Failed to generate barcode for printing', 'error');
+            return;
         }
         const barcodeDataUrl = canvas.toDataURL();
 

@@ -23,6 +23,7 @@ import * as commissionService from './services/commissionService'
 import * as auditService from './services/auditService'
 import * as qcService from './services/qcService'
 import * as dashboardService from './services/dashboardService'
+import { aiService } from './services/aiService'
 import { getLicenseService } from './services/licenseService'
 import type { LicenseModule } from '../src/types'
 import { IPC_CHANNELS } from '../src/types'
@@ -821,6 +822,11 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.LICENSE_IS_TRIAL, () => {
     const licenseService = getLicenseService()
     return licenseService.isTrial()
+  })
+
+  // AI Analysis
+  ipcMain.handle(IPC_CHANNELS.AI_ANALYZE_REPORT, async (_, request) => {
+    return aiService.analyzeReport(request)
   })
 
   // Bulk Import

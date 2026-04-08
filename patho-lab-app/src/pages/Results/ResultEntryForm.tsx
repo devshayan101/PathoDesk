@@ -168,19 +168,21 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
     };
 
     const handleKeyDown = (e: React.KeyboardEvent, param: ResultParameter) => {
-        // Only trigger if typing in a field that isn't already handled (like Widal grid has its own handlers if needed)
-        // Check if range contains positive or negative
+        const target = e.target as HTMLInputElement;
+        const isModifierPressed = e.ctrlKey || e.metaKey;
+        const isInputEmpty = !target.value || target.value.trim() === '';
+
+        // Only trigger if typing in a field that isn't already handled
         const rangeText = getRefRangeText(param).toLowerCase();
         const isQualitative = rangeText.includes('positive') || rangeText.includes('negative');
 
         if (!isQualitative) return;
 
-        if (e.key.toLowerCase() === 'n') {
+        // Trigger if: (Input is empty AND key is 'n'/'p') OR (Modifier is pressed AND key is 'n'/'p')
+        const key = e.key.toLowerCase();
+        if ((isInputEmpty || isModifierPressed) && (key === 'n' || key === 'p')) {
             e.preventDefault();
-            handleValueChange(param.parameter_code, 'Negative');
-        } else if (e.key.toLowerCase() === 'p') {
-            e.preventDefault();
-            handleValueChange(param.parameter_code, 'Positive');
+            handleValueChange(param.parameter_code, key === 'n' ? 'Negative' : 'Positive');
         }
     };
 

@@ -137,20 +137,28 @@ As an offline Electron app, PathoDesk relies on IPC handlers rather than traditi
 
 ---
 
-## 10. AI Features
+## 10. AI Analysis (Beta/Module)
 
-**PathoDesk AI Analysis (Optional Module):**
-*   **Functionality:** Pathologists can click "AI Analysis" on complex multi-test orders (like full blood counts + biochemistry) to get an automated interpretation of the combined patterns, highlighting hidden correlations. 
-*   **Usage logic:** AI analysis requires an active internet connection. It is governed by a **Subscription System** tracking usage quotas (API Credits). Once the monthly quota is exceeded, the user is prompted to upgrade their plan via the Subscription panel.
+The AI Analysis module is an **assistive technology** designed to provide supplementary insights and interpretation templates. 
+
+*   **Functionality:** Pathologists can click "AI Analysis" on complex multi-test orders to get an automated interpretation of combined patterns, highlighting hidden correlations. 
+*   **Regulatory Status:** This feature is currently categorized as a Clinical Decision Support (CDS) tool. It is **NOT** intended for primary diagnosis or as a substitute for professional clinical judgment. Clinical validation and appropriate regulatory clearance (e.g., FDA/CE-IVD) are required prior to clinical deployment in specific jurisdictions.
+*   **Professional Liability:** The final interpretation and verification of all reports remain the sole responsibility of the pathologist and the laboratory medical director.
+*   **Privacy Controls:** 
+    *   **Mandatory Anonymization:** All patient identifiers (Name, DOB, Phone, UID) are stripped server-side before processing by any AI engine.
+    *   **Explicit Opt-in:** AI features are disabled by default and require a BAA (Business Associate Agreement) flag to be enabled in Lab Settings.
+    *   **Offline Capability:** We prioritize on-premise execution of AI models where hardware permits to maintain strict data sovereignty.
 
 ---
 
-## 11. Security & Compliance
+## 11. Data Protection & Security
 
+The application prioritizes the security and integrity of health records:
+*   **Local-First Storage:** All patient records and results are stored on the local premises. We do not transmit PHI (Protected Health Information) to any external cloud service without explicit user configuration.
 *   **Authentication:** Local user sessions protected via `bcryptjs` hashed passwords.
-*   **Role Authorization:** strict UI and IPC gating (e.g., standard technicians cannot alter `test_prices`).
-*   **Data Protection:** Data remains strictly on the local machine unless the user explicitly configures Cloud Backups. EMR definitions adhere loosely to standard healthcare interoperability expectations by preventing silent alterations.
-*   **Auditability:** Every overwrite of a verified result, invoice deletion, or QC failure override requires an explicit reason and is permanently appended to the `audit_logs` table.
+*   **Access Control:** Role-based access (Technician, Pathologist, Auditor) ensures that only authorized personnel can enter or verify results. ipc gating (e.g., standard technicians cannot alter `test_prices`).
+*   **Audit Logging:** Every modification to patient data, results, or critical system settings (including clock changes or license uploads) is recorded in a tamper-resistant local audit log.
+*   **Compliance Controls:** The system is designed to facilitate GDPR and HIPAA compliance by providing data encryption-at-rest (for critical credentials), comprehensive audit trails, and data backup/disaster recovery procedures.
 
 ---
 
@@ -167,7 +175,9 @@ PathoDesk is deployed directly to end-user Windows machines as a standard Deskto
 
 The application utilizes a proprietary **Hardware-bound Licensing System**. 
 Licenses are RSA-PSS signed JSON tokens issued by the vendor.
-*   **Trial Edition:** Time-bound, no machine fingerprinting required. Detects clock rollbacks.
+*   **Trial Edition:** Time-bound, full evaluation for 30 days. Detects clock rollbacks.
+*   **Clock-Rollback Mitigations:** To prevent accidental lockouts, the system includes a ±5-minute drift tolerance and provides clear warnings to the user if a clock disparity is detected. In case of hardware-related clock failure, lab administrators can contact support for an emergency bypass key (requires administrative audit).
+*   **Grace Period:** A 3-day grace period is provided after expiry to allow for report printing and data export.
 *   **Annual Subscription:** Soft-bound to the machine's GUID, Disk Serial, and CPU ID. Permits minor hardware changes via a tolerance system.
 *   **Perpetual License:** Strict hardware-binding. Allows lifetime use for a single specific PC.
 *   **Add-on Modules:** Features like `QC_AUDIT` and the `AI Sandbox` are selectively unlocked based on the license token's entitlements.

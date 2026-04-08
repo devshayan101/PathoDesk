@@ -1290,6 +1290,17 @@ function getMigrations() {
         -- Add parent_id for grouping sub-parameters under a header
         ALTER TABLE test_parameters ADD COLUMN parent_id INTEGER REFERENCES test_parameters(id);
       `
+    },
+    {
+      name: '020_ai_compliance',
+      sql: `
+        -- Insert AI Compliance settings if they don't exist
+        INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES
+          ('ai_analysis_enabled', 'false'),
+          ('ai_privacy_consent_required', 'true'),
+          ('ai_baa_accepted', 'false'),
+          ('ai_anonymization_mandatory', 'true');
+      `
     }
   ];
 }

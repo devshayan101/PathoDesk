@@ -118,6 +118,25 @@ export interface TestResult {
     enteredAt: string;
 }
 
+export interface AIAnalysisRequest {
+    sampleId: number;
+    testName: string;
+    parameters: Array<{
+        code: string;
+        name: string;
+        value: string;
+        unit?: string;
+        ranges?: string;
+    }>;
+}
+
+export interface AIAnalysisResponse {
+    success: boolean;
+    interpretation: string;
+    disclaimer: string;
+    error?: string;
+}
+
 // IPC Channel names
 export const IPC_CHANNELS = {
     // Auth
@@ -316,6 +335,8 @@ export const IPC_CHANNELS = {
     // Bulk Import
     TESTS_BULK_IMPORT: 'tests:bulkImport',
     TESTS_EXPORT: 'tests:export',
+    // AI Analysis
+    AI_ANALYZE_REPORT: 'ai:analyzeReport',
 } as const;
 
 // Billing Types
