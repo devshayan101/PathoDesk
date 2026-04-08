@@ -5,7 +5,7 @@ import 'dotenv/config'
 
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, closeDatabase, queryAll, queryOne, run } from './database/db'
+import { initDatabase, closeDatabase, queryAll, queryOne, run, getDb } from './database/db'
 import * as authService from './services/authService'
 import * as patientService from './services/patientService'
 import * as testService from './services/testService'
@@ -13,6 +13,7 @@ import * as orderService from './services/orderService'
 import * as sampleService from './services/sampleService'
 import * as userService from './services/userService'
 import * as resultService from './services/resultService'
+import { safeStorage } from 'electron'
 import * as reportService from './services/reportService'
 import * as doctorService from './services/doctorService'
 import * as billingService from './services/billingService'
@@ -114,6 +115,54 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.AUTH_GET_SESSION, () => {
     return authService.getSession()
   })
+
+  // Credentials (Secure Storage)
+  ipcMain.handle('credentials:store', async (_, { username, password }) => {
+    try {
+      const encrypted = safeStorage.encryptString(password);
+      const hex = Buffer.from(encrypted).toString('hex');
+      // For simplicity, we use localStorage in renderer for username, but main for password
+      // Wait, let's use a config-like file or better-sqlite3 for storing these?
+      // Actually, safest is to just store them in a dedicated 'credentials' table.
+      const db = getDb();
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS _secure_credentials (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          username TEXT NOT NULL,
+          password_blob TEXT NOT NULL
+        )
+      `).run();
+      db.prepare('INSERT OR REPLACE INTO _secure_credentials (id, username, password_blob) VALUES (1, ?, ?)').run(username, hex);
+      return { success: true };
+    } catch (e: any) {
+      console.error('Failed to store credentials:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('credentials:get', async () => {
+    try {
+      const db = getDb();
+      const row = db.prepare('SELECT username, password_blob FROM _secure_credentials WHERE id = 1').get() as any;
+      if (!row) return null;
+      const buffer = Buffer.from(row.password_blob, 'hex');
+      const password = safeStorage.decryptString(buffer);
+      return { username: row.username, password };
+    } catch (e) {
+      console.error('Failed to get credentials:', e);
+      return null;
+    }
+  });
+
+  ipcMain.handle('credentials:delete', async () => {
+    try {
+      const db = getDb();
+      db.prepare('DELETE FROM _secure_credentials WHERE id = 1').run();
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
 
   // Patients
   ipcMain.handle(IPC_CHANNELS.PATIENT_LIST, () => {
@@ -293,23 +342,39 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle(IPC_CHANNELS.ORDER_UPDATE, async (_, id: number, data) => {
-    const orderResult = orderService.updateOrder(id, data);
-    if (orderResult.success) {
-      // Also update the invoice
-      const testIds: number[] = [];
-      for (const vId of data.testVersionIds) {
-        const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
-        if (tv) testIds.push(tv.test_id);
+    try {
+      if (!data || !Array.isArray(data.testVersionIds)) {
+        throw new Error('Invalid input: testVersionIds must be an array');
       }
-      
-      invoiceService.updateInvoiceByOrder(id, {
-        testIds,
-        priceListId: data.priceListId,
-        discountPercent: data.discountPercent, // Frontend should pass these if changed
-        discountAmount: data.discountAmount
-      });
+
+      return getDb().transaction(() => {
+        const orderResult = orderService.updateOrder(id, data);
+        if (!orderResult.success) return orderResult;
+
+        // Also update the invoice
+        const testIds: number[] = [];
+        for (const vId of data.testVersionIds) {
+          const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
+          if (tv) testIds.push(tv.test_id);
+        }
+        
+        const invoiceResult = invoiceService.updateInvoiceByOrder(id, {
+          testIds,
+          priceListId: data.priceListId,
+          discountPercent: data.discountPercent,
+          discountAmount: data.discountAmount
+        });
+
+        if (!invoiceResult.success) {
+          throw new Error(`Invoice update failed: ${invoiceResult.error}`);
+        }
+
+        return orderResult;
+      })();
+    } catch (e: any) {
+      console.error('IPC ORDER_UPDATE error:', e);
+      return { success: false, error: e.message };
     }
-    return orderResult;
   })
 
   ipcMain.handle(IPC_CHANNELS.ORDER_PENDING, () => {
@@ -702,6 +767,7 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.LICENSE_UPLOAD, async (_, fileContent: string) => {
     const licenseService = getLicenseService()
     const result = await licenseService.uploadLicense(fileContent)
+    const session = authService.getSession()
 
     // Log to audit
     auditService.logAudit({
@@ -712,7 +778,7 @@ function registerIpcHandlers() {
         state: result.status.state,
         labName: result.status.license?.lab_name
       }),
-      performedBy: undefined // Should be passed from frontend
+      performedBy: session?.userId
     })
 
     return result

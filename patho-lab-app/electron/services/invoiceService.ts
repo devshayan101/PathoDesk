@@ -493,6 +493,10 @@ export function updateInvoiceByOrder(orderId: number, data: {
             return { success: false, error: 'Invoice not found' };
         }
 
+        if (invoice.status !== 'DRAFT') {
+            return { success: false, error: `Only DRAFT invoices can be updated. Current status: ${invoice.status}` };
+        }
+
         // Get test prices
         const testPrices = getTestPricesForTests(data.testIds, data.priceListId);
 
@@ -584,6 +588,23 @@ export function updateInvoiceByOrder(orderId: number, data: {
                 totalGst, totalAmount, data.priceListId,
                 invoice.id
             ]);
+
+            // 4. Audit logging
+            const changes: any = {
+                subtotal: { old: invoice.subtotal, new: subtotal },
+                total_amount: { old: invoice.total_amount, new: totalAmount }
+            };
+            
+            if (data.discountAmount !== undefined || data.discountPercent !== undefined) {
+                changes.discount_amount = { old: invoice.discount_amount, new: discountAmount };
+                changes.discount_percent = { old: invoice.discount_percent, new: discountPercent };
+                changes.discount_reason = { old: invoice.discount_reason, new: data.discountReason || invoice.discount_reason };
+            }
+
+            run(`
+                INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+                VALUES ('invoice', ?, 'UPDATE', ?, ?, datetime('now'))
+            `, [invoice.id, JSON.stringify(changes), data.discountApprovedBy || null]);
 
             return { success: true };
         })();

@@ -13,6 +13,16 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_SESSION),
   },
 
+  // Credentials (Secure Storage)
+  credentials: {
+    store: (creds: any) =>
+      ipcRenderer.invoke('credentials:store', creds),
+    get: () =>
+      ipcRenderer.invoke('credentials:get'),
+    delete: () =>
+      ipcRenderer.invoke('credentials:delete'),
+  },
+
   // Patients
   patients: {
     list: () =>

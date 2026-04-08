@@ -1,4 +1,4 @@
-import { queryAll, queryOne, run, runWithId } from '../database/db';
+import { getDb, queryAll, queryOne, run, runWithId } from '../database/db';
 import { getTestPricesForTests } from './billingService';
 
 
@@ -121,7 +121,7 @@ export function createOrder(data: {
       totalAmount += pricesMap.get(tId)?.base_price || 0;
     }
 
-    const discount = data.discount || 0;
+    const discount = Math.min(totalAmount, Math.max(0, data.discount || 0));
     const netAmount = totalAmount - discount;
 
     // Insert order
@@ -196,54 +196,60 @@ export function updateOrder(orderId: number, data: {
       totalAmount += pricesMap.get(tId)?.base_price || 0;
     }
 
-    const discount = data.discount || 0;
+    const discount = Math.min(totalAmount, Math.max(0, data.discount || 0));
     const netAmount = totalAmount - discount;
 
-    // 2. Update order row
-    run(`
-      UPDATE orders 
-      SET total_amount = ?, discount = ?, net_amount = ?, referring_doctor_id = ?
-      WHERE id = ?
-    `, [totalAmount, discount, netAmount, data.referringDoctorId || null, orderId]);
+    // 2. Wrap all updates in a transaction
+    const result = getDb().transaction(() => {
+      // 3. Update order row
+      run(`
+        UPDATE orders 
+        SET total_amount = ?, discount = ?, net_amount = ?, referring_doctor_id = ?
+        WHERE id = ?
+      `, [totalAmount, discount, netAmount, data.referringDoctorId || null, orderId]);
 
-    // 3. Reconcile tests - ONLY ALLOW ADDING
-    const existingTests = queryAll<{ id: number; test_version_id: number; test_name: string }>(`
-      SELECT ot.id, ot.test_version_id, tv.test_name 
-      FROM order_tests ot
-      JOIN test_versions tv ON ot.test_version_id = tv.id
-      WHERE ot.order_id = ?
-    `, [orderId]);
- 
-    const existingRefIds = existingTests.map(t => t.test_version_id);
-    const newRefIds = data.testVersionIds;
- 
-    // Check if any existing test is missing from the updated list
-    for (const et of existingTests) {
-      if (!newRefIds.includes(et.test_version_id)) {
-        return { success: false, error: `Removal of already added tests is not allowed (Missing: ${et.test_name})` };
+      // 4. Reconcile tests - ONLY ALLOW ADDING
+      const existingTests = queryAll<{ id: number; test_version_id: number; test_name: string }>(`
+        SELECT ot.id, ot.test_version_id, tv.test_name 
+        FROM order_tests ot
+        JOIN test_versions tv ON ot.test_version_id = tv.id
+        WHERE ot.order_id = ?
+      `, [orderId]);
+  
+      const existingRefIds = existingTests.map(t => t.test_version_id);
+      const newRefIds = data.testVersionIds;
+  
+      // Check if any existing test is missing from the updated list
+      for (const et of existingTests) {
+        if (!newRefIds.includes(et.test_version_id)) {
+          throw new Error(`Removal of already added tests is not allowed (Missing: ${et.test_name})`);
+        }
       }
-    }
- 
-    // Add new tests
-    for (const vId of newRefIds) {
-      if (!existingRefIds.includes(vId)) {
-        const tId = versionToTestMap.get(vId);
-        const testPrice = tId ? (pricesMap.get(tId)?.base_price || 0) : 0;
- 
-        const orderTestId = runWithId(`
-          INSERT INTO order_tests (order_id, test_version_id, status, price)
-          VALUES (?, ?, 'ORDERED', ?)
-        `, [orderId, vId, testPrice]);
- 
-        const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
-        run(`
-          INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
-          VALUES (?, ?, 'COLLECTED', datetime('now'))
-        `, [sampleUid, orderTestId]);
+  
+      // Add new tests
+      for (const vId of newRefIds) {
+        if (!existingRefIds.includes(vId)) {
+          const tId = versionToTestMap.get(vId);
+          const testPrice = tId ? (pricesMap.get(tId)?.base_price || 0) : 0;
+  
+          const orderTestId = runWithId(`
+            INSERT INTO order_tests (order_id, test_version_id, status, price)
+            VALUES (?, ?, 'ORDERED', ?)
+          `, [orderId, vId, testPrice]);
+  
+          // Use more robust unique ID for samples
+          const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+          run(`
+            INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
+            VALUES (?, ?, 'COLLECTED', datetime('now'))
+          `, [sampleUid, orderTestId]);
+        }
       }
-    }
 
-    return { success: true };
+      return { success: true };
+    })();
+
+    return result;
   } catch (error: any) {
     console.error('Update order error:', error);
     return { success: false, error: error.message };

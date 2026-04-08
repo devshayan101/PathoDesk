@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { obfuscate, deobfuscate } from '../../utils/cryptoUtils';
 import logoUrl from '../../assets/pathoDesk_logo.png';
 import './Login.css';
 
@@ -23,11 +22,11 @@ export default function LoginPage() {
                     setIsRememberEnabled(enabled);
 
                     if (enabled) {
-                        const savedUser = localStorage.getItem('remembered_username');
-                        const savedPass = localStorage.getItem('remembered_password');
-                        if (savedUser && savedPass) {
-                            setUsername(savedUser);
-                            setPassword(deobfuscate(savedPass));
+                        // Use secure IPC to get credentials
+                        const creds = await (window.electronAPI as any).credentials.get();
+                        if (creds) {
+                            setUsername(creds.username);
+                            setPassword(creds.password);
                             setRememberMe(true);
                         }
                     }
@@ -44,11 +43,9 @@ export default function LoginPage() {
         const success = await login(username, password);
         if (success) {
             if (rememberMe && isRememberEnabled) {
-                localStorage.setItem('remembered_username', username);
-                localStorage.setItem('remembered_password', obfuscate(password));
+                await (window.electronAPI as any).credentials.store({ username, password });
             } else {
-                localStorage.removeItem('remembered_username');
-                localStorage.removeItem('remembered_password');
+                await (window.electronAPI as any).credentials.delete();
             }
             navigate('/');
         }
