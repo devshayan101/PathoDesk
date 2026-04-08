@@ -364,7 +364,9 @@ function registerIpcHandlers() {
 
       return getDb().transaction(() => {
         const orderResult = orderService.updateOrder(id, data);
-        if (!orderResult.success) return orderResult;
+        if (!orderResult.success) {
+          throw new Error(orderResult.error || 'Failed to update order');
+        }
 
         // Also update the invoice
         const testIds: number[] = [];

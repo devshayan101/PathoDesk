@@ -170,6 +170,34 @@ export function updateOrder(orderId: number, data: {
       return { success: false, error: 'Order not found' };
     }
 
+    // Check if order is locked (Verified, Finalized or Finalized Invoice)
+    const orderStatus = queryOne<{ report_status: string; invoice_status: string }>(`
+      SELECT 
+        (
+          SELECT 
+            CASE 
+              WHEN COUNT(*) = 0 THEN 'NO_TESTS'
+              WHEN SUM(CASE WHEN status = 'FINALIZED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'FINALIZED'
+              WHEN SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'VERIFIED'
+              WHEN SUM(CASE WHEN status IN ('VERIFIED', 'FINALIZED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIAL'
+              ELSE 'OPEN'
+            END
+          FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
+        ) as report_status,
+        (SELECT status FROM invoices WHERE order_id = o.id AND status != 'CANCELLED' LIMIT 1) as invoice_status
+      FROM orders o
+      WHERE o.id = ?
+    `, [orderId]);
+
+    if (orderStatus) {
+      if (orderStatus.report_status === 'VERIFIED' || orderStatus.report_status === 'FINALIZED') {
+        return { success: false, error: `Order is locked because the report is already ${orderStatus.report_status.toLowerCase()}.` };
+      }
+      if (orderStatus.invoice_status === 'FINALIZED') {
+        return { success: false, error: 'Order is locked because the invoice is already finalized.' };
+      }
+    }
+
     // 1. Re-calculate totals based on new tests
     const testIds: number[] = [];
     const versionToTestMap = new Map<number, number>();

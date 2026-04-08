@@ -173,6 +173,12 @@ export default function OrdersPage() {
     };
 
     const handleEditOrder = async (order: Order) => {
+        const isLocked = ['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status);
+        if (isLocked) {
+            showToast('This order is locked and cannot be edited.', 'warning');
+            return;
+        }
+
         try {
             setLoading(true);
             const data = await window.electronAPI.orders.get(order.id);
@@ -925,7 +931,15 @@ export default function OrdersPage() {
                                             </td>
                                             <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                 <button className="btn btn-secondary btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleViewOrder(order)}>View</button>
-                                                <button className="btn btn-info btn-sm" style={{ marginRight: '0.5rem' }} onClick={() => handleEditOrder(order)}>Edit</button>
+                                                <button 
+                                                    className="btn btn-info btn-sm" 
+                                                    style={{ marginRight: '0.5rem' }} 
+                                                    onClick={() => handleEditOrder(order)}
+                                                    disabled={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status)}
+                                                    title={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status) ? "Order is locked (Verified/Finalized)" : "Edit Order"}
+                                                >
+                                                    Edit
+                                                </button>
                                                 {(order as any).has_collected_samples > 0 ? (
                                                     <button
                                                         className="btn btn-warning btn-sm"
