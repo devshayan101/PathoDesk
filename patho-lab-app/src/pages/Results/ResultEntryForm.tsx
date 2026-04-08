@@ -167,6 +167,23 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent, param: ResultParameter) => {
+        // Only trigger if typing in a field that isn't already handled (like Widal grid has its own handlers if needed)
+        // Check if range contains positive or negative
+        const rangeText = getRefRangeText(param).toLowerCase();
+        const isQualitative = rangeText.includes('positive') || rangeText.includes('negative');
+
+        if (!isQualitative) return;
+
+        if (e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+            handleValueChange(param.parameter_code, 'Negative');
+        } else if (e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            handleValueChange(param.parameter_code, 'Positive');
+        }
+    };
+
     // Helper to save data without UI feedback (internal use)
     const saveData = async (): Promise<boolean> => {
         if (!resultData || !window.electronAPI) return false;
@@ -501,6 +518,7 @@ export default function ResultEntryForm({ sampleId, onClose, onSampleUpdate }: R
                                                     value={value}
                                                     onChange={(e) => handleValueChange(param.parameter_code, e.target.value)}
                                                     onBlur={(e) => handleInputBlur(param.parameter_code, e.target.value)}
+                                                    onKeyDown={(e) => handleKeyDown(e, param)}
                                                     placeholder={param.data_type === 'CALCULATED' ? '⚙ auto' : '—'}
                                                     disabled={isReadOnly || param.data_type === 'CALCULATED'}
                                                     style={param.data_type === 'CALCULATED' ? { backgroundColor: 'var(--color-bg-tertiary)', fontStyle: 'italic' } : undefined}

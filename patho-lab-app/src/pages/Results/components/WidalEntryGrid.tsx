@@ -19,6 +19,27 @@ const ANTIGEN_LABELS: Record<string, string> = {
 
 export default function WidalEntryGrid({ parameters, values, onValueChange, onInputBlur, disabled }: WidalEntryGridProps) {
     
+    const getRefRangeText = (param: ResultParameter): string => {
+        if (param.ref_ranges.length === 0) return '';
+        const range = param.ref_ranges[0];
+        return range.display_text || '';
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, param: ResultParameter) => {
+        const rangeText = getRefRangeText(param).toLowerCase();
+        const isQualitative = rangeText.includes('positive') || rangeText.includes('negative');
+
+        if (!isQualitative) return;
+
+        if (e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+            onValueChange(param.parameter_code, 'Negative');
+        } else if (e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            onValueChange(param.parameter_code, 'Positive');
+        }
+    };
+
     // Build a lookup: Antigen -> Dilution -> Parameter
     const matrix: Record<string, Record<string, ResultParameter>> = {};
     let impressionParam: ResultParameter | null = null;
@@ -94,6 +115,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                                                 value={values[param.parameter_code] || ''}
                                                 onChange={(e) => onValueChange(param.parameter_code, e.target.value)}
                                                 onBlur={(e) => onInputBlur(param.parameter_code, e.target.value)}
+                                                onKeyDown={(e) => handleKeyDown(e, param)}
                                                 disabled={disabled}
                                                 placeholder="-"
                                             />
@@ -118,6 +140,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                                 value={values[param.parameter_code] || ''}
                                 onChange={(e) => onValueChange(param.parameter_code, e.target.value)}
                                 onBlur={(e) => onInputBlur(param.parameter_code, e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, param)}
                                 disabled={disabled}
                             />
                         </div>
@@ -136,6 +159,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                             value={values[(impressionParam as ResultParameter).parameter_code] || ''}
                             onChange={(e) => onValueChange((impressionParam as ResultParameter).parameter_code, e.target.value)}
                             onBlur={(e) => onInputBlur((impressionParam as ResultParameter).parameter_code, e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, impressionParam as ResultParameter)}
                             disabled={disabled}
                             placeholder="Enter impression..."
                         />
@@ -150,6 +174,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                             value={values[(methodParam as ResultParameter).parameter_code] || ''}
                             onChange={(e) => onValueChange((methodParam as ResultParameter).parameter_code, e.target.value)}
                             onBlur={(e) => onInputBlur((methodParam as ResultParameter).parameter_code, e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, methodParam as ResultParameter)}
                             disabled={disabled}
                             placeholder="Enter method..."
                         />
