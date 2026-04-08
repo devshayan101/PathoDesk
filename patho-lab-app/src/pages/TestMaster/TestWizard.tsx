@@ -202,7 +202,14 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
     const updateParam = (idx: number, field: string, value: any) => {
         setParameters(prev => {
             const newParams = [...prev];
-            newParams[idx] = { ...newParams[idx], [field]: value };
+            const updatedParam = { ...newParams[idx], [field]: value };
+            
+            // Clear formula if data_type is changed away from CALCULATED
+            if (field === 'data_type' && value !== 'CALCULATED') {
+                updatedParam.formula = '';
+            }
+            
+            newParams[idx] = updatedParam;
             return newParams;
         });
     };

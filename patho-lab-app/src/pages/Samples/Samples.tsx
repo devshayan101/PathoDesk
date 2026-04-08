@@ -13,6 +13,15 @@ interface Sample {
     collected_at: string;
 }
 
+const escapeHtml = (unsafe: string) => {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
 export default function SamplesPage() {
     const navigate = useNavigate();
     const [samples, setSamples] = useState<Sample[]>([]);
@@ -120,11 +129,11 @@ export default function SamplesPage() {
             </head>
             <body>
                 <div class="barcode-container">
-                    <div class="sample-uid">${sample.sample_uid}</div>
+                    <div class="sample-uid">${escapeHtml(sample.sample_uid)}</div>
                     <img class="barcode-image" src="${barcodeDataUrl}" />
                     <div class="details">
-                        <strong>${sample.patient_name}</strong><br/>
-                        ${sample.test_name}<br/>
+                        <strong>${escapeHtml(sample.patient_name)}</strong><br/>
+                        ${escapeHtml(sample.test_name)}<br/>
                         ${new Date().toLocaleDateString()}
                     </div>
                 </div>

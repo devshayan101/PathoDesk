@@ -187,7 +187,14 @@ export default function ParameterListPanel({
                                 <div className="form-group">
                                     <label>Type</label>
                                     <select className="input" value={newParam.dataType}
-                                        onChange={e => setNewParam({ ...newParam, dataType: e.target.value })}>
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setNewParam({ 
+                                                ...newParam, 
+                                                dataType: val, 
+                                                formula: val === 'CALCULATED' ? newParam.formula : '' 
+                                            });
+                                        }}>
                                         <option>NUMERIC</option>
                                         <option>TEXT</option>
                                         <option>CALCULATED</option>

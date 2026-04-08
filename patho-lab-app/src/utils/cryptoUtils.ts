@@ -1,33 +1,86 @@
-// Simple obfuscation for local storage credentials
-// NOTE: This is for "Remember Me" convenience, not high-security vaulting.
-
-const SECRET_KEY = 'pathodesk-v1-secret';
+/**
+ * Secure credential storage utilities using the Web Crypto API.
+ * 
+ * NOTE: This implementation provides encrypted storage for user convenience
+ * (e.g., "Remember Me" functionality) using modern cryptographic standards.
+ */
 
 /**
- * Obfuscates a string using a simple XOR with a fixed key and Base64 encoding.
- * While not mathematically "unbreakable", it prevents plain-text visibility in localStorage.
+ * Derives a CryptoKey from a salt using PBKDF2.
+ * @param salt - A unique string (e.g., userId or machineId) used as salt.
  */
-export function obfuscate(text: string): string {
-    if (!text) return '';
-    const chars = text.split('').map((c, i) => 
-        String.fromCharCode(c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length))
+export async function deriveKeyFromSalt(salt: string): Promise<CryptoKey> {
+    const encoder = new TextEncoder();
+    const baseKey = await window.crypto.subtle.importKey(
+        "raw",
+        encoder.encode("pathodesk-v1-secret-seed"), // Fixed seed for key derivation
+        "PBKDF2",
+        false,
+        ["deriveKey"]
     );
-    return btoa(unescape(encodeURIComponent(chars.join(''))));
+
+    return window.crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: encoder.encode(salt),
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        baseKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
 }
 
 /**
- * De-obfuscates a string previously obfuscated by obfuscate().
+ * Encrypts a string using AES-GCM and returns a base64 encoded string containing the IV and ciphertext.
  */
-export function deobfuscate(encoded: string): string {
+export async function obfuscate(text: string, key: CryptoKey): Promise<string> {
+    if (!text) return '';
+    
+    const encoder = new TextEncoder();
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encodedData = encoder.encode(text);
+
+    const ciphertext = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        encodedData
+    );
+
+    // Combine IV and ciphertext for storage
+    const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(ciphertext), iv.length);
+
+    return btoa(String.fromCharCode(...combined));
+}
+
+/**
+ * Decrypts a base64 encoded string containing an IV and AES-GCM ciphertext.
+ */
+export async function deobfuscate(encoded: string, key: CryptoKey): Promise<string> {
     if (!encoded) return '';
+    
     try {
-        const text = decodeURIComponent(escape(atob(encoded)));
-        const chars = text.split('').map((c, i) => 
-            String.fromCharCode(c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length))
+        const combined = new Uint8Array(
+            atob(encoded).split('').map(char => char.charCodeAt(0))
         );
-        return chars.join('');
+
+        const iv = combined.slice(0, 12);
+        const ciphertext = combined.slice(12);
+
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv },
+            key,
+            ciphertext
+        );
+
+        return new TextDecoder().decode(decrypted);
     } catch (e) {
-        console.error('Failed to deobfuscate credential:', e);
+        // Silent failure to avoid leaking info about decryption errors
         return '';
     }
 }
+

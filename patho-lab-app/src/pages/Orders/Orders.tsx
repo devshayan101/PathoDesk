@@ -195,7 +195,7 @@ export default function OrdersPage() {
             }
 
             setSelectedPriceListId(data.price_list_id || defaultPriceListId);
-            const initialIds = data.tests.map((t: any) => t.test_version_id);
+            const initialIds = data.tests?.map((t: any) => t.test_version_id) || [];
             setSelectedTestIds(initialIds);
             setInitialTestIds(initialIds);
             
@@ -578,9 +578,15 @@ export default function OrdersPage() {
                                             }}
                                             onFocus={() => setPatientDropdownOpen(true)}
                                             placeholder="Search patient name or ID..."
-                                            style={{ width: '100%' }}
+                                            style={{ width: '100%', backgroundColor: editingOrderId ? 'var(--color-bg-tertiary-dim)' : undefined }}
                                             autoComplete="off"
+                                            disabled={!!editingOrderId}
                                         />
+                                        {editingOrderId && (
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                                Patient cannot be changed for an existing order.
+                                            </p>
+                                        )}
                                         {patientDropdownOpen && filteredPatients.length > 0 && (
                                             <div style={{
                                                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,

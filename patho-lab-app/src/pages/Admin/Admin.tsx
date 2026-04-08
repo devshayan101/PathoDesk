@@ -113,11 +113,16 @@ export default function AdminPage() {
             isOpen: true,
             title: 'Clear Saved Credentials',
             message: 'This will remove all saved login credentials from this device. Users will need to enter their passwords again next time. Proceed?',
-            onConfirm: () => {
-                localStorage.removeItem('remembered_username');
-                localStorage.removeItem('remembered_password');
-                setConfirmDialog(null);
-                showToast('Saved credentials cleared from this device', 'success');
+            onConfirm: async () => {
+                try {
+                    if (window.electronAPI) {
+                        await (window.electronAPI as any).credentials.delete();
+                        setConfirmDialog(null);
+                        showToast('Secure credentials and session cleared', 'success');
+                    }
+                } catch (e: any) {
+                    showToast('Failed to clear credentials: ' + e.message, 'error');
+                }
             }
         });
     };
@@ -224,10 +229,11 @@ export default function AdminPage() {
         try {
             if (window.electronAPI) {
                 const result = await window.electronAPI.users.toggleActive(userId);
-                if (result?.success !== false) {
+                if (result?.success === true) {
                     await loadData();
+                    showToast('User status updated', 'success');
                 } else {
-                    showToast(result.error || 'Failed to update user status', 'error');
+                    showToast(result?.error || 'Failed to update user status', 'error');
                 }
             }
         } catch (e) {
