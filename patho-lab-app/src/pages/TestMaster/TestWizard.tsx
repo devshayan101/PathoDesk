@@ -392,11 +392,14 @@ export default function TestWizard({ initialDraftId, isEditing, onClose, onSucce
                                     )}
                                 </td>
                                 <td>
-                                    {p.data_type === 'CALCULATED' ? (
-                                        <input className="input-sm" value={p.formula || ''} onChange={e => updateParam(idx, 'formula', e.target.value)} placeholder="e.g. {A}/{B}" />
-                                    ) : (
-                                        <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                                    )}
+                                    <input 
+                                        className="input-sm" 
+                                        value={p.formula || ''} 
+                                        onChange={e => updateParam(idx, 'formula', e.target.value)} 
+                                        placeholder={p.data_type === 'CALCULATED' ? "e.g. {A}/{B}" : ""}
+                                        disabled={p.data_type !== 'CALCULATED'}
+                                        style={{ backgroundColor: p.data_type !== 'CALCULATED' ? 'var(--color-bg-tertiary-dim)' : undefined, opacity: p.data_type !== 'CALCULATED' ? 0.5 : 1 }}
+                                    />
                                 </td>
                                 <td><button className="btn-delete" onClick={() => removeParam(idx)}>×</button></td>
                             </tr>

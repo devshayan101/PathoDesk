@@ -593,8 +593,18 @@ export default function AdminPage() {
                             </div>
 
                             <div className="lab-settings-card">
-                                <h3 className="card-section-title">Security & Storage</h3>
+                                <h3 className="card-section-title">Security Settings</h3>
                                 <div className="settings-grid">
+                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            id="enable_remember_me"
+                                            checked={labSettings.enable_remember_me === 'true'}
+                                            onChange={(e) => updateLabSetting('enable_remember_me', e.target.checked ? 'true' : 'false')}
+                                            style={{ width: 18, height: 18, cursor: 'pointer' }}
+                                        />
+                                        <label htmlFor="enable_remember_me" style={{ cursor: 'pointer', margin: 0 }}>Enable "Remember Me" on login screen</label>
+                                    </div>
                                     <div className="form-group full-width" style={{ marginTop: '0.5rem' }}>
                                         <button
                                             type="button"

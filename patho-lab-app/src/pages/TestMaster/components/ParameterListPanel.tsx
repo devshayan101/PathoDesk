@@ -212,16 +212,17 @@ export default function ParameterListPanel({
                                     </div>
                                 )}
                             </div>
-                            {newParam.dataType === 'CALCULATED' && (
-                                <div className="form-row">
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>Formula</label>
-                                        <input className="input" value={newParam.formula}
-                                            onChange={e => setNewParam({ ...newParam, formula: e.target.value })}
-                                            placeholder="e.g. {ALBUMIN} / {GLOBULIN}" />
-                                    </div>
+                            <div className="form-row">
+                                <div className="form-group" style={{ gridColumn: '1 / -1', opacity: newParam.dataType === 'CALCULATED' ? 1 : 0.5 }}>
+                                    <label>Formula</label>
+                                    <input className="input" value={newParam.formula}
+                                        onChange={e => setNewParam({ ...newParam, formula: e.target.value })}
+                                        placeholder={newParam.dataType === 'CALCULATED' ? "e.g. {ALBUMIN} / {GLOBULIN}" : ""}
+                                        disabled={newParam.dataType !== 'CALCULATED'}
+                                        style={{ backgroundColor: newParam.dataType !== 'CALCULATED' ? 'var(--color-bg-tertiary-dim)' : undefined }}
+                                    />
                                 </div>
-                            )}
+                            </div>
                             <div className="form-actions">
                                 <button className="btn btn-primary" onClick={onSaveParam}>
                                     {isEditingParam ? 'Update' : 'Add'}

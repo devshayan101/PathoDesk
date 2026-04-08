@@ -9,19 +9,31 @@ export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
+    const [isRememberEnabled, setIsRememberEnabled] = useState(false);
     const { login, isLoading, error, clearError } = useAuthStore();
     const navigate = useNavigate();
 
     useEffect(() => {
         const init = async () => {
-            // Load saved credentials if present
-            const savedUser = localStorage.getItem('remembered_username');
-            const savedPass = localStorage.getItem('remembered_password');
-            
-            if (savedUser && savedPass) {
-                setUsername(savedUser);
-                setPassword(deobfuscate(savedPass));
-                setRememberMe(true);
+            // Check if remember me feature is enabled
+            if (window.electronAPI) {
+                try {
+                    const settings = await window.electronAPI.labSettings.get();
+                    const enabled = settings.enable_remember_me === 'true';
+                    setIsRememberEnabled(enabled);
+
+                    if (enabled) {
+                        const savedUser = localStorage.getItem('remembered_username');
+                        const savedPass = localStorage.getItem('remembered_password');
+                        if (savedUser && savedPass) {
+                            setUsername(savedUser);
+                            setPassword(deobfuscate(savedPass));
+                            setRememberMe(true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load lab settings:', e);
+                }
             }
         };
         init();
@@ -31,7 +43,7 @@ export default function LoginPage() {
         e.preventDefault();
         const success = await login(username, password);
         if (success) {
-            if (rememberMe) {
+            if (rememberMe && isRememberEnabled) {
                 localStorage.setItem('remembered_username', username);
                 localStorage.setItem('remembered_password', obfuscate(password));
             } else {
@@ -86,17 +98,19 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <div className="form-group remember-me-group">
-                        <label className="checkbox-container">
-                            <input
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                            />
-                            <span className="checkmark"></span>
-                            Remember Me
-                        </label>
-                    </div>
+                    {isRememberEnabled && (
+                        <div className="form-group remember-me-group">
+                            <label className="checkbox-container">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                />
+                                <span className="checkmark"></span>
+                                Remember Me
+                            </label>
+                        </div>
+                    )}
 
                     <button type="submit" className="btn btn-primary login-btn" disabled={isLoading}>
                         {isLoading ? 'Signing in...' : 'Sign In'}
