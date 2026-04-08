@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import JsBarcode from 'jsbarcode';
 import './Samples.css';
 
 interface Sample {
@@ -18,6 +19,24 @@ export default function SamplesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [barcodeModalSample, setBarcodeModalSample] = useState<Sample | null>(null);
+    const barcodeRef = useRef<SVGSVGElement>(null);
+
+    useEffect(() => {
+        if (barcodeModalSample && barcodeRef.current) {
+            try {
+                JsBarcode(barcodeRef.current, barcodeModalSample.sample_uid, {
+                    format: "CODE128",
+                    width: 2,
+                    height: 60,
+                    displayValue: false,
+                    margin: 0,
+                    background: "#fff"
+                });
+            } catch (e) {
+                console.error("Barcode generation failed:", e);
+            }
+        }
+    }, [barcodeModalSample]);
 
     useEffect(() => {
         loadSamples();
@@ -48,6 +67,21 @@ export default function SamplesPage() {
     };
 
     const handlePrintBarcode = (sample: Sample) => {
+        // Create a temporary canvas to get the barcode base64
+        const canvas = document.createElement('canvas');
+        try {
+            JsBarcode(canvas, sample.sample_uid, {
+                format: "CODE128",
+                width: 2,
+                height: 50,
+                displayValue: false,
+                margin: 10
+            });
+        } catch (e) {
+            console.error("Barcode generation for print failed:", e);
+        }
+        const barcodeDataUrl = canvas.toDataURL();
+
         // Create a printable barcode window
         const printContent = `
             <!DOCTYPE html>
@@ -56,43 +90,50 @@ export default function SamplesPage() {
                 <title>Sample Barcode</title>
                 <style>
                     body { 
-                        font-family: monospace; 
+                        font-family: 'Courier New', Courier, monospace; 
                         text-align: center; 
-                        padding: 20px;
+                        padding: 10px;
+                        margin: 0;
                     }
                     .barcode-container {
-                        border: 2px solid #000;
-                        padding: 15px;
+                        border: 1px solid #000;
+                        padding: 10px;
                         display: inline-block;
-                        margin: 10px;
+                        width: 250px;
                     }
                     .sample-uid { 
-                        font-size: 24px; 
+                        font-size: 18px; 
                         font-weight: bold;
-                        letter-spacing: 3px;
+                        letter-spacing: 2px;
+                        margin-bottom: 5px;
                     }
-                    .barcode-lines {
-                        font-size: 36px;
-                        letter-spacing: -2px;
-                        margin: 10px 0;
+                    .barcode-image {
+                        max-width: 100%;
+                        height: auto;
                     }
                     .details { 
-                        font-size: 12px; 
-                        margin-top: 10px;
+                        font-size: 11px; 
+                        margin-top: 5px;
+                        line-height: 1.2;
                     }
                 </style>
             </head>
             <body>
                 <div class="barcode-container">
                     <div class="sample-uid">${sample.sample_uid}</div>
-                    <div class="barcode-lines">|||||||||||||||||||</div>
+                    <img class="barcode-image" src="${barcodeDataUrl}" />
                     <div class="details">
-                        ${sample.patient_name}<br/>
+                        <strong>${sample.patient_name}</strong><br/>
                         ${sample.test_name}<br/>
                         ${new Date().toLocaleDateString()}
                     </div>
                 </div>
-                <script>window.print(); setTimeout(() => window.close(), 500);</script>
+                <script>
+                    window.onload = () => {
+                        window.print();
+                        setTimeout(() => window.close(), 500);
+                    };
+                </script>
             </body>
             </html>
         `;
@@ -219,14 +260,14 @@ export default function SamplesPage() {
                     <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
                         <h3 style={{ marginBottom: '1rem' }}>Sample Barcode</h3>
                         <div style={{ border: '2px solid #000', padding: '15px', display: 'inline-block', margin: '10px', background: '#fff' }}>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '3px', fontFamily: 'monospace' }}>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '3px', fontFamily: 'monospace', marginBottom: '5px' }}>
                                 {barcodeModalSample.sample_uid}
                             </div>
-                            <div style={{ fontSize: '36px', letterSpacing: '-2px', margin: '10px 0', fontFamily: 'monospace' }}>
-                                |||||||||||||||||||
+                            <div style={{ margin: '10px 0', background: '#fff', display: 'flex', justifyContent: 'center' }}>
+                                <svg ref={barcodeRef}></svg>
                             </div>
                             <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#555' }}>
-                                {barcodeModalSample.patient_name}<br />
+                                <strong>{barcodeModalSample.patient_name}</strong><br />
                                 {barcodeModalSample.test_name}<br />
                                 {new Date().toLocaleDateString()}
                             </div>
