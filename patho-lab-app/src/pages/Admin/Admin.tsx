@@ -91,18 +91,26 @@ export default function AdminPage() {
         setLabSaving(true);
         try {
             if (window.electronAPI) {
-                await Promise.all(
+                const results = await Promise.allSettled(
                     Object.entries(labSettings).map(([key, value]) =>
                         window.electronAPI.labSettings.update(key, value)
                     )
                 );
-                showToast('Lab settings saved successfully', 'success');
+                
+                const failures = results.filter(r => r.status === 'rejected');
+                if (failures.length > 0) {
+                    console.error('Some lab settings failed to save:', failures);
+                    showToast(`Saved with ${failures.length} failures`, 'warning');
+                } else {
+                    showToast('Lab settings saved successfully', 'success');
+                }
             }
         } catch (e) {
             console.error('Failed to save lab settings:', e);
             showToast('Failed to save lab settings', 'error');
+        } finally {
+            setLabSaving(false);
         }
-        setLabSaving(false);
     };
     const updateLabSetting = (key: string, value: string) => {
         setLabSettings(prev => ({ ...prev, [key]: value }));
@@ -117,11 +125,12 @@ export default function AdminPage() {
                 try {
                     if (window.electronAPI) {
                         await (window.electronAPI as any).credentials.delete();
-                        setConfirmDialog(null);
                         showToast('Secure credentials and session cleared', 'success');
                     }
                 } catch (e: any) {
                     showToast('Failed to clear credentials: ' + e.message, 'error');
+                } finally {
+                    setConfirmDialog(null);
                 }
             }
         });

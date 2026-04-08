@@ -46,6 +46,7 @@ export default function SamplesPage() {
                 });
             } catch (e) {
                 console.error("Barcode generation failed:", e);
+                showToast('Failed to display barcode preview', 'error');
             }
         }
     }, [barcodeModalSample]);

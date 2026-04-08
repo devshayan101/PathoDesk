@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import logoUrl from '../../assets/pathoDesk_logo.png';
@@ -6,7 +6,7 @@ import './Login.css';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const passwordRef = useRef<HTMLInputElement>(null);
     const [rememberMe, setRememberMe] = useState(false);
     const [isRememberEnabled, setIsRememberEnabled] = useState(false);
     const { login, isLoading, error, clearError } = useAuthStore();
@@ -26,7 +26,9 @@ export default function LoginPage() {
                         const creds = await (window.electronAPI as any).credentials.get();
                         if (creds) {
                             setUsername(creds.username);
-                            setPassword(creds.password);
+                            if (passwordRef.current) {
+                                passwordRef.current.value = creds.password;
+                            }
                             setRememberMe(true);
                         }
                     }
@@ -40,20 +42,28 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const password = passwordRef.current?.value || '';
         const success = await login(username, password);
         if (success) {
             // Guard for non-Electron environments and ensure navigation proceeds even if credential storage fails
             if (window.electronAPI) {
+                const credsAPI = (window.electronAPI as any).credentials;
                 try {
                     if (rememberMe && isRememberEnabled) {
-                        await (window.electronAPI as any).credentials.store({ username, password });
+                        await credsAPI.store({ username, password });
                     } else {
-                        await (window.electronAPI as any).credentials.delete();
+                        await credsAPI.delete();
                     }
                 } catch (err) {
                     console.error('Failed to update remembered credentials:', err);
                 }
             }
+            
+            // Clear password from ref after successful login
+            if (passwordRef.current) {
+                passwordRef.current.value = '';
+            }
+            
             navigate('/');
         }
     };
@@ -93,10 +103,9 @@ export default function LoginPage() {
                         <label htmlFor="password">Password</label>
                         <input
                             id="password"
+                            ref={passwordRef}
                             className="input"
                             type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter password"
                             required
                         />

@@ -208,3 +208,13 @@ For software enterprise support, bug reporting, licensing queries or feature req
 *   **Email:** `fmsenterprises001@gmail.com`
 *   **WhatsApp / Contact:** `+91-7765009936`
 *   **Vendor:** FMS Software Solutions
+
+---
+
+## 17. Regulatory Status
+
+**Disclaimer:** PathoDesk is a laboratory information and management tool designed for data organization, clinical workflow automation, and reporting. 
+
+*   **NOT a Clinical Diagnostic Device:** PathoDesk is NOT a clinical diagnostic device and is not intended for use in the diagnosis or treatment of any disease or medical condition.
+*   **Professional Oversight:** All clinical decisions, diagnostic interpretations, and result verifications must be performed by qualified medical professionals (Pathologists/Lab Directors) in accordance with the regulatory standards of their specific jurisdiction.
+*   **Software Classification:** The AI-assisted modules provided within PathoDesk are categorized as Clinical Decision Support (CDS) tools and must be used strictly as supplementary aids.

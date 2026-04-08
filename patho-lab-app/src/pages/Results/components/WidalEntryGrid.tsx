@@ -121,6 +121,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                                                 onKeyDown={(e) => handleKeyDown(e, param)}
                                                 disabled={disabled}
                                                 placeholder="-"
+                                                aria-label={`${ANTIGEN_LABELS[ag] || ag} dilution ${dil}`}
                                             />
                                         </td>
                                     );

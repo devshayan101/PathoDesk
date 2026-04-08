@@ -11,9 +11,10 @@
  */
 export async function deriveKeyFromSalt(salt: string): Promise<CryptoKey> {
     const encoder = new TextEncoder();
+    const seed = import.meta.env.VITE_CRYPTO_SEED || "pathodesk-v1-fallback-seed";
     const baseKey = await window.crypto.subtle.importKey(
         "raw",
-        encoder.encode("pathodesk-v1-secret-seed"), // Fixed seed for key derivation
+        encoder.encode(seed),
         "PBKDF2",
         false,
         ["deriveKey"]
@@ -79,7 +80,8 @@ export async function deobfuscate(encoded: string, key: CryptoKey): Promise<stri
 
         return new TextDecoder().decode(decrypted);
     } catch (e) {
-        // Silent failure to avoid leaking info about decryption errors
+        // Silent failure to avoid leaking info about decryption errors, but log for debugging
+        console.warn('Deobfuscation failed: check key or data integrity.');
         return '';
     }
 }
