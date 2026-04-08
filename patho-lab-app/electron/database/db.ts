@@ -19,6 +19,9 @@ export function initDatabase(): Database.Database {
   // Run migrations
   runMigrations(db);
 
+  // Check for default passwords warning
+  checkDefaultPasswordsWarning(db);
+
   // One-off cleanup for FAIZAN and ASD price lists
   try {
     const priceLists = db.prepare(`SELECT id, name FROM price_lists WHERE name IN ('FAIZAN', 'ASD')`).all() as { id: number, name: string }[];
@@ -74,9 +77,44 @@ export function runWithId(sql: string, params: any[] = []): number {
 
 // Ensure admin user has correct password (fixes pre-computed hash issues)
 function ensureAdminPassword(database: Database.Database): void {
-  const correctHash = bcrypt.hashSync('admin123', 10);
-  database.prepare('UPDATE users SET password_hash = ? WHERE username = ?').run(correctHash, 'admin');
-  console.log('Admin password hash updated');
+  const admin = database.prepare('SELECT password_hash FROM users WHERE username = ?').get('admin') as { password_hash: string } | undefined;
+
+  if (!admin) {
+    const defaultHash = bcrypt.hashSync('admin123', 10);
+    database.prepare('INSERT INTO users (username, password_hash, full_name, role_id, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))').run('admin', defaultHash, 'Administrator', 1);
+    console.log('Admin user created with default password');
+  } else if (!admin.password_hash || admin.password_hash === '') {
+    const defaultHash = bcrypt.hashSync('admin123', 10);
+    database.prepare('UPDATE users SET password_hash = ? WHERE username = ?').run(defaultHash, 'admin');
+    console.log('Admin password hash updated (was missing)');
+  } else {
+    // Admin exists and has a password hash, do not overwrite
+  }
+}
+
+// Check for seeded default credentials and warn the user
+function checkDefaultPasswordsWarning(database: Database.Database): void {
+  try {
+    const setting = database.prepare('SELECT setting_value FROM lab_settings WHERE setting_key = ?').get('default_passwords_warning_shown') as { setting_value: string } | undefined;
+
+    if (!setting || setting.setting_value === 'false') {
+      // Check if default users 'labtechnician' or 'pathologist' exist
+      const defaultUsers = database.prepare("SELECT 1 FROM users WHERE username IN ('labtechnician', 'pathologist')").get();
+
+      if (defaultUsers) {
+        console.warn('\n' + '!'.repeat(60));
+        console.warn('SECURITY ALERT: DEFAULT CREDENTIALS DETECTED');
+        console.warn('The system is using seeded default passwords for "labtechnician" and "pathologist".');
+        console.warn('It is strongly recommended to change these passwords in settings.');
+        console.warn('!'.repeat(60) + '\n');
+
+        // Mark as shown so it doesn't nag on every startup
+        database.prepare("INSERT OR REPLACE INTO lab_settings (setting_key, setting_value) VALUES ('default_passwords_warning_shown', 'true')").run();
+      }
+    }
+  } catch (e) {
+    console.error('Error checking default passwords warning:', e);
+  }
 }
 
 // Migrations
@@ -1300,6 +1338,13 @@ function getMigrations() {
           ('ai_privacy_consent_required', 'true'),
           ('ai_baa_accepted', 'false'),
           ('ai_anonymization_mandatory', 'true');
+      `
+    },
+    {
+      name: '021_default_passwords_warning_flag',
+      sql: `
+        -- Add default_passwords_warning_shown to lab_settings
+        INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES ('default_passwords_warning_shown', 'false');
       `
     }
   ];
