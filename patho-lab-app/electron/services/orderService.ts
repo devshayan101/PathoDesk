@@ -96,13 +96,20 @@ export function createOrder(data: {
     // Get test IDs from version IDs
     const testIds: number[] = [];
     const versionToTestMap = new Map<number, number>();
+    const invalidIds: number[] = [];
 
     for (const vId of data.testVersionIds) {
       const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
       if (tv) {
         testIds.push(tv.test_id);
         versionToTestMap.set(vId, tv.test_id);
+      } else {
+        invalidIds.push(vId);
       }
+    }
+
+    if (invalidIds.length > 0) {
+      return { success: false, error: `Invalid test version IDs: ${invalidIds.join(', ')}` };
     }
 
     // Lookup real test prices
@@ -166,13 +173,20 @@ export function updateOrder(orderId: number, data: {
     // 1. Re-calculate totals based on new tests
     const testIds: number[] = [];
     const versionToTestMap = new Map<number, number>();
+    const invalidIds: number[] = [];
 
     for (const vId of data.testVersionIds) {
       const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
       if (tv) {
         testIds.push(tv.test_id);
         versionToTestMap.set(vId, tv.test_id);
+      } else {
+        invalidIds.push(vId);
       }
+    }
+
+    if (invalidIds.length > 0) {
+      return { success: false, error: `Invalid test version IDs: ${invalidIds.join(', ')}` };
     }
 
     const pricesMap = getTestPricesForTests(testIds, data.priceListId);

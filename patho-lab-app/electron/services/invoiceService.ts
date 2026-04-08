@@ -1,4 +1,4 @@
-import { queryAll, queryOne, run, runWithId } from '../database/db';
+import { getDb, queryAll, queryOne, run, runWithId } from '../database/db';
 import { getTestPricesForTests } from './billingService';
 import { calculateAndRecordCommission, reverseCommission } from './commissionService';
 import { getLicenseService } from './licenseService';
@@ -250,7 +250,7 @@ export function createInvoice(data: {
             let totalGst = 0;
             for (const item of items) {
                 if (item.gstRate > 0) {
-                    const proportion = item.unitPrice / subtotal;
+                    const proportion = subtotal > 0 ? item.unitPrice / subtotal : 0;
                     const itemDiscountedPrice = discountedSubtotal * proportion;
                     item.gstAmount = (itemDiscountedPrice * item.gstRate) / 100;
                     totalGst += item.gstAmount;
@@ -260,70 +260,75 @@ export function createInvoice(data: {
             const totalAmount = discountedSubtotal + totalGst;
             const invoiceNumber = generateInvoiceNumber();
 
-            // Create invoice
-            const invoiceId = runWithId(`
-          INSERT INTO invoices (
-            invoice_number, order_id, patient_id, price_list_id,
-            subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by,
-            gst_amount, total_amount, status, created_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
-        `, [
-                invoiceNumber,
-                data.orderId,
-                data.patientId,
-                data.priceListId,
-                subtotal,
-                discountAmount,
-                data.discountPercent || 0,
-                data.discountReason || null,
-                data.discountApprovedBy || null,
-                totalGst,
-                totalAmount,
-                data.createdBy || null
-            ]);
-
-            // Create invoice items (price snapshot)
-            for (const item of items) {
-                run(`
-            INSERT INTO invoice_items (
-              invoice_id, test_id, description, unit_price, quantity,
-              discount_amount, gst_rate, gst_amount, line_total
-            ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
-          `, [
-                    invoiceId,
-                    item.testId,
-                    item.description,
-                    item.unitPrice,
-                    item.gstRate,
-                    item.gstAmount,
-                    item.lineTotal
-                ]);
-            }
-
-            // Log audit
-            run(`
-          INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
-          VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
-        `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
-
-            // Calculate and record commission if there's a referring doctor
-            const order = queryOne<{ referring_doctor_id: number | null }>(`
-          SELECT referring_doctor_id FROM orders WHERE id = ?
-        `, [data.orderId]);
-
-            if (order?.referring_doctor_id) {
-                const commissionResult = calculateAndRecordCommission(
-                    invoiceId,
-                    order.referring_doctor_id,
+            // Use a transaction for all database operations to ensure atomicity
+            const result = getDb().transaction(() => {
+                // Create invoice
+                const invoiceId = runWithId(`
+                    INSERT INTO invoices (
+                        invoice_number, order_id, patient_id, price_list_id,
+                        subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by,
+                        gst_amount, total_amount, status, created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
+                `, [
+                    invoiceNumber,
+                    data.orderId,
                     data.patientId,
-                    discountAmount
-                );
-                if (!commissionResult.success) {
-                    console.warn('Commission calculation failed:', commissionResult.error);
-                }
-            }
+                    data.priceListId,
+                    subtotal,
+                    discountAmount,
+                    data.discountPercent || 0,
+                    data.discountReason || null,
+                    data.discountApprovedBy || null,
+                    totalGst,
+                    totalAmount,
+                    data.createdBy || null
+                ]);
 
-            return { success: true, invoiceId, invoiceNumber };
+                // Create invoice items (price snapshot)
+                for (const item of items) {
+                    run(`
+                        INSERT INTO invoice_items (
+                            invoice_id, test_id, description, unit_price, quantity,
+                            discount_amount, gst_rate, gst_amount, line_total
+                        ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+                    `, [
+                        invoiceId,
+                        item.testId,
+                        item.description,
+                        item.unitPrice,
+                        item.gstRate,
+                        item.gstAmount,
+                        item.lineTotal
+                    ]);
+                }
+
+                // Log audit
+                run(`
+                    INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
+                    VALUES ('invoice', ?, 'CREATE', ?, ?, datetime('now'))
+                `, [invoiceId, JSON.stringify({ invoiceNumber, totalAmount }), data.createdBy || null]);
+
+                // Calculate and record commission if there's a referring doctor
+                const order = queryOne<{ referring_doctor_id: number | null }>(`
+                    SELECT referring_doctor_id FROM orders WHERE id = ?
+                `, [data.orderId]);
+
+                if (order?.referring_doctor_id) {
+                    const commissionResult = calculateAndRecordCommission(
+                        invoiceId,
+                        order.referring_doctor_id,
+                        data.patientId,
+                        discountAmount
+                    );
+                    if (!commissionResult.success) {
+                        console.warn('Commission calculation failed:', commissionResult.error);
+                    }
+                }
+
+                return { success: true, invoiceId, invoiceNumber };
+            })();
+
+            return result;
         } catch (error: any) {
             // If it's a UNIQUE constraint error and we have retries left, try again
             if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries - 1) {
@@ -437,8 +442,20 @@ export function getPatientDues(patientId: number): { totalDue: number; invoices:
 
 // Get invoice summary for dashboard
 export function getInvoiceSummary(fromDate?: string, toDate?: string) {
-    const dateFilter = fromDate ? `AND created_at >= '${fromDate}'` : '';
-    const toDateFilter = toDate ? `AND created_at <= '${toDate}'` : '';
+    let dateSql = '';
+    const params: any[] = [];
+
+    if (fromDate) {
+        dateSql += ` AND created_at >= ?`;
+        params.push(fromDate);
+    }
+    if (toDate) {
+        dateSql += ` AND created_at <= ?`;
+        params.push(toDate);
+    }
+
+    // Pass params twice as dateSql is used twice in the select query.
+    const queryParams = [...params, ...params];
 
     const summary = queryOne<{
         total_invoices: number;
@@ -450,11 +467,11 @@ export function getInvoiceSummary(fromDate?: string, toDate?: string) {
       COUNT(*) as total_invoices,
       COALESCE(SUM(total_amount), 0) as total_amount,
       COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id IN (
-        SELECT id FROM invoices WHERE status = 'FINALIZED' ${dateFilter} ${toDateFilter}
+        SELECT id FROM invoices WHERE status = 'FINALIZED' ${dateSql}
       )), 0) as total_collected
     FROM invoices
-    WHERE status = 'FINALIZED' ${dateFilter} ${toDateFilter}
-  `);
+    WHERE status = 'FINALIZED' ${dateSql}
+  `, queryParams);
 
     return {
         ...summary,
@@ -513,9 +530,9 @@ export function updateInvoiceByOrder(orderId: number, data: {
         // Apply discount (use new values if provided, otherwise keep old ones)
         let discountPercent = data.discountPercent !== undefined ? data.discountPercent : invoice.discount_percent;
         let discountAmount = data.discountAmount !== undefined ? data.discountAmount : invoice.discount_amount;
-        
+
         if (data.discountPercent !== undefined) {
-             discountAmount = (subtotal * discountPercent) / 100;
+            discountAmount = (subtotal * discountPercent) / 100;
         }
 
         const discountedSubtotal = subtotal - discountAmount;
@@ -533,40 +550,45 @@ export function updateInvoiceByOrder(orderId: number, data: {
 
         const totalAmount = discountedSubtotal + totalGst;
 
-        // 1. Delete old items
-        run(`DELETE FROM invoice_items WHERE invoice_id = ?`, [invoice.id]);
+        // Use a transaction for all database operations to ensure atomicity
+        const result = getDb().transaction(() => {
+            // 1. Delete old items
+            run(`DELETE FROM invoice_items WHERE invoice_id = ?`, [invoice.id]);
 
-        // 2. Insert new items
-        for (const item of items) {
+            // 2. Insert new items
+            for (const item of items) {
+                run(`
+                    INSERT INTO invoice_items (
+                        invoice_id, test_id, description, unit_price, quantity,
+                        discount_amount, gst_rate, gst_amount, line_total
+                    ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+                `, [
+                    invoice.id,
+                    item.testId,
+                    item.description,
+                    item.unitPrice,
+                    item.gstRate,
+                    item.gstAmount,
+                    item.lineTotal
+                ]);
+            }
+
+            // 3. Update invoice 
             run(`
-                INSERT INTO invoice_items (
-                    invoice_id, test_id, description, unit_price, quantity,
-                    discount_amount, gst_rate, gst_amount, line_total
-                ) VALUES (?, ?, ?, ?, 1, 0, ?, ?, ?)
+                UPDATE invoices SET 
+                    subtotal = ?, discount_amount = ?, discount_percent = ?, 
+                    gst_amount = ?, total_amount = ?, price_list_id = ?
+                WHERE id = ?
             `, [
-                invoice.id,
-                item.testId,
-                item.description,
-                item.unitPrice,
-                item.gstRate,
-                item.gstAmount,
-                item.lineTotal
+                subtotal, discountAmount, discountPercent,
+                totalGst, totalAmount, data.priceListId,
+                invoice.id
             ]);
-        }
 
-        // 3. Update invoice 
-        run(`
-            UPDATE invoices SET 
-                subtotal = ?, discount_amount = ?, discount_percent = ?, 
-                gst_amount = ?, total_amount = ?, price_list_id = ?
-            WHERE id = ?
-        `, [
-            subtotal, discountAmount, discountPercent, 
-            totalGst, totalAmount, data.priceListId,
-            invoice.id
-        ]);
+            return { success: true };
+        })();
 
-        return { success: true };
+        return result;
     } catch (error: any) {
         console.error('Update invoice error:', error);
         return { success: false, error: error.message };
