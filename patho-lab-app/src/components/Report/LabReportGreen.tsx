@@ -16,7 +16,7 @@ const BORDER_COLOR = '#e0e0e0';
 
 const s = StyleSheet.create({
     page: {
-        paddingTop: 24,
+        paddingTop: 12,
         paddingLeft: 0,
         paddingRight: 0,
         paddingBottom: FOOTER_HEIGHT + 20,
@@ -32,7 +32,7 @@ const s = StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         padding: 12,
-        paddingTop: 5,
+        paddingTop: 11, // Added space for NABLBadge overlap
         paddingBottom: 10,
         alignItems: 'center',
         borderBottomWidth: 1,
@@ -65,7 +65,7 @@ const s = StyleSheet.create({
     },
     nablBadge: {
         position: 'absolute',
-        top: 0,
+        top: 12,
         right: 12,
         backgroundColor: ACCENT_GREEN,
         color: '#fff',
@@ -108,7 +108,6 @@ const s = StyleSheet.create({
     // --- Results Table ---
     tableContainer: {
         marginHorizontal: 12,
-        marginBottom: 10,
     },
     departmentHeader: {
         textAlign: 'center',
@@ -121,7 +120,7 @@ const s = StyleSheet.create({
         textAlign: 'center',
         fontSize: 11,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 6,
         color: TEXT_DARK,
     },
     tableHeader: {
@@ -132,7 +131,6 @@ const s = StyleSheet.create({
         borderTopRightRadius: 4,
         paddingVertical: 6,
         paddingHorizontal: 4,
-        marginBottom: 2,
     },
     tableRow: {
         flexDirection: 'row',
@@ -148,7 +146,7 @@ const s = StyleSheet.create({
     colUnit: { flex: 1.2, textAlign: 'center', color: TEXT_MUTED },
     colRange: { flex: 2, textAlign: 'right', paddingRight: 4, color: TEXT_MUTED },
     colFlag: { flex: 0.8, alignItems: 'center', justifyContent: 'center' },
-    
+
     // Flag Badges
     badge: {
         paddingHorizontal: 6,
@@ -173,16 +171,16 @@ const s = StyleSheet.create({
         backgroundColor: '#f9fdf9',
         borderRadius: 4,
     },
-    interpHeading: { 
-        fontSize: 10, 
-        fontWeight: 'bold', 
-        color: ACCENT_GREEN, 
-        marginBottom: 5 
+    interpHeading: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: ACCENT_GREEN,
+        marginBottom: 5
     },
-    interpText: { 
-        fontSize: 9, 
-        color: TEXT_DARK, 
-        lineHeight: 1.4 
+    interpText: {
+        fontSize: 9,
+        color: TEXT_DARK,
+        lineHeight: 1.4
     },
 
     // --- Footer ---
@@ -214,12 +212,10 @@ const s = StyleSheet.create({
         width: 100,
         height: 35,
         objectFit: 'contain' as const,
-        marginBottom: 3,
     },
     sigLabel: {
         fontSize: 8,
         color: TEXT_MUTED,
-        marginBottom: 2,
     },
     sigTitle: {
         fontSize: 9,
@@ -234,9 +230,8 @@ const s = StyleSheet.create({
     },
     pageNum: {
         fontSize: 8,
-        textAlign: 'center',
+        textAlign: 'right',
         color: TEXT_MUTED,
-        marginTop: 6,
     },
     // Watermark
     watermark: {
@@ -249,14 +244,15 @@ const s = StyleSheet.create({
     },
     branding: {
         position: 'absolute',
-        bottom: 4,
+        bottom: 8,
         left: 12,
         right: 12,
         alignItems: 'center',
+        paddingBottom: 2
     },
     brandingText: {
         fontSize: 7,
-        color: '#c0c0c0',
+        color: '#969595ff',
     },
 });
 

@@ -31,8 +31,8 @@ const s = StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         padding: 12,
-        paddingTop: 5,
-        paddingBottom: 10,
+        paddingTop: 11, // Added space for NABLBadge overlap
+        paddingBottom: 6,
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: BORDER_COLOR,
@@ -77,9 +77,9 @@ const s = StyleSheet.create({
     },
     // --- Patient Info Card ---
     patientBox: {
-        margin: 12,
-        marginTop: 10,
-        marginBottom: 10,
+        margin: 10,
+        marginTop: 8,
+        marginBottom: 8,
         borderRadius: 6,
         backgroundColor: LIGHT_GREEN,
         borderWidth: 1,
@@ -107,7 +107,6 @@ const s = StyleSheet.create({
     // --- Results Table ---
     tableContainer: {
         marginHorizontal: 12,
-        marginBottom: 10,
     },
     departmentHeader: {
         textAlign: 'center',
@@ -120,7 +119,7 @@ const s = StyleSheet.create({
         textAlign: 'center',
         fontSize: 11,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 6,
         color: TEXT_DARK,
     },
     tableHeader: {
@@ -131,7 +130,6 @@ const s = StyleSheet.create({
         borderTopRightRadius: 4,
         paddingVertical: 6,
         paddingHorizontal: 4,
-        marginBottom: 2,
     },
     tableRow: {
         flexDirection: 'row',
@@ -147,7 +145,7 @@ const s = StyleSheet.create({
     colUnit: { flex: 1.2, textAlign: 'center', color: TEXT_MUTED },
     colRange: { flex: 2, textAlign: 'right', paddingRight: 4, color: TEXT_MUTED },
     colFlag: { flex: 0.8, alignItems: 'center', justifyContent: 'center' },
-    
+
     // Flag Badges
     badge: {
         paddingHorizontal: 6,
@@ -172,16 +170,16 @@ const s = StyleSheet.create({
         backgroundColor: '#f9fdf9',
         borderRadius: 4,
     },
-    interpHeading: { 
-        fontSize: 10, 
-        fontWeight: 'bold', 
-        color: ACCENT_GREEN, 
-        marginBottom: 5 
+    interpHeading: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: ACCENT_GREEN,
+        marginBottom: 5
     },
-    interpText: { 
-        fontSize: 9, 
-        color: TEXT_DARK, 
-        lineHeight: 1.4 
+    interpText: {
+        fontSize: 9,
+        color: TEXT_DARK,
+        lineHeight: 1.4
     },
 
     // --- Footer ---
@@ -213,12 +211,10 @@ const s = StyleSheet.create({
         width: 100,
         height: 35,
         objectFit: 'contain' as const,
-        marginBottom: 3,
     },
     sigLabel: {
         fontSize: 8,
         color: TEXT_MUTED,
-        marginBottom: 2,
     },
     sigTitle: {
         fontSize: 9,
@@ -228,15 +224,12 @@ const s = StyleSheet.create({
     disclaimer: {
         fontSize: 7,
         color: TEXT_MUTED,
-        marginTop: 8,
         textAlign: 'center',
     },
     pageNum: {
         fontSize: 8,
-        textAlign: 'center',
+        textAlign: 'right',
         color: TEXT_MUTED,
-        marginTop: 6,
-        marginBottom: 3
     },
     // Watermark
     watermark: {
@@ -249,15 +242,15 @@ const s = StyleSheet.create({
     },
     branding: {
         position: 'absolute',
-        bottom: 4,
+        bottom: 8,
         left: 12,
         right: 12,
         alignItems: 'center',
+        paddingBottom: 2
     },
     brandingText: {
         fontSize: 7,
-        color: '#c0c0c0',
-        paddingBottom: 4
+        color: '#969595ff',
     },
 });
 
@@ -454,7 +447,7 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
             </View>
 
             {/* End of Report Marker */}
-            <View style={{ alignItems: 'center', width: '100%', marginTop: 20 }} wrap={false}>
+            <View style={{ alignItems: 'center', width: '100%', paddingTop: 4 }}>
                 <Text style={{ fontSize: 10, fontWeight: 'bold', color: TEXT_MUTED }}>--- End of Report ---</Text>
             </View>
 
