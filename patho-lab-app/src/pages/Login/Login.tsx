@@ -42,10 +42,17 @@ export default function LoginPage() {
         e.preventDefault();
         const success = await login(username, password);
         if (success) {
-            if (rememberMe && isRememberEnabled) {
-                await (window.electronAPI as any).credentials.store({ username, password });
-            } else {
-                await (window.electronAPI as any).credentials.delete();
+            // Guard for non-Electron environments and ensure navigation proceeds even if credential storage fails
+            if (window.electronAPI) {
+                try {
+                    if (rememberMe && isRememberEnabled) {
+                        await (window.electronAPI as any).credentials.store({ username, password });
+                    } else {
+                        await (window.electronAPI as any).credentials.delete();
+                    }
+                } catch (err) {
+                    console.error('Failed to update remembered credentials:', err);
+                }
             }
             navigate('/');
         }

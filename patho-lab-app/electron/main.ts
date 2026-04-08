@@ -119,11 +119,17 @@ function registerIpcHandlers() {
   // Credentials (Secure Storage)
   ipcMain.handle('credentials:store', async (_, { username, password }) => {
     try {
+      if (!username || typeof username !== 'string' || !password || typeof password !== 'string') {
+        return { success: false, error: 'invalid input' };
+      }
+
+      if (!safeStorage.isEncryptionAvailable()) {
+        return { success: false, error: 'encryption not available' };
+      }
+
       const encrypted = safeStorage.encryptString(password);
       const hex = Buffer.from(encrypted).toString('hex');
-      // For simplicity, we use localStorage in renderer for username, but main for password
-      // Wait, let's use a config-like file or better-sqlite3 for storing these?
-      // Actually, safest is to just store them in a dedicated 'credentials' table.
+      
       const db = getDb();
       db.prepare(`
         CREATE TABLE IF NOT EXISTS _secure_credentials (
@@ -143,12 +149,20 @@ function registerIpcHandlers() {
   ipcMain.handle('credentials:get', async () => {
     try {
       const db = getDb();
+      // Check if table exists first
+      const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_secure_credentials'").get();
+      if (!tableExists) return null;
+
       const row = db.prepare('SELECT username, password_blob FROM _secure_credentials WHERE id = 1').get() as any;
       if (!row) return null;
       const buffer = Buffer.from(row.password_blob, 'hex');
       const password = safeStorage.decryptString(buffer);
       return { username: row.username, password };
-    } catch (e) {
+    } catch (e: any) {
+      const message = (e as any)?.message || '';
+      if (message.includes('no such table')) {
+        return null;
+      }
       console.error('Failed to get credentials:', e);
       return null;
     }

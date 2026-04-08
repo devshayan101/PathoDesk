@@ -13,8 +13,9 @@ interface Sample {
     collected_at: string;
 }
 
-const escapeHtml = (unsafe: string) => {
-    return unsafe
+const escapeHtml = (unsafe: any) => {
+    const s = unsafe ?? "";
+    return String(s)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
