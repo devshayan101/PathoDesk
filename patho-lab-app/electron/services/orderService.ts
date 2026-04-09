@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { getDb, queryAll, queryOne, run, runWithId } from '../database/db';
 import { getTestPricesForTests } from './billingService';
 
@@ -140,9 +141,8 @@ export function createOrder(data: {
         VALUES (?, ?, 'ORDERED', ?)
       `, [orderId, testVersionId, testPrice]);
 
-      // Auto-generate sample for this test
-      // unique sample UID: S + timestamp + random 3 chars
-      const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      // Auto-generate sample for this test using crypto.randomUUID() for maximum uniqueness
+      const sampleUid = `S-${randomUUID().split('-')[0].toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
       run(`
         INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
@@ -171,31 +171,33 @@ export function updateOrder(orderId: number, data: {
     }
 
     // Check if order is locked (Verified, Finalized or Finalized Invoice)
-    const orderStatus = queryOne<{ report_status: string; invoice_status: string }>(`
+    // We use a simpler check: look for any finalized/verified samples or a finalized invoice
+    const lockCheck = queryOne<{ is_locked: number, reason: string }>(`
       SELECT 
-        (
-          SELECT 
-            CASE 
-              WHEN COUNT(*) = 0 THEN 'NO_TESTS'
-              WHEN SUM(CASE WHEN status = 'FINALIZED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'FINALIZED'
-              WHEN SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END) = COUNT(*) THEN 'VERIFIED'
-              WHEN SUM(CASE WHEN status IN ('VERIFIED', 'FINALIZED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIAL'
-              ELSE 'OPEN'
-            END
-          FROM samples WHERE order_test_id IN (SELECT id FROM order_tests WHERE order_id = o.id)
-        ) as report_status,
-        (SELECT status FROM invoices WHERE order_id = o.id AND status != 'CANCELLED' LIMIT 1) as invoice_status
-      FROM orders o
-      WHERE o.id = ?
-    `, [orderId]);
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM samples s 
+            JOIN order_tests ot ON s.order_test_id = ot.id 
+            WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
+          ) THEN 1
+          WHEN EXISTS (
+            SELECT 1 FROM invoices WHERE order_id = ? AND status = 'FINALIZED'
+          ) THEN 1
+          ELSE 0
+        END as is_locked,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM samples s 
+            JOIN order_tests ot ON s.order_test_id = ot.id 
+            WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
+          ) THEN 'Report is verified/finalized'
+          ELSE 'Invoice is finalized (Paid)'
+        END as reason
+      FROM orders WHERE id = ?
+    `, [orderId, orderId, orderId, orderId]);
 
-    if (orderStatus) {
-      if (orderStatus.report_status === 'VERIFIED' || orderStatus.report_status === 'FINALIZED') {
-        return { success: false, error: `Order is locked because the report is already ${orderStatus.report_status.toLowerCase()}.` };
-      }
-      if (orderStatus.invoice_status === 'FINALIZED') {
-        return { success: false, error: 'Order is locked because the invoice is already finalized (Paid).' };
-      }
+    if (lockCheck?.is_locked) {
+      return { success: false, error: `Order is locked: ${lockCheck.reason}` };
     }
 
     // 1. Re-calculate totals based on new tests
@@ -265,8 +267,8 @@ export function updateOrder(orderId: number, data: {
             VALUES (?, ?, 'ORDERED', ?)
           `, [orderId, vId, testPrice]);
   
-          // Use more robust unique ID for samples
-          const sampleUid = `S${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+          // Use more robust unique ID for samples using crypto.randomUUID()
+          const sampleUid = `S-${randomUUID().split('-')[0].toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
           run(`
             INSERT INTO samples (sample_uid, order_test_id, status, collected_at)
             VALUES (?, ?, 'COLLECTED', datetime('now'))

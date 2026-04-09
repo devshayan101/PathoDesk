@@ -18,7 +18,7 @@ export default function LoginPage() {
             if (window.electronAPI) {
                 try {
                     const settings = await window.electronAPI.labSettings.get();
-                    const enabled = settings.enable_remember_me === 'true';
+                    const enabled = settings.enable_remember_me === 'true' || settings.enable_remember_me === true;
                     setIsRememberEnabled(enabled);
 
                     if (enabled) {

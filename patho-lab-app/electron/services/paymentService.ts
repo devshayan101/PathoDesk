@@ -63,8 +63,15 @@ export function recordPayment(data: {
             // Get order_id from invoice
             const inv = queryOne<{ order_id: number }>(`SELECT order_id FROM invoices WHERE id = ?`, [data.invoiceId]);
             if (inv) {
-                run(`UPDATE orders SET payment_status = 'FINALIZED' WHERE id = ?`, [inv.order_id]);
-                run(`UPDATE invoices SET status = 'FINALIZED' WHERE id = ?`, [data.invoiceId]);
+                run('BEGIN TRANSACTION');
+                try {
+                    run(`UPDATE orders SET payment_status = 'FINALIZED' WHERE id = ?`, [inv.order_id]);
+                    run(`UPDATE invoices SET status = 'FINALIZED' WHERE id = ?`, [data.invoiceId]);
+                    run('COMMIT');
+                } catch (txError) {
+                    run('ROLLBACK');
+                    throw txError;
+                }
             }
         }
 

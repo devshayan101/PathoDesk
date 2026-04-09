@@ -113,6 +113,7 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                                     return (
                                         <td key={dil}>
                                             <input
+                                                id={`widal-input-${param.parameter_code}`}
                                                 type="text"
                                                 className="input grid-input"
                                                 value={values[param.parameter_code] || ''}
@@ -137,8 +138,9 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                 <div className="widal-extra-params">
                     {extraParams.map(param => (
                         <div key={param.parameter_code} className="extra-param-field">
-                            <label>{param.parameter_name}</label>
+                            <label htmlFor={`widal-extra-${param.parameter_code}`}>{param.parameter_name}</label>
                             <input
+                                id={`widal-extra-${param.parameter_code}`}
                                 type="text"
                                 className="input"
                                 value={values[param.parameter_code] || ''}
@@ -156,8 +158,9 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
             <div className="widal-special-fields">
                 {impressionParam && (
                     <div className="special-field">
-                        <label>IMPRESSION :</label>
+                        <label htmlFor="widal-impression">IMPRESSION :</label>
                         <input
+                            id="widal-impression"
                             type="text"
                             className="input impression-input"
                             value={values[(impressionParam as ResultParameter).parameter_code] || ''}
@@ -171,8 +174,9 @@ export default function WidalEntryGrid({ parameters, values, onValueChange, onIn
                 )}
                 {methodParam && (
                     <div className="special-field method-field">
-                        <label>Method :</label>
+                        <label htmlFor="widal-method">Method :</label>
                         <input
+                            id="widal-method"
                             type="text"
                             className="input method-input"
                             value={values[(methodParam as ResultParameter).parameter_code] || ''}

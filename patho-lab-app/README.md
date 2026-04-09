@@ -1,7 +1,7 @@
 # PathoDesk
 
 ## 1. Project Title & Description
-**PathoDesk** is a fully offline, clinically safe, and licensed pathology lab data management system designed for Windows desktop environments. It provides a comprehensive solution for independent pathology labs, small to medium diagnostic centers, and clinics to manage their complete workflow—from patient registration and sample accessioning to result entry, billing, and report generation.
+**PathoDesk** is an offline-first, clinical workflow support application designed for Windows desktop environments. It provides a comprehensive solution for independent pathology labs, small to medium diagnostic centers, and clinics to manage their laboratory data and reporting workflow—from patient registration and sample accessioning to result entry, billing, and report generation.
 
 **The Problem It Solves:** 
 Many pathology labs rely on outdated, fragmented, or cloud-dependent software that is vulnerable to internet outages and recurring high SaaS costs. PathoDesk addresses these pain points by offering a powerful, offline-first desktop application with an intuitive modern interface, ensuring that lab operations remain uninterrupted, data is kept strictly secure on-premises, and complex tasks like doctor commissions and quality control are automated.
@@ -141,13 +141,14 @@ As an offline Electron app, PathoDesk relies on IPC handlers rather than traditi
 
 The AI Analysis module is an **assistive technology** designed to provide supplementary insights and interpretation templates. 
 
-*   **Functionality:** Pathologists can click "AI Analysis" on complex multi-test orders to get an automated interpretation of combined patterns, highlighting hidden correlations. 
-*   **Regulatory Status:** This feature is currently categorized as a Clinical Decision Support (CDS) tool. It is **NOT** intended for primary diagnosis or as a substitute for professional clinical judgment. Clinical validation and appropriate regulatory clearance (e.g., FDA/CE-IVD) are required prior to clinical deployment in specific jurisdictions.
+*   **Functionality:** Pathologists can click "AI Analysis" on complex multi-test orders to get automated assistive insights of combined patterns, highlighting potential correlations for professional review. 
+*   **Regulatory Status:** This feature is categorized as a Clinical Decision Support (CDS) tool. It is **NOT** intended for primary diagnosis or as a substitute for professional clinical judgment. It acts as a supportive tool for clinical workflow and requires professional oversight.
 *   **Professional Liability:** The final interpretation and verification of all reports remain the sole responsibility of the pathologist and the laboratory medical director.
-*   **Privacy Controls:** 
-    *   **Mandatory Anonymization:** All patient identifiers (Name, DOB, Phone, UID) are stripped server-side before processing by any AI engine.
-    *   **Explicit Opt-in:** AI features are disabled by default and require a BAA (Business Associate Agreement) flag to be enabled in Lab Settings.
-    *   **Offline Capability:** We prioritize on-premise execution of AI models where hardware permits to maintain strict data sovereignty.
+*   **Privacy Controls & Informed Consent:** 
+    *   **On-Premise Anonymization:** To protect patient privacy, all patient identifiers (Name, DOB, Phone, UID) MUST be de-identified on-premise BEFORE any data is transmitted to an external service.
+    *   **Informed Consent:** Enabling the AI feature transmits de-identified lab data to external LLM providers. This requires explicit informed user consent prior to being enabled in the Lab Settings toggle.
+    *   **Signed BAA:** Any external LLM provider utilized by the system must have a signed Business Associate Agreement (BAA) to ensure HIPAA/GDPR compliance for the transmitted de-identified data.
+    *   **Internet Dependency:** Note that while core workflows remain fully offline, the AI Analysis module requires an active network connection for de-identified data processing.
 
 ---
 
@@ -213,8 +214,8 @@ For software enterprise support, bug reporting, licensing queries or feature req
 
 ## 17. Regulatory Status
 
-**Disclaimer:** PathoDesk is a laboratory information and management tool designed for data organization, clinical workflow automation, and reporting. 
+**Disclaimer:** PathoDesk is a laboratory information and management tool designed for data organization, assistive clinical workflow support, and reporting. 
 
-*   **NOT a Clinical Diagnostic Device:** PathoDesk is NOT a clinical diagnostic device and is not intended for use in the diagnosis or treatment of any disease or medical condition.
+*   **Non-Diagnostic Device:** PathoDesk is NOT a clinical diagnostic device. It is an assistive tool for clinical workflow support and is not intended for the primary diagnosis or treatment of any disease or medical condition.
 *   **Professional Oversight:** All clinical decisions, diagnostic interpretations, and result verifications must be performed by qualified medical professionals (Pathologists/Lab Directors) in accordance with the regulatory standards of their specific jurisdiction.
-*   **Software Classification:** The AI-assisted modules provided within PathoDesk are categorized as Clinical Decision Support (CDS) tools and must be used strictly as supplementary aids.
+*   **Software Classification:** The AI-assisted modules provided within PathoDesk are categorized as Clinical Decision Support (CDS) tools and must be used strictly as supplementary aids for clinical workflow.

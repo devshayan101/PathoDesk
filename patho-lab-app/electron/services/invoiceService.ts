@@ -589,7 +589,23 @@ export function updateInvoiceByOrder(orderId: number, data: {
                 invoice.id
             ]);
 
-            // 4. Audit logging
+            // 4. Commission Recalculation (if applicable)
+            const order = queryOne<{ referring_doctor_id: number | null, patient_id: number }>(`
+                SELECT referring_doctor_id, patient_id FROM orders WHERE id = ?
+            `, [orderId]);
+
+            if (order?.referring_doctor_id) {
+                // Remove old commission and record new one
+                reverseCommission(invoice.id);
+                calculateAndRecordCommission(
+                    invoice.id,
+                    order.referring_doctor_id,
+                    order.patient_id,
+                    discountAmount
+                );
+            }
+
+            // 5. Audit logging
             const changes: any = {
                 subtotal: { old: invoice.subtotal, new: subtotal },
                 total_amount: { old: invoice.total_amount, new: totalAmount }

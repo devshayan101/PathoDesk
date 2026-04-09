@@ -412,13 +412,13 @@ export default function LabReportGreen({ data, labSettings }: Props) {
                             ) : (
                                 <View key={i} style={[s.tableRow, { backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.03)' }]} wrap={false}>
                                     <Text style={[s.colTest, { paddingLeft: r.parent_id ? 20 : 4 }]}>{r.parameter_name}</Text>
-                                    <Text style={[s.colResult, { paddingLeft: r.parent_id ? -10 : 0 }]}>
+                                    <Text style={[s.colResult, { marginLeft: r.parent_id ? -10 : 0 }]}>
                                         <Text style={{ fontWeight: r.abnormal_flag && r.abnormal_flag !== 'NORMAL' ? 'bold' : 'normal' }}>
                                             {r.result_value || '-'}
                                         </Text>
                                     </Text>
-                                    <Text style={[s.colUnit, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
-                                    <Text style={[s.colRange, { paddingLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
+                                    <Text style={[s.colUnit, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.unit || ''}</Text>
+                                    <Text style={[s.colRange, { marginLeft: r.parent_id ? -5 : 0 }]}>{r.ref_range_text || '-'}</Text>
                                     <View style={s.colFlag}>
                                         {formatFlag(r.abnormal_flag) !== '' ? (
                                             <Text style={[s.badge, flagBadgeStyle(r.abnormal_flag)]}>

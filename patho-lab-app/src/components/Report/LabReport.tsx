@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
     },
     tableRowOdd: {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#f9f9f9',
     },
     colParameter: { flex: 3 },
     colResult: { flex: 2, textAlign: 'center' },

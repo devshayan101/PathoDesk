@@ -415,7 +415,7 @@ export default function OrdersPage() {
                 });
 
                 if (!orderResult.success) {
-                    showToast('Failed to create order: ' + orderResult.orderId, 'error');
+                    showToast('Failed to create order: ' + (orderResult.error || 'Unknown error'), 'error');
                     setSubmitting(false);
                     return;
                 }
@@ -453,9 +453,9 @@ export default function OrdersPage() {
                     showToast('Order created but invoice failed: ' + invoiceResult.error, 'error');
                 }
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Submit order error:', e);
-            showToast('An error occurred', 'error');
+            showToast('An error occurred: ' + (e.message || 'Unknown error'), 'error');
         }
         setSubmitting(false);
     };
