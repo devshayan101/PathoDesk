@@ -63,7 +63,8 @@ export function recordPayment(data: {
             // Get order_id from invoice
             const inv = queryOne<{ order_id: number }>(`SELECT order_id FROM invoices WHERE id = ?`, [data.invoiceId]);
             if (inv) {
-                run(`UPDATE orders SET payment_status = 'PAID' WHERE id = ?`, [inv.order_id]);
+                run(`UPDATE orders SET payment_status = 'FINALIZED' WHERE id = ?`, [inv.order_id]);
+                run(`UPDATE invoices SET status = 'FINALIZED' WHERE id = ?`, [data.invoiceId]);
             }
         }
 
@@ -176,7 +177,7 @@ export function getOutstandingDues(): Array<{
       FROM payments
       GROUP BY invoice_id
     ) paid ON i.id = paid.invoice_id
-    WHERE i.status = 'FINALIZED'
+    WHERE i.status = 'PENDING'
     GROUP BY p.id
     HAVING balance_due > 0
     ORDER BY balance_due DESC

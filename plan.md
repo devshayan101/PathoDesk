@@ -433,7 +433,6 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] Result entry: When test parameter range has value either positive or negative, in input field pressing 'n' key should populate field with 'negative', similarly pressing 'p' key should populate field with 'positive'.
 
-- [x] Order update feature [user should be able to update order after it is created. Add new tests to order.]
 
 - [x] Sample > barcode: barcode generated for sample is invalid.[simple lines are generated instead of barcode]
 
@@ -447,7 +446,13 @@ Build a **fully offline, clinically safe, licensed pathology lab software** for 
 
 - [x] User Login: login screen should be able to save user credentials, to prefill it next time. [Do this for both admin and user login][ask user before saving credentials][in admin setting add option to enable/disable this feature and clear saved credentials]
 
-## Verification Plan
+- [x] Order update feature [user should be able to update order after it is created. Add new tests to order.]
+
+- [x] order update bug : error: 'Failed to update order: Invoice update failed: Only DRAFT invoices can be updated. Current status: FINALIZED ' ; lock order update for verified and finalized orders only.
+
+- [x] invoice status : If payment is not recieved for an order, then order status should be PENDING, if payment is recieved then it should be FINALIZED.
+
+## Verification Plan`
 *Reference: qa_acceptance_test_cases_end_to_end_lis.md*
 
 ### E2E Clinical Workflow Tests

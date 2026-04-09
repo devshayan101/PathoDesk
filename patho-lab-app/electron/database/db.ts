@@ -1346,6 +1346,124 @@ function getMigrations() {
         -- Add default_passwords_warning_shown to lab_settings
         INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES ('default_passwords_warning_shown', 'false');
       `
+    },
+    {
+      name: '022_invoice_and_order_status_sync',
+      sql: `
+        -- Recreate invoices table to update CHECK constraint for PENDING status
+        PRAGMA foreign_keys = OFF;
+        
+        ALTER TABLE invoices RENAME TO invoices_old;
+        
+        CREATE TABLE invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_number TEXT UNIQUE NOT NULL,
+          order_id INTEGER NOT NULL REFERENCES orders(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          price_list_id INTEGER REFERENCES price_lists(id),
+          subtotal REAL NOT NULL,
+          discount_amount REAL DEFAULT 0,
+          discount_percent REAL DEFAULT 0,
+          discount_reason TEXT,
+          discount_approved_by INTEGER REFERENCES users(id),
+          gst_amount REAL DEFAULT 0,
+          total_amount REAL NOT NULL,
+          status TEXT CHECK (status IN ('DRAFT','PENDING','FINALIZED','CANCELLED')) DEFAULT 'DRAFT',
+          created_by INTEGER REFERENCES users(id),
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          finalized_at TEXT,
+          cancelled_at TEXT,
+          cancelled_by INTEGER REFERENCES users(id),
+          cancellation_reason TEXT
+        );
+        
+        INSERT INTO invoices (id, invoice_number, order_id, patient_id, price_list_id, subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by, gst_amount, total_amount, status, created_by, created_at, finalized_at, cancelled_at, cancelled_by, cancellation_reason)
+        SELECT id, invoice_number, order_id, patient_id, price_list_id, subtotal, discount_amount, discount_percent, discount_reason, discount_approved_by, gst_amount, total_amount, status, created_by, created_at, finalized_at, cancelled_at, cancelled_by, cancellation_reason
+        FROM invoices_old;
+        
+        DROP TABLE invoices_old;
+        
+        PRAGMA foreign_keys = ON;
+
+        -- Update invoices: Moving from DRAFT -> FINALIZED to DRAFT -> PENDING -> FINALIZED
+        -- Existing 'FINALIZED' invoices with balance > 0 become 'PENDING'
+        UPDATE invoices 
+        SET status = 'PENDING' 
+        WHERE status = 'FINALIZED' 
+          AND (total_amount - (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id)) > 0.01;
+
+        -- Ensure orders also reflect these status labels
+        UPDATE orders SET payment_status = 'PENDING' WHERE payment_status = 'INVOICED';
+        UPDATE orders SET payment_status = 'FINALIZED' WHERE payment_status = 'PAID';
+      `
+    },
+    {
+      name: '023_fix_invoice_foreign_keys',
+      sql: `
+        -- Recreate tables that reference invoices to fix broken foreign keys pointing to deleted invoices_old
+        PRAGMA foreign_keys = OFF;
+        
+        -- 1. Fix invoice_items
+        ALTER TABLE invoice_items RENAME TO invoice_items_old;
+        CREATE TABLE invoice_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+          test_id INTEGER REFERENCES tests(id),
+          package_id INTEGER REFERENCES packages(id),
+          description TEXT NOT NULL,
+          unit_price REAL NOT NULL,
+          quantity INTEGER DEFAULT 1,
+          discount_amount REAL DEFAULT 0,
+          gst_rate REAL DEFAULT 0,
+          gst_amount REAL DEFAULT 0,
+          line_total REAL NOT NULL
+        );
+        INSERT INTO invoice_items SELECT * FROM invoice_items_old;
+        DROP TABLE invoice_items_old;
+        
+        -- 2. Fix payments
+        ALTER TABLE payments RENAME TO payments_old;
+        CREATE TABLE payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+          amount REAL NOT NULL,
+          payment_mode TEXT CHECK (payment_mode IN ('CASH','CARD','UPI','CREDIT')) NOT NULL,
+          reference_number TEXT,
+          payment_date TEXT NOT NULL DEFAULT (datetime('now')),
+          received_by INTEGER REFERENCES users(id),
+          remarks TEXT
+        );
+        INSERT INTO payments SELECT * FROM payments_old;
+        DROP TABLE payments_old;
+        
+        -- 3. Fix doctor_commissions
+        ALTER TABLE doctor_commissions RENAME TO doctor_commissions_old;
+        CREATE TABLE doctor_commissions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+          invoice_item_id INTEGER REFERENCES invoice_items(id) ON DELETE SET NULL,
+          doctor_id INTEGER NOT NULL REFERENCES doctors(id),
+          patient_id INTEGER NOT NULL REFERENCES patients(id),
+          test_id INTEGER REFERENCES tests(id),
+          test_description TEXT,
+          commission_model TEXT NOT NULL CHECK (commission_model IN ('PERCENTAGE','FLAT')),
+          commission_rate REAL NOT NULL,
+          test_price REAL NOT NULL,
+          commission_amount REAL NOT NULL,
+          calculated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          settlement_id INTEGER REFERENCES commission_settlements(id),
+          is_cancelled INTEGER DEFAULT 0
+        );
+        INSERT INTO doctor_commissions SELECT * FROM doctor_commissions_old;
+        DROP TABLE doctor_commissions_old;
+        
+        -- Recreate indexes
+        CREATE INDEX idx_doctor_commissions_doctor ON doctor_commissions(doctor_id);
+        CREATE INDEX idx_doctor_commissions_invoice ON doctor_commissions(invoice_id);
+        CREATE INDEX idx_doctor_commissions_settlement ON doctor_commissions(settlement_id);
+        
+        PRAGMA foreign_keys = ON;
+      `
     }
   ];
 }

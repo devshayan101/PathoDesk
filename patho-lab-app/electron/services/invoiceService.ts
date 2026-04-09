@@ -20,7 +20,7 @@ interface InvoiceRow {
     discount_approved_by: number | null;
     gst_amount: number;
     total_amount: number;
-    status: 'DRAFT' | 'FINALIZED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'FINALIZED' | 'CANCELLED';
     created_by: number | null;
     created_at: string;
     finalized_at: string | null;
@@ -359,12 +359,12 @@ export function finalizeInvoice(id: number, userId?: number): { success: boolean
         }
 
         run(`
-      UPDATE invoices SET status = 'FINALIZED', finalized_at = datetime('now')
+      UPDATE invoices SET status = 'PENDING', finalized_at = datetime('now')
       WHERE id = ?
     `, [id]);
 
         // Update order payment status
-        run(`UPDATE orders SET payment_status = 'INVOICED' WHERE id = ?`, [invoice.order_id]);
+        run(`UPDATE orders SET payment_status = 'PENDING' WHERE id = ?`, [invoice.order_id]);
 
         // Audit log
         run(`
@@ -493,8 +493,8 @@ export function updateInvoiceByOrder(orderId: number, data: {
             return { success: false, error: 'Invoice not found' };
         }
 
-        if (invoice.status !== 'DRAFT') {
-            return { success: false, error: `Only DRAFT invoices can be updated. Current status: ${invoice.status}` };
+        if (!['DRAFT', 'PENDING'].includes(invoice.status)) {
+            return { success: false, error: `Only DRAFT or PENDING invoices can be updated. Current status: ${invoice.status}` };
         }
 
         // Get test prices

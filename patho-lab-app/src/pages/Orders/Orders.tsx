@@ -173,7 +173,7 @@ export default function OrdersPage() {
     };
 
     const handleEditOrder = async (order: Order) => {
-        const isLocked = ['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status);
+        const isLocked = ['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || order.payment_status === 'FINALIZED';
         if (isLocked) {
             showToast('This order is locked and cannot be edited.', 'warning');
             return;
@@ -906,7 +906,7 @@ export default function OrdersPage() {
                                     }
 
                                     return filteredOrders.map(order => (
-                                        <tr key={order.id} style={{ borderLeft: order.payment_status === 'PAID' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
+                                        <tr key={order.id} style={{ borderLeft: order.payment_status === 'FINALIZED' ? '3px solid var(--color-success)' : '3px solid transparent' }}>
                                             <td><code style={{ background: 'var(--color-bg-tertiary)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{order.order_uid}</code></td>
                                             <td>
                                                 <div style={{ fontWeight: 500 }}>{order.patient_name}</div>
@@ -916,15 +916,17 @@ export default function OrdersPage() {
                                             <td>{new Date(order.order_date).toLocaleDateString()}</td>
                                             <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{(order.net_amount || order.total_amount).toLocaleString()}</td>
                                             <td>
-                                                <span className={`badge ${order.payment_status === 'PAID' ? 'badge-success' : order.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>
-                                                    {order.payment_status}
+                                                <span className={`badge ${order.payment_status === 'FINALIZED' ? 'badge-success' : order.payment_status === 'PENDING' ? 'badge-info' : 'badge-warning'}`}>
+                                                    {['DRAFT', 'PENDING'].includes(order.payment_status || '') ? 'PENDING' : order.payment_status}
                                                 </span>
                                             </td>
                                             <td>
-                                                <span className={`badge ${order.report_status === 'FINALIZED' ? 'badge-success' :
-                                                    order.report_status === 'VERIFIED' ? 'badge-info' :
-                                                        order.report_status === 'PARTIAL' ? 'badge-warning' :
-                                                            'badge-default'
+                                                <span className={`badge ${
+                                                    order.report_status === 'FINALIZED' ? 'badge-success' :
+                                                        order.report_status === 'VERIFIED' ? 'badge-info' :
+                                                            order.report_status === 'PARTIAL' ? 'badge-warning' :
+                                                                order.report_status === 'SUBMITTED' ? 'badge-warning' :
+                                                                    'badge-default'
                                                     }`}>
                                                     {order.report_status?.replace('_', ' ') || 'PENDING'}
                                                 </span>
@@ -935,8 +937,8 @@ export default function OrdersPage() {
                                                     className="btn btn-info btn-sm" 
                                                     style={{ marginRight: '0.5rem' }} 
                                                     onClick={() => handleEditOrder(order)}
-                                                    disabled={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status)}
-                                                    title={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || ['INVOICED', 'PAID'].includes(order.payment_status) ? "Order is locked (Verified/Finalized)" : "Edit Order"}
+                                                    disabled={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || order.payment_status === 'FINALIZED'}
+                                                    title={['VERIFIED', 'FINALIZED'].includes(order.report_status || '') || order.payment_status === 'FINALIZED' ? "Order is locked (Paid/Verified/Finalized)" : "Edit Order"}
                                                 >
                                                     Edit
                                                 </button>
@@ -1059,7 +1061,7 @@ export default function OrdersPage() {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <div><span className="text-muted">Amount:</span> <strong>₹{(selectedOrder.net_amount || selectedOrder.total_amount).toLocaleString()}</strong></div>
-                                <div><span className="text-muted">Payment:</span> <span className={`badge ${selectedOrder.payment_status === 'PAID' ? 'badge-success' : selectedOrder.payment_status === 'INVOICED' ? 'badge-info' : 'badge-warning'}`}>{selectedOrder.payment_status}</span></div>
+                                <div><span className="text-muted">Payment:</span> <span className={`badge ${selectedOrder.payment_status === 'FINALIZED' ? 'badge-success' : selectedOrder.payment_status === 'PENDING' ? 'badge-info' : 'badge-warning'}`}>{['DRAFT', 'PENDING'].includes(selectedOrder.payment_status || '') ? 'PENDING' : selectedOrder.payment_status}</span></div>
                             </div>
                         </div>
 

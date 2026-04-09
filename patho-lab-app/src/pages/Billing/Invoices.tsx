@@ -25,7 +25,7 @@ interface Invoice {
     discount_amount: number;
     gst_amount: number;
     total_amount: number;
-    status: 'DRAFT' | 'FINALIZED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'FINALIZED' | 'CANCELLED';
     created_at: string;
     amount_paid: number;
     balance_due: number;
@@ -191,6 +191,7 @@ export default function Invoices() {
     const getStatusBadge = (status: string) => {
         const classes: Record<string, string> = {
             'DRAFT': 'badge-warning',
+            'PENDING': 'badge-info',
             'FINALIZED': 'badge-success',
             'CANCELLED': 'badge-danger'
         };
@@ -223,7 +224,8 @@ export default function Invoices() {
                     >
                         <option value="">All Status</option>
                         <option value="DRAFT">Draft</option>
-                        <option value="FINALIZED">Finalized</option>
+                        <option value="PENDING">Pending Payment</option>
+                        <option value="FINALIZED">Paid (Finalized)</option>
                         <option value="CANCELLED">Cancelled</option>
                     </select>
                 </div>
@@ -261,7 +263,7 @@ export default function Invoices() {
                                         <td style={{ textAlign: 'right', fontWeight: 600, cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{formatCurrency(invoice.total_amount)}</td>
                                         <td style={{ cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>{getStatusBadge(invoice.status)}</td>
                                         <td style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => handleViewInvoice(invoice)}>
-                                            {invoice.status === 'FINALIZED'
+                                            {['PENDING', 'FINALIZED'].includes(invoice.status)
                                                 ? (invoice.balance_due > 0 ? (
                                                     <span style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{formatCurrency(invoice.balance_due)}</span>
                                                 ) : (
@@ -278,7 +280,7 @@ export default function Invoices() {
                                                 <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handlePrintInvoice(invoice)} title="Print Invoice">
                                                     🖨️
                                                 </button>
-                                                {invoice.status === 'FINALIZED' && invoice.balance_due > 0 && (
+                                                {invoice.status === 'PENDING' && invoice.balance_due > 0 && (
                                                     <button className="btn btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleOpenPayment(invoice)} title="Receive Payment">
                                                         💳
                                                     </button>

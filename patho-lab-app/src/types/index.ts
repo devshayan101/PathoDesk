@@ -394,7 +394,7 @@ export interface Invoice {
     discountReason?: string;
     gstAmount: number;
     totalAmount: number;
-    status: 'DRAFT' | 'FINALIZED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'FINALIZED' | 'CANCELLED';
     createdAt: string;
     finalizedAt?: string;
     amountPaid?: number;
@@ -419,7 +419,7 @@ export interface Payment {
     id: number;
     invoiceId: number;
     amount: number;
-    paymentMode: 'CASH' | 'CARD' | 'UPI';
+    paymentMode: 'CASH' | 'CARD' | 'UPI' | 'CREDIT';
     referenceNumber?: string;
     paymentDate: string;
     receivedBy?: number;

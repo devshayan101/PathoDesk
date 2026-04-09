@@ -127,7 +127,7 @@ export function createOrder(data: {
     // Insert order
     const orderId = runWithId(`
       INSERT INTO orders (order_uid, patient_id, order_date, total_amount, discount, net_amount, payment_status, referring_doctor_id)
-      VALUES (?, ?, datetime('now'), ?, ?, ?, 'PENDING', ?)
+      VALUES (?, ?, datetime('now'), ?, ?, ?, 'DRAFT', ?)
     `, [orderUid, data.patientId, totalAmount, discount, netAmount, data.referringDoctorId || null]);
 
     // Insert order tests and auto-generate samples
@@ -194,7 +194,7 @@ export function updateOrder(orderId: number, data: {
         return { success: false, error: `Order is locked because the report is already ${orderStatus.report_status.toLowerCase()}.` };
       }
       if (orderStatus.invoice_status === 'FINALIZED') {
-        return { success: false, error: 'Order is locked because the invoice is already finalized.' };
+        return { success: false, error: 'Order is locked because the invoice is already finalized (Paid).' };
       }
     }
 
