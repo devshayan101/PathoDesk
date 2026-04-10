@@ -269,6 +269,8 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.INVOICE_CREATE, data),
     finalize: (id: number, userId?: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.INVOICE_FINALIZE, id, userId),
+    markFinalized: (id: number, userId?: number) =>
+      ipcRenderer.invoke(IPC_CHANNELS.INVOICE_MARK_FINALIZED, id, userId),
     cancel: (id: number, reason: string, userId: number) =>
       ipcRenderer.invoke(IPC_CHANNELS.INVOICE_CANCEL, id, reason, userId),
     getPatientDues: (patientId: number) =>

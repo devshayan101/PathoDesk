@@ -417,11 +417,11 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
                                         <Text style={s.testNameHeader}>{test.test_name}</Text>
 
                                         <View style={s.tableHeader}>
-                                            <Text style={[s.colTest, { fontWeight: 'bold' }]}>Test Name</Text>
-                                            <Text style={[s.colResult, { fontWeight: 'bold' }]}>Results</Text>
+                                            <Text style={[s.colTest, { fontWeight: 'bold', color: '#ffffff' }]}>Test Name</Text>
+                                            <Text style={[s.colResult, { fontWeight: 'bold', color: '#ffffff' }]}>Results</Text>
                                             <Text style={[s.colUnit, { fontWeight: 'bold', color: '#ffffff' }]}>Units</Text>
                                             <Text style={[s.colRange, { fontWeight: 'bold', color: '#ffffff' }]}>Reference range</Text>
-                                            <Text style={[s.colFlag, { fontWeight: 'bold', textAlign: 'center' }]}>Flag</Text>
+                                            <Text style={[s.colFlag, { fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }]}>Flag</Text>
                                         </View>
                                         {/* Render first row with header to prevent orphans */}
                                         {results.length > 0 && renderRow(results[0], 0)}

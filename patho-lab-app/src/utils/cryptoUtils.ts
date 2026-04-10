@@ -11,7 +11,10 @@
  */
 export async function deriveKeyFromSalt(salt: string): Promise<CryptoKey> {
     const encoder = new TextEncoder();
-    const seed = import.meta.env.VITE_CRYPTO_SEED || "pathodesk-v1-fallback-seed";
+    const seed = import.meta.env.VITE_CRYPTO_SEED;
+    if (!seed) {
+        throw new Error("CRITICAL SECURITY ERROR: VITE_CRYPTO_SEED is not defined in environment variables. Application cannot initialize securely.");
+    }
     const baseKey = await window.crypto.subtle.importKey(
         "raw",
         encoder.encode(seed),
@@ -55,7 +58,15 @@ export async function obfuscate(text: string, key: CryptoKey): Promise<string> {
     combined.set(iv);
     combined.set(new Uint8Array(ciphertext), iv.length);
 
-    return btoa(String.fromCharCode(...combined));
+    // Use chunked processing for btoa to handle large arrays safely
+    let binary = '';
+    const bytes = new Uint8Array(combined);
+    const len = bytes.byteLength;
+    const CHUNK_SIZE = 0x8000; // 32KB
+    for (let i = 0; i < len; i += CHUNK_SIZE) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK_SIZE)));
+    }
+    return btoa(binary);
 }
 
 /**

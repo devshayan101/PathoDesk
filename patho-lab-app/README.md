@@ -156,10 +156,13 @@ The AI Analysis module is an **assistive technology** designed to provide supple
 
 The application prioritizes the security and integrity of health records:
 *   **Local-First Storage:** All patient records and results are stored on the local premises. We do not transmit PHI (Protected Health Information) to any external cloud service without explicit user configuration.
-*   **Authentication:** Local user sessions protected via `bcryptjs` hashed passwords.
+*   **Authentication:** User passwords are securely hashed using `bcryptjs`; local sessions are protected via a secure token-based session strategy.
 *   **Access Control:** Role-based access (Technician, Pathologist, Auditor) ensures that only authorized personnel can enter or verify results. ipc gating (e.g., standard technicians cannot alter `test_prices`).
 *   **Audit Logging:** Every modification to patient data, results, or critical system settings (including clock changes or license uploads) is recorded in a tamper-resistant local audit log.
-*   **Compliance Controls:** The system is designed to facilitate GDPR and HIPAA compliance by providing data encryption-at-rest (for critical credentials), comprehensive audit trails, and data backup/disaster recovery procedures.
+*   **Compliance Controls:** The system is designed to facilitate GDPR and HIPAA compliance through:
+    *   **Data Encryption:** All PII/PHI is encrypted at rest using AES-256-GCM, with keys managed securely.
+    *   **Audit Logging:** Every access or modification to PII/PHI is audit-logged with user identification.
+    *   **Disaster Recovery:** Automated data backup and recovery procedures.
 
 ---
 

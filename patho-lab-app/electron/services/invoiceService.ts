@@ -378,6 +378,36 @@ export function finalizeInvoice(id: number, userId?: number): { success: boolean
     }
 }
 
+export function markInvoiceFinalized(id: number, userId?: number): { success: boolean; error?: string } {
+    try {
+        const invoice = queryOne<InvoiceRow>(`SELECT * FROM invoices WHERE id = ?`, [id]);
+        if (!invoice) {
+            return { success: false, error: 'Invoice not found' };
+        }
+        if (invoice.status !== 'PENDING') {
+            return { success: false, error: 'Only pending invoices can be marked as finalized' };
+        }
+
+        run(`
+      UPDATE invoices SET status = 'FINALIZED'
+      WHERE id = ?
+    `, [id]);
+
+        // Update order payment status
+        run(`UPDATE orders SET payment_status = 'FINALIZED' WHERE id = ?`, [invoice.order_id]);
+
+        // Audit log
+        run(`
+      INSERT INTO audit_log (entity, entity_id, action, performed_by, performed_at)
+      VALUES ('invoice', ?, 'MARK_FINALIZED', ?, datetime('now'))
+    `, [id, userId || null]);
+
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
 export function cancelInvoice(id: number, reason: string, userId: number): { success: boolean; error?: string } {
     try {
         const invoice = queryOne<InvoiceRow>(`SELECT * FROM invoices WHERE id = ?`, [id]);
@@ -429,7 +459,7 @@ export function getPatientDues(patientId: number): { totalDue: number; invoices:
     FROM invoices i
     LEFT JOIN payments pay ON i.id = pay.invoice_id
     WHERE i.patient_id = ? 
-      AND i.status = 'FINALIZED'
+      AND i.status IN ('PENDING', 'FINALIZED')
     GROUP BY i.id
     HAVING balance_due > 0
     ORDER BY i.created_at ASC
@@ -467,10 +497,10 @@ export function getInvoiceSummary(fromDate?: string, toDate?: string) {
       COUNT(*) as total_invoices,
       COALESCE(SUM(total_amount), 0) as total_amount,
       COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id IN (
-        SELECT id FROM invoices WHERE status = 'FINALIZED' ${dateSql}
+        SELECT id FROM invoices WHERE status IN ('PENDING', 'FINALIZED') ${dateSql}
       )), 0) as total_collected
     FROM invoices
-    WHERE status = 'FINALIZED' ${dateSql}
+    WHERE status IN ('PENDING', 'FINALIZED') ${dateSql}
   `, queryParams);
 
     return {
@@ -486,6 +516,7 @@ export function updateInvoiceByOrder(orderId: number, data: {
     discountAmount?: number;
     discountReason?: string;
     discountApprovedBy?: number;
+    userId?: number;
 }): { success: boolean; error?: string } {
     try {
         const invoice = queryOne<InvoiceRow>(`SELECT * FROM invoices WHERE order_id = ? AND status != 'CANCELLED'`, [orderId]);
@@ -581,10 +612,12 @@ export function updateInvoiceByOrder(orderId: number, data: {
             run(`
                 UPDATE invoices SET 
                     subtotal = ?, discount_amount = ?, discount_percent = ?, 
+                    discount_reason = ?, discount_approved_by = ?,
                     gst_amount = ?, total_amount = ?, price_list_id = ?
                 WHERE id = ?
             `, [
                 subtotal, discountAmount, discountPercent,
+                data.discountReason || null, data.discountApprovedBy || null,
                 totalGst, totalAmount, data.priceListId,
                 invoice.id
             ]);
@@ -620,7 +653,7 @@ export function updateInvoiceByOrder(orderId: number, data: {
             run(`
                 INSERT INTO audit_log (entity, entity_id, action, new_value, performed_by, performed_at)
                 VALUES ('invoice', ?, 'UPDATE', ?, ?, datetime('now'))
-            `, [invoice.id, JSON.stringify(changes), data.discountApprovedBy || null]);
+            `, [invoice.id, JSON.stringify(changes), data.userId || data.discountApprovedBy || null]);
 
             return { success: true };
         })();

@@ -81,7 +81,7 @@ export function updateUser(id: number, data: {
             // Safety: Don't allow changing role of the admin user
             const user = queryOne<{ username: string }>('SELECT username FROM users WHERE id = ?', [id]);
             if (user?.username === 'admin') {
-                // Skip role update for admin
+                return { success: false, error: 'Cannot change the role of the primary administrator account.' };
             } else {
                 sets.push('role_id = ?');
                 params.push(data.roleId);

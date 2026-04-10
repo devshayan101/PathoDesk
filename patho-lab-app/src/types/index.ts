@@ -271,6 +271,7 @@ export const IPC_CHANNELS = {
     INVOICE_GET_BY_ORDER: 'invoice:getByOrder',
     INVOICE_CREATE: 'invoice:create',
     INVOICE_FINALIZE: 'invoice:finalize',
+    INVOICE_MARK_FINALIZED: 'invoice:markFinalized',
     INVOICE_CANCEL: 'invoice:cancel',
     INVOICE_PATIENT_DUES: 'invoice:patientDues',
     INVOICE_SUMMARY: 'invoice:summary',

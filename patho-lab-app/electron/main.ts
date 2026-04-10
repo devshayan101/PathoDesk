@@ -5,7 +5,7 @@ import 'dotenv/config'
 
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, closeDatabase, queryAll, queryOne, run, getDb } from './database/db'
+import { initDatabase, closeDatabase, queryAll, run, getDb } from './database/db'
 import * as authService from './services/authService'
 import * as patientService from './services/patientService'
 import * as testService from './services/testService'
@@ -172,7 +172,11 @@ function registerIpcHandlers() {
   ipcMain.handle('credentials:delete', async () => {
     try {
       const db = getDb();
-      db.prepare('DELETE FROM _secure_credentials WHERE id = 1').run();
+      // Check if table exists first
+      const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_secure_credentials'").get();
+      if (tableExists) {
+        db.prepare('DELETE FROM _secure_credentials WHERE id = 1').run();
+      }
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message };
@@ -362,7 +366,16 @@ function registerIpcHandlers() {
         throw new Error('Invalid input: testVersionIds must be an array');
       }
 
-      return getDb().transaction(() => {
+      const db = getDb();
+      return db.transaction(() => {
+        // Validate all testVersionIds exist before proceeding
+        for (const vId of data.testVersionIds) {
+          const exists = db.prepare('SELECT id FROM test_versions WHERE id = ?').get(vId);
+          if (!exists) {
+            throw new Error(`Invalid testVersionId: ${vId}`);
+          }
+        }
+
         const orderResult = orderService.updateOrder(id, data);
         if (!orderResult.success) {
           throw new Error(orderResult.error || 'Failed to update order');
@@ -371,7 +384,7 @@ function registerIpcHandlers() {
         // Also update the invoice
         const testIds: number[] = [];
         for (const vId of data.testVersionIds) {
-          const tv = queryOne<{ test_id: number }>('SELECT test_id FROM test_versions WHERE id = ?', [vId]);
+          const tv = db.prepare('SELECT test_id FROM test_versions WHERE id = ?').get(vId) as { test_id: number };
           if (tv) testIds.push(tv.test_id);
         }
         
@@ -629,6 +642,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.INVOICE_FINALIZE, (_, id: number, userId?: number) => {
     return invoiceService.finalizeInvoice(id, userId)
+  })
+  
+  ipcMain.handle(IPC_CHANNELS.INVOICE_MARK_FINALIZED, (_, id: number, userId?: number) => {
+    return invoiceService.markInvoiceFinalized(id, userId)
   })
 
   ipcMain.handle(IPC_CHANNELS.INVOICE_CANCEL, (_, id: number, reason: string, userId: number) => {

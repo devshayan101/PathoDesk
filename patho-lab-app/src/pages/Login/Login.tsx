@@ -46,10 +46,10 @@ export default function LoginPage() {
         const success = await login(username, password);
         if (success) {
             // Guard for non-Electron environments and ensure navigation proceeds even if credential storage fails
-            if (window.electronAPI) {
+            if (window.electronAPI && isRememberEnabled) {
                 const credsAPI = (window.electronAPI as any).credentials;
                 try {
-                    if (rememberMe && isRememberEnabled) {
+                    if (rememberMe) {
                         await credsAPI.store({ username, password });
                     } else {
                         await credsAPI.delete();

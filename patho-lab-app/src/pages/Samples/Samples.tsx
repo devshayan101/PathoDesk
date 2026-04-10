@@ -49,7 +49,7 @@ export default function SamplesPage() {
                 showToast('Failed to display barcode preview', 'error');
             }
         }
-    }, [barcodeModalSample]);
+    }, [barcodeModalSample, showToast]);
 
     useEffect(() => {
         loadSamples();

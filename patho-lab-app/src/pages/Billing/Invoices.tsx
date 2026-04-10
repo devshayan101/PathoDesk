@@ -225,7 +225,7 @@ export default function Invoices() {
                         <option value="">All Status</option>
                         <option value="DRAFT">Draft</option>
                         <option value="PENDING">Pending Payment</option>
-                        <option value="FINALIZED">Paid (Finalized)</option>
+                        <option value="FINALIZED">Finalized</option>
                         <option value="CANCELLED">Cancelled</option>
                     </select>
                 </div>

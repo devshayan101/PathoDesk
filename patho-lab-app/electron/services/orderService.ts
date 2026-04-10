@@ -170,35 +170,7 @@ export function updateOrder(orderId: number, data: {
       return { success: false, error: 'Order not found' };
     }
 
-    // Check if order is locked (Verified, Finalized or Finalized Invoice)
-    // We use a simpler check: look for any finalized/verified samples or a finalized invoice
-    const lockCheck = queryOne<{ is_locked: number, reason: string }>(`
-      SELECT 
-        CASE 
-          WHEN EXISTS (
-            SELECT 1 FROM samples s 
-            JOIN order_tests ot ON s.order_test_id = ot.id 
-            WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
-          ) THEN 1
-          WHEN EXISTS (
-            SELECT 1 FROM invoices WHERE order_id = ? AND status = 'FINALIZED'
-          ) THEN 1
-          ELSE 0
-        END as is_locked,
-        CASE 
-          WHEN EXISTS (
-            SELECT 1 FROM samples s 
-            JOIN order_tests ot ON s.order_test_id = ot.id 
-            WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
-          ) THEN 'Report is verified/finalized'
-          ELSE 'Invoice is finalized (Paid)'
-        END as reason
-      FROM orders WHERE id = ?
-    `, [orderId, orderId, orderId, orderId]);
 
-    if (lockCheck?.is_locked) {
-      return { success: false, error: `Order is locked: ${lockCheck.reason}` };
-    }
 
     // 1. Re-calculate totals based on new tests
     const testIds: number[] = [];
@@ -231,6 +203,35 @@ export function updateOrder(orderId: number, data: {
 
     // 2. Wrap all updates in a transaction
     const result = getDb().transaction(() => {
+      // 2a. Check if order is locked (Verified, Finalized or Finalized Invoice)
+      // Done inside transaction to prevent TOCTOU race conditions
+      const lockCheck = queryOne<{ is_locked: number, reason: string }>(`
+        SELECT 
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM samples s 
+              JOIN order_tests ot ON s.order_test_id = ot.id 
+              WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
+            ) THEN 1
+            WHEN EXISTS (
+              SELECT 1 FROM invoices WHERE order_id = ? AND status = 'FINALIZED'
+            ) THEN 1
+            ELSE 0
+          END as is_locked,
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM samples s 
+              JOIN order_tests ot ON s.order_test_id = ot.id 
+              WHERE ot.order_id = ? AND s.status IN ('VERIFIED', 'FINALIZED')
+            ) THEN 'Report is verified/finalized'
+            ELSE 'Invoice is finalized (Paid)'
+          END as reason
+        FROM orders WHERE id = ?
+      `, [orderId, orderId, orderId, orderId]);
+
+      if (lockCheck?.is_locked) {
+        throw new Error(`Order is locked: ${lockCheck.reason}`);
+      }
       // 3. Update order row
       run(`
         UPDATE orders 

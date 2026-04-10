@@ -23,20 +23,25 @@ export class AIService {
     }
 
     private async checkCompliance(): Promise<{ allowed: boolean; error?: string }> {
-        const db = getDb();
-        const settings = db.prepare("SELECT setting_key, setting_value FROM lab_settings WHERE setting_key LIKE 'ai_%'").all() as any[];
-        const config: Record<string, string> = {};
-        settings.forEach(s => config[s.setting_key] = s.setting_value);
+        try {
+            const db = getDb();
+            const settings = db.prepare("SELECT setting_key, setting_value FROM lab_settings WHERE setting_key LIKE 'ai_%'").all() as any[];
+            const config: Record<string, string> = {};
+            settings.forEach(s => config[s.setting_key] = s.setting_value);
 
-        if (config['ai_analysis_enabled'] !== 'true') {
-            return { allowed: false, error: 'AI features are disabled in Lab Settings.' };
+            if (config['ai_analysis_enabled'] !== 'true') {
+                return { allowed: false, error: 'AI features are disabled in Lab Settings.' };
+            }
+
+            if (config['ai_baa_accepted'] !== 'true') {
+                return { allowed: false, error: 'Business Associate Agreement (BAA) must be accepted before using AI features.' };
+            }
+
+            return { allowed: true };
+        } catch (e) {
+            console.error('Compliance check failed'); // Generic error to avoid data leak
+            return { allowed: false, error: 'Internal compliance check failed.' };
         }
-
-        if (config['ai_baa_accepted'] !== 'true') {
-            return { allowed: false, error: 'Business Associate Agreement (BAA) must be accepted before using AI features.' };
-        }
-
-        return { allowed: true };
     }
 
     async analyzeReport(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
@@ -55,7 +60,8 @@ export class AIService {
         try {
             // Simulated AI interpretation logic
             // In production, this would call an external API or local LLM
-            console.log('AI analyzing sanitized data:', JSON.stringify(sanitizedData, null, 2));
+            // Log de-identified metadata only
+            console.log(`AI analyzing test: ${sanitizedData.testName} (${sanitizedData.parameters.length} params)`);
 
             const interpretation = `Based on the provided values for ${sanitizedData.testName}, the results suggest a typical pattern. Further clinical correlation is recommended.`;
             const disclaimer = "ASSISTIVE ONLY - DO NOT USE FOR PRIMARY DIAGNOSIS. Clinical validation required.";
@@ -66,7 +72,7 @@ export class AIService {
                 disclaimer
             };
         } catch (error) {
-            console.error('AI Analysis failed:', error);
+            console.error('AI Analysis failed: communication or processing error');
             return {
                 success: false,
                 interpretation: '',
