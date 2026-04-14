@@ -1,4 +1,25 @@
 import { queryAll, queryOne, run } from '../database/db';
+import QRCode from 'qrcode';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+function getS3Client(settings: Record<string, string>) {
+    const accountId = settings.r2_account_id;
+    const accessKeyId = settings.r2_access_key_id;
+    const secretAccessKey = settings.r2_secret_access_key;
+
+    if (!accountId || !accessKeyId || !secretAccessKey) {
+        throw new Error('R2 credentials not configured');
+    }
+
+    return new S3Client({
+        region: 'auto',
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: {
+            accessKeyId,
+            secretAccessKey,
+        },
+    });
+}
 
 interface LabSetting {
     setting_key: string;
@@ -254,4 +275,62 @@ export function getOrderReportData(orderId: number): ReportData[] {
     }
 
     return reportDataList;
+}
+
+export async function generateReportQRCode(sampleUid: string): Promise<string> {
+    const settings = getLabSettings();
+    const baseUrl = settings.verify_base_url || 'https://verify.pathodesk.com/v';
+    const verifyUrl = `${baseUrl}/${sampleUid}`;
+
+    try {
+        return await QRCode.toDataURL(verifyUrl, {
+            errorCorrectionLevel: 'H',
+            margin: 1,
+            width: 256,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        });
+    } catch (err) {
+        console.error('QR Code generation error:', err);
+        return '';
+    }
+}
+
+export async function uploadReportPdfToR2(identifier: string | number, pdfBuffer: Uint8Array): Promise<{ success: boolean; error?: string }> {
+    try {
+        const settings = getLabSettings();
+        const bucket = settings.r2_bucket_name;
+        if (!bucket) throw new Error('R2 bucket not configured');
+
+        let sampleUid = '';
+        if (typeof identifier === 'number') {
+            const sample = queryOne<any>('SELECT sample_uid FROM samples WHERE id = ?', [identifier]);
+            if (!sample) throw new Error('Sample not found');
+            sampleUid = sample.sample_uid;
+        } else {
+            // It's already a UID or a custom combined UID
+            sampleUid = identifier;
+        }
+
+        const { getLicenseService } = await import('./licenseService');
+        const licenseStatus = getLicenseService().getStatus();
+        const labId = licenseStatus.license?.license_id || 'generic-lab';
+
+        const client = getS3Client(settings);
+        const key = `reports/${labId}/${sampleUid}.pdf`;
+
+        await client.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: pdfBuffer,
+            ContentType: 'application/pdf',
+        }));
+
+        return { success: true };
+    } catch (e: any) {
+        console.error('Report PDF upload error:', e);
+        return { success: false, error: e.message };
+    }
 }

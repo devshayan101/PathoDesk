@@ -229,6 +229,8 @@ export const IPC_CHANNELS = {
     REPORT_GET_DATA: 'report:getData',
     REPORT_GET_ORDER_DATA: 'report:getOrderData',
     REPORT_GENERATE_PDF: 'report:generatePdf',
+    REPORT_GET_QR: 'report:getQr',
+    REPORT_UPLOAD_PDF: 'report:uploadPdf',
 
     // Lab Settings
     LAB_SETTINGS_GET: 'labSettings:get',
@@ -332,6 +334,9 @@ export const IPC_CHANNELS = {
     BACKUP_CREATE: 'backup:create',
     BACKUP_RESTORE: 'backup:restore',
     BACKUP_INTEGRITY_CHECK: 'backup:integrityCheck',
+    BACKUP_CLOUD_CREATE: 'backup:cloudCreate',
+    BACKUP_CLOUD_LIST: 'backup:cloudList',
+    BACKUP_CLOUD_RESTORE: 'backup:cloudRestore',
 
     // Bulk Import
     TESTS_BULK_IMPORT: 'tests:bulkImport',

@@ -273,7 +273,7 @@ interface LabSettings {
     disclaimer?: string; show_time_in_report?: string;
 }
 
-interface Props { data: ReportData; labSettings: LabSettings; }
+interface Props { data: ReportData; labSettings: LabSettings; qrCode?: string | null; }
 
 // Helpers
 function calcAge(dob: string): string {
@@ -304,7 +304,7 @@ function flagBadgeStyle(flag: string | null) {
     }
 }
 
-export default function LabReportGreen({ data, labSettings }: Props) {
+export default function LabReportGreen({ data, labSettings, qrCode }: Props) {
     const { sample, patient, test, results: rawResults, referringDoctor } = data;
     const showTime = labSettings.show_time_in_report === 'true';
     const gender = patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other';
@@ -460,6 +460,9 @@ export default function LabReportGreen({ data, labSettings }: Props) {
 
                     {/* Middle - Report Status */}
                     <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                        {qrCode && (
+                            <Image src={qrCode} style={{ width: 50, height: 50, marginBottom: 4 }} />
+                        )}
                         <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: <Text style={{ fontWeight: 'bold' }}>{sample.status}</Text></Text>
                         {sample.verified_at && (
                             <Text style={[s.sigLabel, { fontSize: 8 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>

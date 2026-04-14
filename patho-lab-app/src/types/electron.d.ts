@@ -85,6 +85,9 @@ export interface ElectronAPI {
         getData: (sampleId: number) => Promise<any>;
         getOrderData: (orderId: number) => Promise<any[]>;
         generatePdf: (data: any, options: any) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+        generateQRCode: (token: string) => Promise<string>;
+        getQr: (sampleUid: string) => Promise<string>;
+        uploadPdf: (id: string | number, pdfBuffer: Uint8Array) => Promise<{ success: boolean; error?: string }>;
     };
     dashboard: {
         getStats: () => Promise<any>;
@@ -191,6 +194,9 @@ export interface ElectronAPI {
         create: () => Promise<{ success: boolean; filePath?: string; error?: string }>;
         restore: () => Promise<{ success: boolean; error?: string }>;
         checkIntegrity: () => Promise<{ success: boolean; results: string[]; foreignKeyErrors: any[] }>;
+        cloudCreate: () => Promise<{ success: boolean; backupKey?: string; error?: string }>;
+        cloudList: (limit?: number) => Promise<any[]>;
+        cloudRestore: (backupKey: string) => Promise<{ success: boolean; error?: string }>;
     };
 }
 

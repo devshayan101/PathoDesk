@@ -25,7 +25,7 @@ pathoDesk_assets/
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
+*.sln   
 *.sw?
 
 # Vite cache files
@@ -34,3 +34,6 @@ pathoDesk_assets/
 # opensrc - source code for packages
 opensrc/
 *.tsbuildinfo
+
+# Graphify
+graphify-out/

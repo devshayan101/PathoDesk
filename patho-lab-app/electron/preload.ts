@@ -179,6 +179,10 @@ const api = {
       ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_ORDER_DATA, orderId),
     generatePdf: (data: any, options: any) =>
       ipcRenderer.invoke(IPC_CHANNELS.REPORT_GENERATE_PDF, data, options),
+    getQr: (sampleUid: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REPORT_GET_QR, sampleUid),
+    uploadPdf: (id: string | number, pdfBuffer: Uint8Array) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REPORT_UPLOAD_PDF, id, pdfBuffer),
   },
 
   // Dashboard

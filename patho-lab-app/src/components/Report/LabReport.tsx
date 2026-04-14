@@ -275,6 +275,7 @@ interface LabSettings {
 interface Props {
     data: ReportData;
     labSettings: LabSettings;
+    qrCode?: string | null;
 }
 
 // Calculate age from DOB
@@ -293,13 +294,10 @@ function calculateAge(dob: string): string {
 export function formatDate(dateStr: string | null | undefined, showTime = false): string {
     const validDateStr = dateStr || new Date().toISOString();
 
-    // SQLite returns "YYYY-MM-DD HH:MM:SS". JS parses this as local if no Z is present.
-    // Convert to ISO string explicitly to enforce UTC parsing and local offset conversion.
     let isoStr = validDateStr;
     if (isoStr.includes(' ') && !isoStr.includes('T')) {
         isoStr = isoStr.replace(' ', 'T') + 'Z';
     } else if (isoStr.length === 10) {
-        // Just a Date
         isoStr = isoStr + 'T00:00:00Z';
     } else if (!isoStr.endsWith('Z') && !isoStr.includes('+') && !isoStr.includes('-')) {
         isoStr += 'Z';
@@ -343,18 +341,14 @@ function formatFlag(flag: string | null): string {
     }
 }
 
-
-
-export default function LabReport({ data, labSettings }: Props) {
+export default function LabReport({ data, labSettings, qrCode }: Props) {
     const { sample, patient, test, results: rawResults, referringDoctor } = data;
     const showTime = labSettings.show_time_in_report === 'true';
 
-    // Filter out parameters with no result value, but keep headers
     const results = rawResults.filter(r => r.is_header === 1 || (r.result_value && r.result_value.trim() !== ''));
 
     return (
         <Page size="A4" style={[styles.page, { display: 'flex', flexDirection: 'column' }]}>
-            {/* Microscope Watermark - fixed on every page */}
             <View style={styles.watermarkContainer} fixed>
                 <Image src={logoUrl} style={{ width: 220, opacity: 0.1 }} />
                 {labSettings.lab_name && (
@@ -364,29 +358,26 @@ export default function LabReport({ data, labSettings }: Props) {
                 )}
             </View>
 
-            {/* Header - Lab Info - fixed on every page */}
             <View style={styles.header} fixed>
-                {/* Left side: Lab Logo and Name */}
                 <View style={{ flex: 1.8, flexDirection: 'row', alignItems: 'center' }}>
                     <Image src={logoUrl} style={styles.logo} />
                     <View style={{ flex: 1, paddingRight: 5 }}>
-                        {labSettings.lab_name ? labSettings.lab_name.split('\n').map((line: string, i: number) => (
+                        {labSettings.lab_name ? labSettings.lab_name.split('\n').map((line, i) => (
                             <Text key={i} style={styles.labName}>{line}</Text>
                         )) : <Text style={styles.labName}>Pathology Laboratory</Text>}
                     </View>
                 </View>
 
-                {/* Center: 24_7 logo */}
                 <View style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}>
                     <Image src={logo247Url} style={{ width: 44, height: 44 }} />
                 </View>
 
-                {/* Right side: Lab Details and Incharge */}
                 <View style={{ flex: 1.8, alignItems: 'flex-end', justifyContent: 'center' }}>
                     <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
                         {labSettings.address_line1 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line1}{labSettings.address_line2 ? ',' : ''}</Text>}
                         {labSettings.address_line2 && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>{labSettings.address_line2}</Text>}
-                    </View>                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
+                    </View>
+                    <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
                         {labSettings.phone && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Phone: {labSettings.phone}</Text>}
                         {labSettings.email && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Email: {labSettings.email}</Text>}
                     </View>
@@ -401,9 +392,7 @@ export default function LabReport({ data, labSettings }: Props) {
                 </View>
             </View>
 
-            {/* Patient Info */}
             <View style={styles.patientSectionContainer}>
-                {/* Row 1 */}
                 <View style={styles.patientSectionRow}>
                     <View style={styles.patientCol}>
                         <Text style={styles.label}>Patient Name</Text>
@@ -425,7 +414,6 @@ export default function LabReport({ data, labSettings }: Props) {
                     </View>
                 </View>
 
-                {/* Row 2 */}
                 <View style={!referringDoctor ? styles.patientSectionRowLast : styles.patientSectionRow}>
                     <View style={styles.patientCol}>
                         <Text style={styles.label}>Sample Received</Text>
@@ -445,7 +433,6 @@ export default function LabReport({ data, labSettings }: Props) {
                     </View>
                 </View>
 
-                {/* Row 3 (Referred By - Optional) */}
                 {referringDoctor && (
                     <View style={styles.patientSectionRowLast}>
                         <View style={styles.patientCol}>
@@ -456,19 +443,12 @@ export default function LabReport({ data, labSettings }: Props) {
                             <Text style={styles.label}>Specialty</Text>
                             <Text style={styles.value}>{referringDoctor.specialty || '-'}</Text>
                         </View>
-                        <View style={styles.patientCol}>
-                            <Text style={styles.label}></Text>
-                            <Text style={styles.value}></Text>
-                        </View>
-                        <View style={styles.patientColLast}>
-                            <Text style={styles.label}></Text>
-                            <Text style={styles.value}></Text>
-                        </View>
+                        <View style={styles.patientCol}></View>
+                        <View style={styles.patientColLast}></View>
                     </View>
                 )}
             </View>
 
-            {/* Results — Widal matrix or normal table */}
             {isWidalTest(test.test_name) ? (
                 <View wrap={false}>
                     <Text style={styles.testHeader}>{test.test_name}</Text>
@@ -485,31 +465,8 @@ export default function LabReport({ data, labSettings }: Props) {
                             <Text style={[styles.colRange, styles.tableHeaderCell]}>Reference Range</Text>
                             <Text style={[styles.colFlag, styles.tableHeaderCell]}>Flag</Text>
                         </View>
-                        {results.length > 0 && (() => {
-                            const result = results[0];
-                            const idx = 0;
-                            const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
-                            return result.is_header === 1 ? (
-                                <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
-                                    <Text style={[styles.colParameter, { fontWeight: 'bold', width: '100%', fontSize: 10, color: '#004080' }]}>{result.parameter_name}</Text>
-                                </View>
-                            ) : (
-                                <View key={idx} style={[styles.tableRow, rowStyle]} wrap={false}>
-                                    <Text style={[styles.colParameter, { paddingLeft: result.parent_id ? 15 : 0, color: '#102a43' }]}>{result.parameter_name}</Text>
-                                    <Text style={[styles.colResult, { fontSize: 10, fontWeight: 'bold', color: '#102a43' }, getFlagStyle(result.abnormal_flag)]}>
-                                        {result.result_value || '-'}
-                                    </Text>
-                                    <Text style={[styles.colUnit, { color: '#607d8b' }]}>{result.unit || ''}</Text>
-                                    <Text style={[styles.colRange, { fontSize: 8, color: '#607d8b' }]}>{result.ref_range_text || '-'}</Text>
-                                    <Text style={[styles.colFlag, getFlagStyle(result.abnormal_flag)]}>
-                                        {formatFlag(result.abnormal_flag)}
-                                    </Text>
-                                </View>
-                            );
-                        })()}
                     </View>
-                    {results.slice(1).map((result, idxOffset) => {
-                        const idx = idxOffset + 1;
+                    {results.map((result, idx) => {
                         const rowStyle = idx % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd;
                         return result.is_header === 1 ? (
                             <View key={idx} style={[styles.tableRow, rowStyle, { paddingVertical: 2, minHeight: 12, borderBottomWidth: 0 }]} wrap={false}>
@@ -532,7 +489,6 @@ export default function LabReport({ data, labSettings }: Props) {
                 </View>
             )}
 
-            {/* Interpretation Template */}
             {test.interpretation_template && (
                 <View style={{ marginTop: 0, padding: 10, border: '1px solid #eee', borderRadius: 4 }}>
                     <Text style={{ fontSize: 10, fontWeight: 'normal', marginBottom: 5 }}>Note:</Text>
@@ -542,10 +498,8 @@ export default function LabReport({ data, labSettings }: Props) {
                 </View>
             )}
 
-            {/* Footer - fixed at bottom of every page */}
             <View style={styles.footer} fixed>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
-                    {/* Lab Technician Signature */}
                     <View style={styles.signatureBox}>
                         {data.labTechnician?.signature ? (
                             <Image src={data.labTechnician.signature} style={styles.signatureImage} />
@@ -559,15 +513,16 @@ export default function LabReport({ data, labSettings }: Props) {
                         <Text style={[styles.label, { fontWeight: 'bold' }]}>Lab Technician</Text>
                     </View>
 
-                    {/* Report Status (Middle) */}
                     <View style={{ alignItems: 'center', marginBottom: 5 }}>
+                        {qrCode && (
+                            <Image src={qrCode} style={{ width: 60, height: 60, marginBottom: 5 }} />
+                        )}
                         <Text style={[styles.label, { fontSize: 9 }]}>Report Status: {sample.status}</Text>
                         {sample.verified_at && (
                             <Text style={[styles.label, { fontSize: 9 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
                         )}
                     </View>
 
-                    {/* Pathologist Signature */}
                     <View style={styles.signatureBox}>
                         {data.pathologist?.signature ? (
                             <Image src={data.pathologist.signature} style={styles.signatureImage} />
@@ -584,7 +539,6 @@ export default function LabReport({ data, labSettings }: Props) {
                 <Text style={styles.disclaimer}>{labSettings.disclaimer}</Text>
             </View>
 
-            {/* Software Branding - fixed at bottom of every page */}
             <View style={styles.brandingContainer} fixed>
                 <Text style={styles.brandingText}>FMS Software Solutions</Text>
                 <Text style={styles.brandingText}>Email: fmsenterprises001@gmail.com | WhatsApp: +91-7765009936</Text>

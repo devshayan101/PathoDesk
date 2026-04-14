@@ -1,3 +1,4 @@
+
 import { Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
 import logo247Url from '/24_7.png';
@@ -283,7 +284,7 @@ function flagBadgeStyle(flag: string | null) {
     }
 }
 
-export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
+export default function CombinedLabReportGreen({ dataList, labSettings, qrCode }: any) {
     if (!dataList || dataList.length === 0) return null;
 
     // Extracted global patient and sample info from the first report
@@ -468,6 +469,9 @@ export default function CombinedLabReportGreen({ dataList, labSettings }: any) {
 
                     {/* Middle - Report Status */}
                     <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                        {qrCode && (
+                            <Image src={qrCode} style={{ width: 50, height: 50, marginBottom: 4 }} />
+                        )}
                         <Text style={[s.sigLabel, { fontSize: 8 }]}>Report Status: <Text style={{ fontWeight: 'bold' }}>{sample.status}</Text></Text>
                         {sample.verified_at && (
                             <Text style={[s.sigLabel, { fontSize: 8 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>

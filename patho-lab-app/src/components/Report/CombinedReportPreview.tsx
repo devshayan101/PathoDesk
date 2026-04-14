@@ -13,8 +13,8 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
     const [loading, setLoading] = useState(true);
     const [template, setTemplate] = useState<'standard' | 'green'>('standard');
     const [labSettings, setLabSettings] = useState<any>({});
-
     const [printing, setPrinting] = useState(false);
+    const [qrCode, setQrCode] = useState<string | null>(null);
 
     // Fetch settings for active template
     useEffect(() => {
@@ -42,19 +42,60 @@ export default function CombinedReportPreview({ orderId, onClose }: CombinedRepo
         loadAllData();
     }, [orderId]);
 
+    // Fetch QR code for verification
+    useEffect(() => {
+        const fetchQR = async () => {
+            if (reportDataList.length > 0) {
+                const sample = reportDataList[0].sample;
+                if (sample?.verification_token) {
+                    const qr = await window.electronAPI.reports.generateQRCode(sample.verification_token);
+                    setQrCode(qr);
+                }
+            }
+        };
+        fetchQR();
+    }, [reportDataList]);
+
     const combinedDocument = useMemo(() => {
         if (!reportDataList || reportDataList.length === 0) return null;
         
         return (
             <Document>
                 {template === 'green' ? (
-                    <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} />
+                    <CombinedLabReportGreen dataList={reportDataList} labSettings={labSettings} qrCode={qrCode} />
                 ) : (
-                    <CombinedLabReport dataList={reportDataList} labSettings={labSettings} />
+                    <CombinedLabReport dataList={reportDataList} labSettings={labSettings} qrCode={qrCode} />
                 )}
             </Document>
         );
-    }, [reportDataList, template, labSettings]);
+    }, [reportDataList, template, labSettings, qrCode]);
+
+    // Handle auto-archival for verified/finalized reports
+    useEffect(() => {
+        if (loading || reportDataList.length === 0 || !combinedDocument) return;
+        
+        const autoArchive = async () => {
+            const firstSample = reportDataList[0].sample;
+            if (firstSample.status === 'FINALIZED' || firstSample.status === 'VERIFIED') {
+                try {
+                    const blob = await pdf(combinedDocument).toBlob();
+                    const buffer = await blob.arrayBuffer();
+                    const uint8Array = new Uint8Array(buffer);
+                    
+                    // We archive order reports with a prefix 'ORD_' or just use the first sample UID?
+                    // Let's use firstSample.sample_uid + "_combined"
+                    await window.electronAPI.reports.uploadPdf(`${firstSample.sample_uid}_combined`, uint8Array);
+                    console.log(`Auto-archived combined report for ${firstSample.sample_uid}`);
+                } catch (err) {
+                    console.error("Combined auto-archival failed", err);
+                }
+            }
+        };
+
+        if (qrCode) {
+            autoArchive();
+        }
+    }, [loading, reportDataList, qrCode, combinedDocument]);
 
     const handlePrint = async () => {
         if (!combinedDocument) return;

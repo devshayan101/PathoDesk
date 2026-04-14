@@ -1464,6 +1464,18 @@ function getMigrations() {
         
         PRAGMA foreign_keys = ON;
       `
+    },
+    {
+      name: '024_r2_settings',
+      sql: `
+        INSERT OR IGNORE INTO lab_settings (setting_key, setting_value) VALUES 
+          ('r2_account_id', ''),
+          ('r2_access_key_id', ''),
+          ('r2_secret_access_key', ''),
+          ('r2_bucket_name', ''),
+          ('backup_encryption_key', ''),
+          ('verify_base_url', 'https://verify.pathodesk.com/v');
+      `
     }
   ];
 }

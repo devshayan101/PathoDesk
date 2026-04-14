@@ -15,6 +15,7 @@ import * as userService from './services/userService'
 import * as resultService from './services/resultService'
 import { safeStorage } from 'electron'
 import * as reportService from './services/reportService'
+import * as backupService from './services/backupService'
 import * as doctorService from './services/doctorService'
 import * as billingService from './services/billingService'
 import * as invoiceService from './services/invoiceService'
@@ -858,20 +859,61 @@ function registerIpcHandlers() {
   })
 
   // Backup & Restore
-  ipcMain.handle(IPC_CHANNELS.BACKUP_CREATE, async () => {
-    const backupService = await import('./services/backupService')
+  ipcMain.handle(IPC_CHANNELS.BACKUP_CREATE, () => {
     return backupService.createBackup()
   })
 
-  ipcMain.handle(IPC_CHANNELS.BACKUP_RESTORE, async () => {
-    const backupService = await import('./services/backupService')
+  ipcMain.handle(IPC_CHANNELS.BACKUP_RESTORE, () => {
     return backupService.restoreBackup()
   })
 
-  ipcMain.handle(IPC_CHANNELS.BACKUP_INTEGRITY_CHECK, async () => {
-    const backupService = await import('./services/backupService')
+  ipcMain.handle(IPC_CHANNELS.BACKUP_INTEGRITY_CHECK, () => {
     return backupService.checkIntegrity()
   })
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_CLOUD_CREATE, () => {
+    return backupService.createCloudBackup()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_CLOUD_LIST, () => {
+    return backupService.listCloudBackups()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BACKUP_CLOUD_RESTORE, (_, key: string) => {
+    return backupService.restoreFromCloud(key)
+  })
+
+  // Reports
+  ipcMain.handle(IPC_CHANNELS.REPORT_GET_QR, (_, sampleUid: string) => {
+    return reportService.generateReportQRCode(sampleUid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.REPORT_UPLOAD_PDF, (_, sampleId: number, pdfBuffer: Uint8Array) => {
+    return reportService.uploadReportPdfToR2(sampleId, pdfBuffer)
+  })
+}
+
+// Auto backup scheduler (every 6 hours)
+function setupBackupScheduler() {
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+  setInterval(async () => {
+    console.log('Running scheduled cloud backup...');
+    try {
+      const result = await backupService.createCloudBackup();
+      if (result.success) {
+        console.log('Scheduled cloud backup successful:', result.filePath);
+      } else {
+        // Silently ignore if not configured - only log real errors
+        if (!result.error?.includes('not configured')) {
+            console.error('Scheduled cloud backup failed:', result.error);
+        }
+      }
+    } catch (err: any) {
+      if (!err.message?.includes('not configured')) {
+        console.error('Scheduled cloud backup error:', err);
+      }
+    }
+  }, SIX_HOURS);
 }
 
 app.on('window-all-closed', () => {
@@ -891,6 +933,7 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
+  setupBackupScheduler()
 
   // Auto-updater: check for updates in production
   if (!VITE_DEV_SERVER_URL) {

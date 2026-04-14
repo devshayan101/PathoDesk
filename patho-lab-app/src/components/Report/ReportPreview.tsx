@@ -26,6 +26,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [printing, setPrinting] = useState(false);
+    const [qrCode, setQrCode] = useState<string | null>(null);
 
     // Pick the right report component based on theme setting
     const ReportComponent = labSettings.report_theme === 'green' ? LabReportGreen : LabReport;
@@ -34,7 +35,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
         if (!reportData) return;
         setPrinting(true);
         try {
-            const blob = await pdf(<Document><ReportComponent data={reportData} labSettings={labSettings} /></Document>).toBlob();
+            const blob = await pdf(<Document><ReportComponent data={reportData} labSettings={labSettings} qrCode={qrCode} /></Document>).toBlob();
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url);
             if (printWindow) {
@@ -47,6 +48,34 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
             console.error('Failed to print report:', e);
         }
         setPrinting(false);
+    };
+
+    useEffect(() => {
+        if (reportData && (reportData.sample.status === 'VERIFIED' || reportData.sample.status === 'FINALIZED')) {
+            // Only upload if we have the QR code (since it's a verified/finalized report)
+            // or if it's been enough time? Actually, just waiting for qrCode to be non-null is better.
+            if (qrCode) {
+                uploadToCloud();
+            }
+        }
+    }, [reportData, qrCode]);
+
+    const uploadToCloud = async () => {
+        if (!reportData || !window.electronAPI) return;
+        // Don't upload if it's already been uploaded in this session to avoid loops, 
+        // though PutObject is idempotent, it's good practice.
+        // For simplicity, we'll just try once when data is loaded.
+        try {
+            console.log('Generating PDF for cloud archival...');
+            const blob = await pdf(<Document><ReportComponent data={reportData} labSettings={labSettings} qrCode={qrCode} /></Document>).toBlob();
+            const buffer = new Uint8Array(await blob.arrayBuffer());
+            const result = await window.electronAPI.reports.uploadPdf(reportData.sample.id, buffer);
+            if (result.success) {
+                console.log('Report archived to R2 storage');
+            }
+        } catch (e) {
+            console.error('Failed to archive report to cloud:', e);
+        }
     };
 
     useEffect(() => {
@@ -69,6 +98,16 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
 
                 setReportData(data);
                 setLabSettings(settings);
+
+                // Fetch QR code if report is verified/finalized
+                if (data.sample.status === 'VERIFIED' || data.sample.status === 'FINALIZED') {
+                    try {
+                        const qr = await window.electronAPI.reports.getQr(data.sample.sample_uid);
+                        setQrCode(qr);
+                    } catch (err) {
+                        console.error('Failed to fetch QR code:', err);
+                    }
+                }
             }
         } catch (e: any) {
             setError(e.message || 'Failed to load report data');
@@ -115,7 +154,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
                             {printing ? 'Preparing...' : '🖨 Print'}
                         </button>
                         <PDFDownloadLink
-                            document={<Document><ReportComponent data={reportData} labSettings={labSettings} /></Document>}
+                            document={<Document><ReportComponent data={reportData} labSettings={labSettings} qrCode={qrCode} /></Document>}
                             fileName={`Report_${reportData.sample.sample_uid}.pdf`}
                             className="btn btn-primary"
                         >
@@ -128,7 +167,7 @@ export default function ReportPreview({ sampleId, onClose }: Props) {
                 <div className="pdf-viewer-container">
                     <PDFViewer width="100%" height="100%" showToolbar={false}>
                         <Document>
-                            <ReportComponent data={reportData} labSettings={labSettings} />
+                            <ReportComponent data={reportData} labSettings={labSettings} qrCode={qrCode} />
                         </Document>
                     </PDFViewer>
                 </div>

@@ -1,3 +1,4 @@
+
 import { Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 import logoUrl from '/icon.png';
 import logo247Url from '/24_7.png';
@@ -263,7 +264,7 @@ function formatFlag(flag: string | null): string {
     }
 }
 
-export default function CombinedLabReport({ dataList, labSettings }: any) {
+export default function CombinedLabReport({ dataList, labSettings, qrCode }: any) {
     if (!dataList || dataList.length === 0) return null;
 
     // Extracted global patient and sample info from the first report
@@ -322,14 +323,11 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
                         {labSettings.phone && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Phone: {labSettings.phone}</Text>}
                         {labSettings.email && <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>Email: {labSettings.email}</Text>}
                     </View>
-                    {/* <View style={[styles.labInfoRow, { justifyContent: 'flex-end' }]}>
-                        {labSettings.nabl_accreditation && (
-                            <Text style={[styles.labInfo, { marginRight: 0, marginLeft: 5, textAlign: 'right' }]}>NABL: {labSettings.nabl_accreditation}</Text>
+                    <View style={{ flex: 1.8, alignItems: 'flex-end', justifyContent: 'center' }}>
+                        {labSettings.lab_incharge && (
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#004080', marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
                         )}
-                    </View> */}
-                    {labSettings.lab_incharge && (
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#004080', marginTop: 2, textAlign: 'right' }}>{labSettings.lab_incharge}</Text>
-                    )}
+                    </View>
                 </View>
             </View>
 
@@ -493,6 +491,9 @@ export default function CombinedLabReport({ dataList, labSettings }: any) {
 
                     {/* Report Status (Middle) */}
                     <View style={{ alignItems: 'center', marginBottom: 5 }}>
+                        {qrCode && (
+                            <Image src={qrCode} style={{ width: 60, height: 60, marginBottom: 5 }} />
+                        )}
                         <Text style={[styles.label, { fontSize: 9 }]}>Report Status: {sample.status}</Text>
                         {sample.verified_at && (
                             <Text style={[styles.label, { fontSize: 9 }]}>Verified: {formatDate(sample.verified_at, showTime)}</Text>
