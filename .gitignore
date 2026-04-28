@@ -1,0 +1,8 @@
+/*
+!/patho-lab-app/
+!.gitignore
+
+# opensrc - source code for packages
+opensrc/
+
+graphify-out/

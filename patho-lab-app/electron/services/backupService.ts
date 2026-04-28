@@ -118,26 +118,26 @@ function encrypt(buffer: Buffer, keyString: string): Buffer {
     const key = crypto.scryptSync(keyString, salt, 32);
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    
+
     const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
     const tag = cipher.getAuthTag();
-    
+
     // Format: [salt(16)][iv(12)][tag(16)][encrypted_data]
     return Buffer.concat([salt, iv, tag, encrypted]);
 }
 
 function decrypt(buffer: Buffer, keyString: string): Buffer {
     if (buffer.length < 44) throw new Error('Invalid encrypted buffer');
-    
+
     const salt = buffer.subarray(0, 16);
     const iv = buffer.subarray(16, 28);
     const tag = buffer.subarray(28, 44);
     const encrypted = buffer.subarray(44);
-    
+
     const key = crypto.scryptSync(keyString, salt, 32);
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(tag);
-    
+
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
 }
 
@@ -147,7 +147,7 @@ export async function createCloudBackup(): Promise<{ success: boolean; filePath?
         const settings = getLabSettings();
         const encryptionKey = settings.backup_encryption_key || 'pathodesk-default-secure-key';
         const bucket = settings.r2_bucket_name;
-        
+
         if (!bucket) throw new Error('Cloud storage (R2) bucket not configured in settings');
 
         // 1. Create a safe copy of the DB using VACUUM INTO
@@ -163,12 +163,12 @@ export async function createCloudBackup(): Promise<{ success: boolean; filePath?
         // 3. Upload to R2
         const client = getS3Client(settings);
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        
+
         // Use license ID for isolation
         const { getLicenseService } = await import('./licenseService');
         const licenseStatus = getLicenseService().getStatus();
         const labId = licenseStatus.license?.license_id || 'generic-lab';
-        
+
         const key = `backups/${labId}/${timestamp}.db.enc.gz`;
 
         await client.send(new PutObjectCommand({
@@ -188,7 +188,7 @@ export async function createCloudBackup(): Promise<{ success: boolean; filePath?
         return { success: false, error: e.message };
     } finally {
         if (tempDbPath && fs.existsSync(tempDbPath)) {
-            try { fs.unlinkSync(tempDbPath); } catch (_) {}
+            try { fs.unlinkSync(tempDbPath); } catch (_) { }
         }
     }
 }
@@ -264,7 +264,7 @@ export async function restoreFromCloud(key: string): Promise<{ success: boolean;
         // 4. Overwrite current DB
         closeDatabase();
         fs.copyFileSync(tempPath, getDbPath());
-        
+
         // Remove journals
         const dbPath = getDbPath();
         const walPath = dbPath + '-wal';
@@ -278,7 +278,7 @@ export async function restoreFromCloud(key: string): Promise<{ success: boolean;
         return { success: true };
     } catch (e: any) {
         console.error('Cloud restore error:', e);
-        try { initDatabase(); } catch (_) {}
+        try { initDatabase(); } catch (_) { }
         return { success: false, error: e.message };
     }
 }

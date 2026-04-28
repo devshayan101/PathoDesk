@@ -29,7 +29,7 @@ pathoDesk_assets/
 *.sw?
 
 # Vite cache files
-*.timestamp-*.mjs
+*.mjs
 
 # opensrc - source code for packages
 opensrc/

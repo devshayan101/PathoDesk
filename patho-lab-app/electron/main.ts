@@ -26,6 +26,7 @@ import * as qcService from './services/qcService'
 import * as dashboardService from './services/dashboardService'
 import { aiService } from './services/aiService'
 import { getLicenseService } from './services/licenseService'
+import { getAdminService } from './services/adminService'
 import type { LicenseModule } from '../src/types'
 import { IPC_CHANNELS } from '../src/types'
 
@@ -519,6 +520,14 @@ function registerIpcHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.LAB_SETTINGS_UPDATE, (_, key: string, value: string) => {
     reportService.updateLabSetting(key, value)
+    
+    // Refresh admin service schedule if backup settings changed
+    if (['daily_backup_time', 'enable_cloud_backup'].includes(key)) {
+      getAdminService().refreshLocalSchedule().catch(err => {
+        console.error('Failed to refresh backup schedule:', err);
+      });
+    }
+    
     return { success: true }
   })
 
@@ -891,29 +900,39 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.REPORT_UPLOAD_PDF, (_, sampleId: number, pdfBuffer: Uint8Array) => {
     return reportService.uploadReportPdfToR2(sampleId, pdfBuffer)
   })
+
+  // Admin Hub
+  ipcMain.handle('admin:get-status', () => {
+    const admin = getAdminService()
+    return {
+      isConfigured: admin.isConfigured(),
+      isKilled: admin.getIsKilled(),
+      config: admin.getConfig(),
+      backupOverride: admin.getBackupOverride(),
+    }
+  })
+
+  ipcMain.handle('admin:register', async (_, hubUrl: string, labId: string, secretKey: string) => {
+    const admin = getAdminService()
+    return admin.register(hubUrl, labId, secretKey)
+  })
+
+  ipcMain.handle('admin:disconnect', () => {
+    const admin = getAdminService()
+    admin.disconnect()
+    return { success: true }
+  })
 }
 
-// Auto backup scheduler (every 6 hours)
-function setupBackupScheduler() {
-  const SIX_HOURS = 6 * 60 * 60 * 1000;
-  setInterval(async () => {
-    console.log('Running scheduled cloud backup...');
-    try {
-      const result = await backupService.createCloudBackup();
-      if (result.success) {
-        console.log('Scheduled cloud backup successful:', result.filePath);
-      } else {
-        // Silently ignore if not configured - only log real errors
-        if (!result.error?.includes('not configured')) {
-            console.error('Scheduled cloud backup failed:', result.error);
-        }
-      }
-    } catch (err: any) {
-      if (!err.message?.includes('not configured')) {
-        console.error('Scheduled cloud backup error:', err);
-      }
-    }
-  }, SIX_HOURS);
+// Initialize admin service (handles heartbeats and scheduled backups)
+async function initAdminService() {
+  try {
+    const admin = getAdminService()
+    await admin.initialize()
+    console.log('Admin service initialized')
+  } catch (err: any) {
+    console.error('Admin service initialization error:', err.message)
+  }
 }
 
 app.on('window-all-closed', () => {
@@ -933,7 +952,7 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
-  setupBackupScheduler()
+  initAdminService()
 
   // Auto-updater: check for updates in production
   if (!VITE_DEV_SERVER_URL) {
